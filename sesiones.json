@@ -1,0 +1,86 @@
+{
+  "6gh2y6ptd5ms4skujq": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol": "admin",
+    "loginTime": "2026-07-28T15:09:42.183Z"
+  },
+  "et4cou6ekpemsndd48s": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "i1ek4fftmzomsnde45l": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "rjs5r6igz9kmsndhrdq": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "01jsm0wrljkbmsnkzkfi": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "zl26658rjgmsom5jcq": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "bqc6kn01e6hmsq7l9yc": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "jp2ajfciytmsqa954c": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "674bqmdb28nmsqanfml": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "04b39nfi73olmsqao59n": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "c5j3kc1acm6msqb2qur": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  },
+  "lbkrj2608lmsqbanth": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin"
+  }
+}

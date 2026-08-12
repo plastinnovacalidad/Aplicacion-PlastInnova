@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metrología y Planos de Molde - Calidad & Circuitos SMD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    .header { background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-shrink: 0; }
+    .header h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+    .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-action:hover { background: rgba(255,255,255,0.35); }
+
+    .main-layout { display: flex; flex: 1; height: calc(100vh - 70px); overflow: hidden; width: 100%; }
+
+    /* Sidebar selector */
+    .sidebar { width: 340px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; flex-shrink: 0; height: 100%; }
+    .sidebar-header { padding: 15px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar-header-top { display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-header h3 { font-size: 16px; color: #2d3748; font-weight: 600; }
+    .search-input { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
+    .search-input:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+
+    .refs-list { flex: 1; overflow-y: auto; }
+    .ref-item { padding: 12px 20px; border-bottom: 1px solid #edf2f7; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .ref-item:hover { background: #f7fafc; }
+    .ref-item.active { background: #ebf8ff; border-left: 4px solid #3182ce; }
+    .ref-item h4 { font-size: 14px; color: #2d3748; font-weight: 600; }
+    .ref-item p { font-size: 11px; color: #718096; margin-top: 2px; }
+    .badge-cotas { background: #e2e8f0; color: #4a5568; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+
+    /* Content Area */
+    .content-area { flex: 1; background: #eef2f7; height: 100%; overflow-y: auto; padding: 25px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+    .welcome-card { background: white; padding: 50px; border-radius: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin: auto; max-width: 600px; width: 100%; }
+    .welcome-card h2 { font-size: 24px; color: #2d3748; margin-bottom: 10px; }
+    .welcome-card p { font-size: 14px; color: #718096; }
+
+    .panel-card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; flex-direction: column; margin-bottom: 40px; }
+    .panel-card.active { display: flex; }
+    .panel-header { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .panel-header h2 { font-size: 18px; color: #2d3748; font-weight: 600; }
+    .panel-body { padding: 25px 30px; display: flex; flex-direction: column; gap: 25px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+    .tab-btn { background: none; border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #718096; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+    .tab-btn.active { background: #3182ce; color: white; }
+
+    .tab-content { display: none; flex-direction: column; gap: 25px; }
+    .tab-content.active { display: flex; }
+
+    /* Blueprint Viewer */
+    .viewer-container { display: flex; flex-direction: column; gap: 8px; }
+    .blueprint-viewer { width: 100%; height: 700px; background: #1a202c; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #cbd5e0; }
+    .blueprint-viewer iframe, .blueprint-viewer img { width: 100%; height: 100%; object-fit: contain; border: none; background: white; overflow: hidden; }
+    .protected-overlay { position: absolute; inset: 0; z-index: 50; background: transparent; cursor: default; }
+
+    /* Tables */
+    .table-responsive { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { background: #edf2f7; color: #4a5568; padding: 12px 16px; font-weight: 600; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 10; }
+    td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #2d3748; }
+    tr:hover { background: #f8fafc; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 12px; font-weight: 600; color: #4a5568; }
+    .form-group input, .form-group textarea, .form-group select { padding: 10px 14px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-group input:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+
+    .btn { padding: 10px 20px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn:hover { opacity: 0.9; }
+    .btn.success { background: #38a169; }
+    .btn.sm { padding: 6px 12px; font-size: 12px; }
+
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 15px; font-size: 11px; font-weight: 600; }
+    .badge.conforme { background: #c6f6d5; color: #22543d; }
+    .badge.fuera { background: #fed7d7; color: #742a2a; }
+
+    .medida-input { width: 110px; padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: 600; text-align: center; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>📐 Módulo de Metrología y Planos de Molde</h1>
+      <p>Control de planos, cotas, tolerancias e inspección metrológica de moldes</p>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-action">← Volver al Portal</a>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-header-top">
+          <h3>Referencias</h3>
+          <button class="btn sm success" id="btnNuevaRefSidebar" onclick="abrirModalNuevaReferencia()" style="display:none;">+ Nueva</button>
+        </div>
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar referencia..." oninput="filtrarReferencias()">
+      </div>
+      <div class="refs-list" id="refsList">
+        <div style="padding: 20px; text-align: center; color: #a0aec0;">Cargando referencias...</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content-area">
+      <div class="welcome-card" id="welcomeCard">
+        <h2>Bienvenido a Metrología</h2>
+        <p>Seleccione una referencia en el panel izquierdo para visualizar su plano técnico, cotas y registrar inspecciones.</p>
+      </div>
+
+      <div class="panel-card" id="detailPanel">
+        <div class="panel-header">
+          <h2 id="refTitleDisplay">Referencia: -</h2>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span id="refMetaDisplay" style="font-size: 12px; color: #718096;"></span>
+            <button class="btn sm" id="btnSubirVersion" onclick="abrirModalNuevaVersion()" style="display:none;">📄 Subir Versión</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="tabs">
+            <button class="tab-btn active" id="tabBtnInspeccion" onclick="switchTab('tabInspeccion', this)">📋 Inspección & Cotas</button>
+            <button class="tab-btn" id="tabBtnHistorial" onclick="switchTab('tabHistorial', this)" style="display:none;">📊 Historial</button>
+            <button class="tab-btn" id="tabBtnCambios" onclick="switchTab('tabCambios', this)" style="display:none;">📜 Auditoría de Cambios</button>
+          </div>
+
+          <!-- TAB 1: INSPECCIÓN & COTAS -->
+          <div class="tab-content active" id="tabInspeccion">
+            <!-- Taller Blueprint Viewer directly inline (700px height) -->
+            <div class="viewer-container">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size: 15px; color: #2d3748;">Plano Activo (Altura de 700px)</h3>
+                <button class="btn sm" onclick="abrirZoomPlano()">🔍 Ampliar / Pantalla Completa</button>
+              </div>
+              <div class="blueprint-viewer" id="blueprintViewerTop">
+                <div style="color: #a0aec0; text-align: center;">Cargando plano...</div>
+              </div>
+            </div>
+
+            <!-- Inspection Header Metadata (Submitted once per batch) -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0;" id="secDatosInspeccion">
+              <h3 style="font-size: 15px; margin-bottom: 12px; color: #2d3748;">Datos Generales de la Inspección</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Fecha de Inspección</label>
+                  <input type="date" id="inspFecha" readonly style="background:#edf2f7; cursor:not-allowed;">
+                </div>
+                <div class="form-group">
+                  <label>Responsable</label>
+                  <input type="text" id="inspResponsable" placeholder="Nombre del inspector" readonly style="background:#edf2f7; cursor:not-allowed;">
+                </div>
+                <div class="form-group">
+                  <label>Lote</label>
+                  <input type="text" id="inspLote" placeholder="Número de lote">
+                </div>
+                <div class="form-group">
+                  <label>Molde (Referencia)</label>
+                  <input type="text" id="inspMolde" placeholder="Identificador molde" readonly style="background:#edf2f7; cursor:not-allowed;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Cotas table with per-cota photo evidence & edit button -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="font-size: 15px; color: #2d3748;">Toma de Medidas en Cotas & Evidencia Fotográfica</h3>
+                <button class="btn sm success" id="btnAgregarCota" onclick="abrirModalCota()" style="display:none;">+ Agregar Cota</button>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cota</th>
+                      <th>Medida Estándar</th>
+                      <th>Tolerancia (±)</th>
+                      <th>Tol. Mínima</th>
+                      <th>Tol. Máxima</th>
+                      <th>Medida Real</th>
+                      <th>Estado</th>
+                      <th>Foto / Evidencia Cota</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaCotasInspeccion">
+                    <tr><td colspan="9" style="text-align:center; color:#a0aec0;">Seleccione una referencia</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                <button class="btn success" id="btnEnviarInspeccion" onclick="guardarInspeccion()" style="display:none;">💾 Enviar Registro de Inspección</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: HISTORIAL DE INSPECCIONES -->
+          <div class="tab-content" id="tabHistorial">
+            <h3 style="font-size: 15px; color: #2d3748; margin-bottom: 15px;">Historial de Inspecciones Metrológicas</h3>
+            <!-- Filtros por columna -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:11px;">Filtrar Fecha</label>
+                <input type="text" id="filtroHistFecha" placeholder="Fecha..." oninput="filtrarHistorial()" style="padding:6px 10px; font-size:12px;">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:11px;">Filtrar Responsable</label>
+                <input type="text" id="filtroHistResp" placeholder="Responsable..." oninput="filtrarHistorial()" style="padding:6px 10px; font-size:12px;">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:11px;">Filtrar Lote</label>
+                <input type="text" id="filtroHistLote" placeholder="Lote..." oninput="filtrarHistorial()" style="padding:6px 10px; font-size:12px;">
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Responsable</th>
+                    <th>Lote</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaHistorialInspecciones">
+                  <tr><td colspan="5" style="text-align:center; color:#a0aec0;">Cargando historial...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 3: REGISTRO DE CAMBIOS -->
+          <div class="tab-content" id="tabCambios">
+            <h3 style="font-size: 15px; color: #2d3748;">Auditoría y Registro de Cambios</h3>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tipo de Cambio</th>
+                    <th>Detalles / Motivo</th>
+                    <th>Hecho Por</th>
+                    <th>Fecha</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaCambiosAuditoria">
+                  <tr><td colspan="4" style="text-align:center; color:#a0aec0;">No hay registros de cambios.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Zoom Plano -->
+  <div id="modalZoom" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; flex-direction:column; z-index:2000; padding:20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:white;">
+      <h3 style="font-size:18px;">Visualizador Ampliado de Plano</h3>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="btn sm" onclick="zoomIn()">🔍+ Acercar</button>
+        <button class="btn sm" onclick="zoomOut()">🔍- Alejar</button>
+        <button class="btn sm" style="background:#e53e3e;" onclick="cerrarZoomPlano()">✕ Cerrar</button>
+      </div>
+    </div>
+    <div style="flex:1; background:#1a202c; border-radius:10px; overflow:auto; display:flex; align-items:center; justify-content:center; position:relative;">
+      <div id="zoomContentContainer" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;"></div>
+    </div>
+  </div>
+
+  <!-- Modal Nueva Versión -->
+  <div id="modalVersion" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:white; padding:25px; border-radius:12px; width:420px; display:flex; flex-direction:column; gap:12px;">
+      <h3 style="font-size:16px; color:#2d3748;">Subir Nueva Versión de Plano</h3>
+      <div class="form-group">
+        <label>Número de Versión (ej: V2, V3)</label>
+        <input type="text" id="nuevaVersionNum" placeholder="Automático si se deja vacío">
+      </div>
+      <div class="form-group">
+        <label>Archivo del Plano (PDF o Imagen)</label>
+        <input type="file" id="nuevoArchivoPlano" accept=".pdf,image/*">
+      </div>
+      <div class="form-group">
+        <label>Motivo del Cambio *</label>
+        <textarea id="nuevoMotivoCambio" rows="3" placeholder="Explique por qué se sube esta nueva versión..."></textarea>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:5px;">
+        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalVersion()">Cancelar</button>
+        <button class="btn sm success" onclick="subirNuevaVersion()">Subir Versión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Inspección & Evidencia -->
+  <div id="modalDetalleInspeccion" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:white; padding:25px; border-radius:12px; width:700px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:15px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-size:18px; color:#2d3748;" id="modalInspeccionTitulo">Detalle de Inspección</h3>
+        <button class="btn sm" style="background:#e53e3e; color:white;" onclick="cerrarModalDetalleInspeccion()">✕ Cerrar</button>
+      </div>
+      <div id="modalInspeccionInfo" style="font-size:13px; color:#4a5568; background:#f8fafc; padding:15px; border-radius:8px; display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;"></div>
+      <div>
+        <h4 style="font-size:14px; margin-bottom:8px; color:#2d3748;">Medidas y Evidencias Fotográficas</h4>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Cota</th>
+                <th>Estándar</th>
+                <th>Tol. (±)</th>
+                <th>Medida Real</th>
+                <th>Estado</th>
+                <th>Evidencia Fotográfica</th>
+              </tr>
+            </thead>
+            <tbody id="tablaDetalleInspeccionCotas">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nueva Referencia con Cotas Iniciales -->
+  <div id="modalReferencia" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:white; padding:25px; border-radius:12px; width:520px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+      <h3 style="font-size:16px; color:#2d3748;">Crear Nueva Referencia de Molde & Cotas</h3>
+      <div class="form-group">
+        <label>Código Base de la Referencia * (ej: Iny/Rep/9999)</label>
+        <input type="text" id="nuevaRefCodigo" placeholder="Código base">
+      </div>
+      <div class="form-group">
+        <label>Versión Inicial</label>
+        <input type="text" id="nuevaRefVersion" value="V1" placeholder="V1">
+      </div>
+      <div class="form-group">
+        <label>Archivo del Plano (PDF o Imagen) *</label>
+        <input type="file" id="nuevaRefArchivo" accept=".pdf,image/*">
+      </div>
+      <div class="form-group">
+        <label>Motivo / Observación</label>
+        <textarea id="nuevaRefMotivo" rows="2" placeholder="Motivo de creación..."></textarea>
+      </div>
+
+      <!-- Cotas Iniciales Dinámicas -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <label style="font-size:12px; font-weight:600; color:#4a5568; text-transform:uppercase;">Cotas Iniciales</label>
+          <button class="btn sm success" type="button" onclick="agregarFilaCotaModal()">+ Añadir Cota</button>
+        </div>
+        <div style="max-height:160px; overflow-y:auto; border:1px solid #cbd5e0; border-radius:6px; padding:8px;">
+          <table style="width:100%; font-size:12px;" id="tablaCotasModal">
+            <thead>
+              <tr>
+                <th>Cota</th>
+                <th>Estándar</th>
+                <th>Tolerancia (±)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalReferencia()">Cancelar</button>
+        <button class="btn sm success" onclick="crearNuevaReferencia()">Crear Referencia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Agregar Cota -->
+  <div id="modalCota" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:white; padding:25px; border-radius:12px; width:400px; display:flex; flex-direction:column; gap:12px;">
+      <h3 style="font-size:16px; color:#2d3748;">Agregar Nueva Cota</h3>
+      <div class="form-group">
+        <label>Nombre de la Cota (ej: A, B, C)</label>
+        <input type="text" id="nuevaCotaNombre" placeholder="Cota">
+      </div>
+      <div class="form-group">
+        <label>Medida Estándar</label>
+        <input type="number" step="0.001" id="nuevaCotaEstandar" placeholder="0.000">
+      </div>
+      <div class="form-group">
+        <label>Tolerancia (±)</label>
+        <input type="number" step="0.001" id="nuevaCotaTolerancia" placeholder="0.000">
+      </div>
+      <div class="form-group">
+        <label>Motivo</label>
+        <input type="text" id="nuevaCotaMotivo" placeholder="Motivo de adición">
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:5px;">
+        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalCota()">Cancelar</button>
+        <button class="btn sm success" onclick="guardarNuevaCota()">Guardar Cota</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editar Cota -->
+  <div id="modalEditarCota" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:white; padding:25px; border-radius:12px; width:400px; display:flex; flex-direction:column; gap:12px;">
+      <h3 style="font-size:16px; color:#2d3748;">Editar Cota y Tolerancia</h3>
+      <input type="hidden" id="editCotaId">
+      <div class="form-group">
+        <label>Nombre de la Cota</label>
+        <input type="text" id="editCotaNombre" placeholder="Cota">
+      </div>
+      <div class="form-group">
+        <label>Medida Estándar</label>
+        <input type="number" step="0.001" id="editCotaEstandar" placeholder="0.000">
+      </div>
+      <div class="form-group">
+        <label>Tolerancia (±)</label>
+        <input type="number" step="0.001" id="editCotaTolerancia" placeholder="0.000">
+      </div>
+      <div class="form-group">
+        <label>Motivo de la Modificación *</label>
+        <input type="text" id="editCotaMotivo" placeholder="Motivo obligatorio">
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:5px;">
+        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalEditarCota()">Cancelar</button>
+        <button class="btn sm success" onclick="guardarEdicionCota()">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) location.href = 'index.html';
+
+    let listaReferencias = [];
+    let listaInspeccionesActuales = [];
+    let referenciaActual = null;
+    let datosReferenciaActual = null;
+    let currentZoomLevel = 1;
+    let currentPlanoRuta = null;
+    let permisosUsuario = [];
+
+    async function cargarMisPermisos() {
+      try {
+        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        const rolesCache = data.roles || [];
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        const miRol = rolesCache.find(r => r.nombre === me.rol);
+        permisosUsuario = miRol ? miRol.permisos.map(p => p.codigo) : [];
+        aplicarPermisosUI();
+      } catch (e) { permisosUsuario = []; }
+    }
+
+    function tienePermiso(codigo) {
+      return permisosUsuario.includes(codigo);
+    }
+
+    function aplicarPermisosUI() {
+      const puedeInspeccionar = tienePermiso('metrologia.inspeccionar') || tienePermiso('metrologia.gestion');
+      const puedeCrearRef = tienePermiso('metrologia.crear_referencia') || tienePermiso('metrologia.gestion');
+      const puedeVersiones = tienePermiso('metrologia.versiones') || tienePermiso('metrologia.gestion');
+      const puedeHistorial = tienePermiso('metrologia.historial') || tienePermiso('metrologia.gestion');
+      const puedeAuditoria = tienePermiso('metrologia.auditoria') || tienePermiso('metrologia.gestion');
+      const puedeEditarCotas = tienePermiso('metrologia.editar_cotas') || tienePermiso('metrologia.gestion');
+
+      document.getElementById('btnNuevaRefSidebar').style.display = puedeCrearRef ? 'inline-block' : 'none';
+      document.getElementById('btnSubirVersion').style.display = puedeVersiones ? 'inline-block' : 'none';
+      document.getElementById('btnAgregarCota').style.display = puedeEditarCotas ? 'inline-block' : 'none';
+      document.getElementById('btnEnviarInspeccion').style.display = puedeInspeccionar ? 'inline-block' : 'none';
+      document.getElementById('secDatosInspeccion').style.display = puedeInspeccionar ? 'block' : 'none';
+
+      document.getElementById('tabBtnHistorial').style.display = puedeHistorial ? 'inline-block' : 'none';
+      document.getElementById('tabBtnCambios').style.display = puedeAuditoria ? 'inline-block' : 'none';
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (res.ok && data) {
+          const nombreUsuario = data.nombre || data.usuario;
+          document.getElementById('userNameDisplay').textContent = `${nombreUsuario} (${data.rol || 'Usuario'})`;
+          const respInput = document.getElementById('inspResponsable');
+          if (respInput) {
+            respInput.value = nombreUsuario;
+            respInput.readOnly = true;
+            respInput.style.backgroundColor = '#edf2f7';
+          }
+          await cargarMisPermisos();
+        } else {
+          location.href = 'index.html';
+        }
+      } catch (e) {
+        location.href = 'index.html';
+      }
+    }
+
+    async function cargarReferencias() {
+      try {
+        const res = await fetch('/api/moldes/referencias', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        listaReferencias = data.referencias || [];
+        renderizarListaReferencias(listaReferencias);
+      } catch (e) {
+        document.getElementById('refsList').innerHTML = `<div style="padding:20px; text-align:center; color:#e53e3e;">Error cargando referencias</div>`;
+      }
+    }
+
+    function renderizarListaReferencias(refs) {
+      const listEl = document.getElementById('refsList');
+      if (refs.length === 0) {
+        listEl.innerHTML = `<div style="padding:20px; text-align:center; color:#a0aec0;">No hay referencias</div>`;
+        return;
+      }
+      listEl.innerHTML = refs.map(r => `
+        <div class="ref-item ${referenciaActual === r.codigo_base ? 'active' : ''}" onclick="seleccionarReferencia('${r.codigo_base}')">
+          <div>
+            <h4>${r.codigo_base}</h4>
+            <p>Versión: ${r.version_activa || 'N/A'}</p>
+          </div>
+          <span class="badge-cotas">${r.total_cotas} cotas</span>
+        </div>
+      `).join('');
+    }
+
+    function filtrarReferencias() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtradas = listaReferencias.filter(r => r.codigo_base.toLowerCase().includes(q));
+      renderizarListaReferencias(filtradas);
+    }
+
+    async function seleccionarReferencia(codigo) {
+      referenciaActual = codigo;
+      renderizarListaReferencias(listaReferencias.filter(r => r.codigo_base.toLowerCase().includes(document.getElementById('searchInput').value.toLowerCase())));
+
+      document.getElementById('welcomeCard').style.display = 'none';
+      document.getElementById('detailPanel').style.display = 'flex';
+      document.getElementById('refTitleDisplay').textContent = `Referencia: ${codigo}`;
+
+      document.getElementById('inspFecha').valueAsDate = new Date();
+      document.getElementById('inspMolde').value = codigo;
+
+      try {
+        const res = await fetch(`/api/moldes/referencias/${encodeURIComponent(codigo)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        datosReferenciaActual = data;
+
+        document.getElementById('refMetaDisplay').textContent = `Plano Activo: ${data.version_activa?.archivo_ruta || 'Ninguno'} (${data.version_activa?.version || ''})`;
+        currentPlanoRuta = data.version_activa?.archivo_ruta;
+
+        renderizarVisorPlano(currentPlanoRuta);
+
+        const tbodyCotas = document.getElementById('tablaCotasInspeccion');
+        if (data.cotas.length === 0) {
+          tbodyCotas.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#a0aec0;">No hay cotas registradas para esta referencia. Haga clic en "+ Agregar Cota" para añadir una.</td></tr>`;
+        } else {
+          tbodyCotas.innerHTML = data.cotas.map(c => `
+            <tr data-cota-id="${c.id}">
+              <td><strong>${c.cota}</strong></td>
+              <td>${c.medida_estandar}</td>
+              <td>±${c.tolerancia}</td>
+              <td>${c.tolerancia_minima.toFixed(3)}</td>
+              <td>${c.tolerancia_maxima.toFixed(3)}</td>
+              <td><input type="number" step="0.001" class="medida-input" placeholder="0.000" oninput="evaluarCota(this, ${c.tolerancia_minima}, ${c.tolerancia_maxima})"></td>
+              <td><span class="badge" style="background:#e2e8f0; color:#4a5568;">Pendiente</span></td>
+              <td><input type="file" accept="image/*" class="cota-img-input" style="font-size:12px;"></td>
+              <td>
+                <button class="btn sm" id="btnEditCota_${c.id}" onclick="abrirModalEditarCota(${c.id}, '${c.cota}', ${c.medida_estandar}, ${c.tolerancia})" style="display:none; background:#d69e2e; color:white; padding:4px 8px;" title="Editar Cota">✏️</button>
+                <button class="btn sm" id="btnDeleteCota_${c.id}" onclick="eliminarCota(${c.id}, '${c.cota}')" style="display:none; background:#e53e3e; color:white; padding:4px 8px; margin-left:4px;" title="Eliminar Cota">🗑️</button>
+              </td>
+            </tr>
+          `).join('');
+          if (tienePermiso('metrologia.editar_cotas') || tienePermiso('metrologia.gestion')) {
+            document.querySelectorAll('[id^="btnEditCota_"]').forEach(btn => btn.style.display = 'inline-block');
+          }
+          if (tienePermiso('metrologia.eliminar_cotas') || tienePermiso('metrologia.gestion')) {
+            document.querySelectorAll('[id^="btnDeleteCota_"]').forEach(btn => btn.style.display = 'inline-block');
+          }
+        }
+
+        // Historial Inspecciones
+        listaInspeccionesActuales = data.inspecciones || [];
+        document.getElementById('filtroHistFecha').value = '';
+        document.getElementById('filtroHistResp').value = '';
+        document.getElementById('filtroHistLote').value = '';
+        renderizarHistorial(listaInspeccionesActuales);
+
+        // Auditoria (Excluyendo tipo_cambio = 'inspeccion')
+        document.getElementById('tablaCambiosAuditoria').innerHTML = data.seguimiento.length === 0 ?
+          `<tr><td colspan="4" style="text-align:center; color:#a0aec0;">No hay registros de auditoría de planos o cotas.</td></tr>` :
+          data.seguimiento.map(s => `
+            <tr>
+              <td><strong>${s.tipo_cambio}</strong></td>
+              <td>${s.motivo || '-'} <br><small style="color:#718096">${s.cambio}</small></td>
+              <td>${s.hecho_por_nombre || 'Sistema'}</td>
+              <td><small>${new Date(s.fecha_cambio).toLocaleString()}</small></td>
+            </tr>
+          `).join('');
+
+      } catch (e) {
+        console.error('Error cargando detalle referencia:', e);
+      }
+    }
+
+    function renderizarVisorPlano(ruta) {
+      const viewerTop = document.getElementById('blueprintViewerTop');
+      if (!ruta) {
+        viewerTop.innerHTML = `<div style="color: #a0aec0; text-align: center;">No hay plano asociado</div>`;
+        return;
+      }
+
+      const fileUrl = `/api/moldes/ver-plano?ruta=${encodeURIComponent(ruta)}&token=${token}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+      const ext = ruta.split('.').pop().toLowerCase();
+      
+      let html = '';
+      if (ext === 'pdf') {
+        html = `<iframe src="${fileUrl}" style="width:100%; height:100%; border:none; background:white; overflow:hidden;" scrolling="no"></iframe>`;
+      } else {
+        html = `<img src="${fileUrl}" alt="Plano de Molde" style="width:100%; height:100%; object-fit:contain; background:white;">`;
+      }
+      viewerTop.innerHTML = html + `<div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>`;
+    }
+
+    function abrirZoomPlano() {
+      if (!currentPlanoRuta) {
+        alert('No hay plano activo para ampliar.');
+        return;
+      }
+      currentZoomLevel = 1;
+      const fileUrl = `/api/moldes/ver-plano?ruta=${encodeURIComponent(currentPlanoRuta)}&token=${token}`;
+      const ext = currentPlanoRuta.split('.').pop().toLowerCase();
+      const container = document.getElementById('zoomContentContainer');
+      
+      let html = '';
+      if (ext === 'pdf') {
+        html = `<iframe src="${fileUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="width:100%; height:100%; border:none; background:white;"></iframe>`;
+      } else {
+        html = `<img id="zoomableImg" src="${fileUrl}" style="max-width:100%; max-height:100%; object-fit:contain; transition:transform 0.2s; background:white;" alt="Plano Ampliado">`;
+      }
+      container.innerHTML = html + `<div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>`;
+      document.getElementById('modalZoom').style.display = 'flex';
+    }
+
+    function cerrarZoomPlano() {
+      document.getElementById('modalZoom').style.display = 'none';
+    }
+
+    function zoomIn() {
+      currentZoomLevel += 0.25;
+      const img = document.getElementById('zoomableImg');
+      if (img) img.style.transform = `scale(${currentZoomLevel})`;
+    }
+
+    function zoomOut() {
+      if (currentZoomLevel > 0.5) currentZoomLevel -= 0.25;
+      const img = document.getElementById('zoomableImg');
+      if (img) img.style.transform = `scale(${currentZoomLevel})`;
+    }
+
+    function evaluarCota(input, min, max) {
+      const val = parseFloat(input.value);
+      const row = input.closest('tr');
+      const badge = row.querySelector('.badge');
+      if (isNaN(val)) {
+        badge.className = 'badge';
+        badge.style.background = '#e2e8f0';
+        badge.style.color = '#4a5568';
+        badge.textContent = 'Pendiente';
+        return;
+      }
+      if (val >= min && val <= max) {
+        badge.className = 'badge conforme';
+        badge.textContent = 'CONFORME';
+      } else {
+        badge.className = 'badge fuera';
+        badge.textContent = 'FUERA TOL.';
+      }
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    async function guardarInspeccion() {
+      const fecha = document.getElementById('inspFecha').value;
+      const responsable = document.getElementById('inspResponsable').value.trim();
+      const lote = document.getElementById('inspLote').value.trim();
+      const molde = document.getElementById('inspMolde').value.trim();
+
+      if (!fecha || !responsable) {
+        alert('Por favor ingrese la fecha y el responsable.');
+        return;
+      }
+
+      const medidas = [];
+      const formData = new FormData();
+      formData.append('fecha', fecha);
+      formData.append('responsable', responsable);
+      formData.append('lote', lote);
+      formData.append('molde', molde);
+
+      const filas = document.querySelectorAll('#tablaCotasInspeccion tr');
+      let countValidas = 0;
+      filas.forEach((row, index) => {
+        const cotaId = row.getAttribute('data-cota-id');
+        const input = row.querySelector('.medida-input');
+        const fileInput = row.querySelector('.cota-img-input');
+        if (cotaId && input && input.value !== '') {
+          countValidas++;
+          medidas.push({ cota_id: parseInt(cotaId, 10), medida_real: parseFloat(input.value) });
+          if (fileInput && fileInput.files[0]) {
+            formData.append(`evidencia_${cotaId}`, fileInput.files[0]);
+          }
+        }
+      });
+
+      if (countValidas === 0) {
+        alert('Debe ingresar al menos una medida real en las cotas.');
+        return;
+      }
+
+      formData.append('medidas', JSON.stringify(medidas));
+
+      try {
+        const res = await fetch(`/api/moldes/referencias/${encodeURIComponent(referenciaActual)}/medidas`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('¡Registro de inspección guardado con éxito!');
+          document.getElementById('inspResponsable').value = '';
+          document.getElementById('inspLote').value = '';
+          document.getElementById('inspMolde').value = referenciaActual;
+          document.getElementById('inspFecha').valueAsDate = new Date();
+          document.querySelectorAll('.medida-input').forEach(i => i.value = '');
+          document.querySelectorAll('.cota-img-input').forEach(i => i.value = '');
+          document.querySelectorAll('#tablaCotasInspeccion .badge').forEach(b => {
+            b.className = 'badge';
+            b.style.background = '#e2e8f0';
+            b.style.color = '#4a5568';
+            b.textContent = 'Pendiente';
+          });
+        } else {
+          alert(data.error || 'Error al guardar inspección');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    function abrirModalCota() {
+      document.getElementById('modalCota').style.display = 'flex';
+    }
+    function cerrarModalCota() {
+      document.getElementById('modalCota').style.display = 'none';
+    }
+
+    async function guardarNuevaCota() {
+      const cota = document.getElementById('nuevaCotaNombre').value.trim();
+      const medidaEstandar = document.getElementById('nuevaCotaEstandar').value;
+      const tolerancia = document.getElementById('nuevaCotaTolerancia').value;
+      const motivo = document.getElementById('nuevaCotaMotivo').value.trim();
+
+      if (!cota || medidaEstandar === '' || tolerancia === '') {
+        alert('Cota, medida estándar y tolerancia son obligatorias.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/moldes/referencias/${encodeURIComponent(referenciaActual)}/cotas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ cota, medida_estandar: parseFloat(medidaEstandar), tolerancia: parseFloat(tolerancia), motivo: motivo || 'Adición de cota' })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('¡Cota agregada con éxito!');
+          cerrarModalCota();
+          document.getElementById('nuevaCotaNombre').value = '';
+          document.getElementById('nuevaCotaEstandar').value = '';
+          document.getElementById('nuevaCotaTolerancia').value = '';
+          document.getElementById('nuevaCotaMotivo').value = '';
+          seleccionarReferencia(referenciaActual);
+        } else {
+          alert(data.error || 'Error agregando cota');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    function abrirModalEditarCota(id, cota, estandar, toler) {
+      document.getElementById('editCotaId').value = id;
+      document.getElementById('editCotaNombre').value = cota;
+      document.getElementById('editCotaEstandar').value = estandar;
+      document.getElementById('editCotaTolerancia').value = toler;
+      document.getElementById('editCotaMotivo').value = '';
+      document.getElementById('modalEditarCota').style.display = 'flex';
+    }
+
+    function cerrarModalEditarCota() {
+      document.getElementById('modalEditarCota').style.display = 'none';
+    }
+
+    async function guardarEdicionCota() {
+      const id = document.getElementById('editCotaId').value;
+      const cota = document.getElementById('editCotaNombre').value.trim();
+      const medida_estandar = document.getElementById('editCotaEstandar').value;
+      const tolerancia = document.getElementById('editCotaTolerancia').value;
+      const motivo = document.getElementById('editCotaMotivo').value.trim();
+
+      if (!motivo) {
+        alert('El motivo de la modificación es obligatorio.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/moldes/cotas/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ cota, medida_estandar: parseFloat(medida_estandar), tolerancia: parseFloat(tolerancia), motivo })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('¡Cota actualizada con éxito!');
+          cerrarModalEditarCota();
+          seleccionarReferencia(referenciaActual);
+        } else {
+          alert(data.error || 'Error actualizando cota');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    function abrirModalNuevaVersion() {
+      document.getElementById('modalVersion').style.display = 'flex';
+    }
+    function cerrarModalVersion() {
+      document.getElementById('modalVersion').style.display = 'none';
+    }
+
+    async function subirNuevaVersion() {
+      const versionNum = document.getElementById('nuevaVersionNum').value.trim();
+      const archivo = document.getElementById('nuevoArchivoPlano').files[0];
+      const motivo = document.getElementById('nuevoMotivoCambio').value.trim();
+
+      if (!archivo) {
+        alert('Debe seleccionar el archivo del plano.');
+        return;
+      }
+      if (!motivo) {
+        alert('El motivo del cambio es obligatorio.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('archivo', archivo);
+      formData.append('motivo', motivo);
+      if (versionNum) formData.append('version', versionNum);
+
+      try {
+        const res = await fetch(`/api/moldes/referencias/${encodeURIComponent(referenciaActual)}/versiones`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('¡Nueva versión de plano subida con éxito!');
+          document.getElementById('nuevaVersionNum').value = '';
+          document.getElementById('nuevoArchivoPlano').value = '';
+          document.getElementById('nuevoMotivoCambio').value = '';
+          cerrarModalVersion();
+          seleccionarReferencia(referenciaActual);
+        } else {
+          alert(data.error || 'Error subiendo versión');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    function abrirModalNuevaReferencia() {
+      document.getElementById('modalReferencia').style.display = 'flex';
+      document.getElementById('tablaCotasModal').querySelector('tbody').innerHTML = '';
+      agregarFilaCotaModal();
+    }
+    function cerrarModalReferencia() {
+      document.getElementById('modalReferencia').style.display = 'none';
+    }
+
+    function agregarFilaCotaModal() {
+      const tbody = document.getElementById('tablaCotasModal').querySelector('tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" class="cota-nombre" placeholder="Ej: A" style="width:100%; padding:4px;"></td>
+        <td><input type="number" step="0.001" class="cota-estandar" placeholder="0.000" style="width:100%; padding:4px;"></td>
+        <td><input type="number" step="0.001" class="cota-tol" placeholder="0.000" style="width:100%; padding:4px;"></td>
+        <td><button class="btn sm" style="background:#e53e3e; color:white; padding:2px 6px;" onclick="this.closest('tr').remove()">X</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    async function crearNuevaReferencia() {
+      const codigoBase = document.getElementById('nuevaRefCodigo').value.trim();
+      const version = document.getElementById('nuevaRefVersion').value.trim();
+      const archivo = document.getElementById('nuevaRefArchivo').files[0];
+      const motivo = document.getElementById('nuevaRefMotivo').value.trim();
+
+      if (!codigoBase || !archivo) {
+        alert('El código base y el archivo del plano son obligatorios.');
+        return;
+      }
+
+      const cotasIniciales = [];
+      const filasCotas = document.querySelectorAll('#tablaCotasModal tbody tr');
+      filasCotas.forEach(tr => {
+        const cota = tr.querySelector('.cota-nombre').value.trim();
+        const estandar = tr.querySelector('.cota-estandar').value;
+        const tol = tr.querySelector('.cota-tol').value;
+        if (cota && estandar !== '' && tol !== '') {
+          cotasIniciales.push({ cota, medida_estandar: parseFloat(estandar), tolerancia: parseFloat(tol) });
+        }
+      });
+
+      const formData = new FormData();
+      formData.append('codigo_base', codigoBase);
+      formData.append('version', version || 'V1');
+      formData.append('archivo', archivo);
+      formData.append('motivo', motivo || 'Creación de referencia nueva');
+      formData.append('cotas', JSON.stringify(cotasIniciales));
+
+      try {
+        const res = await fetch('/api/moldes/referencias', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('¡Referencia y cotas creadas con éxito!');
+          cerrarModalReferencia();
+          document.getElementById('nuevaRefCodigo').value = '';
+          document.getElementById('nuevaRefArchivo').value = '';
+          document.getElementById('nuevaRefMotivo').value = '';
+          await cargarReferencias();
+          seleccionarReferencia(codigoBase);
+        } else {
+          alert(data.error || 'Error creando referencia');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    async function verDetalleInspeccion(id) {
+      try {
+        const res = await fetch(`/api/moldes/inspeccion-detalle/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (res.ok && data.inspeccion) {
+          const i = data.inspeccion;
+          document.getElementById('modalInspeccionTitulo').textContent = `Inspección #${i.id} - ${i.molde || referenciaActual}`;
+          document.getElementById('modalInspeccionInfo').innerHTML = `
+            <div><strong>Fecha:</strong> ${i.fecha}</div>
+            <div><strong>Responsable:</strong> ${i.responsable}</div>
+            <div><strong>Lote:</strong> ${i.lote || '-'}</div>
+            <div><strong>Inspector:</strong> ${i.creado_por_nombre || 'Usuario'}</div>
+          `;
+          const tbody = document.getElementById('tablaDetalleInspeccionCotas');
+          if (data.medidas.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#a0aec0;">No hay medidas registradas.</td></tr>`;
+          } else {
+            tbody.innerHTML = data.medidas.map(m => {
+              const badgeClass = m.estado === 'CONFORME' ? 'badge conforme' : 'badge fuera';
+              let imgHtml = '<span style="color:#a0aec0;">Sin foto</span>';
+              if (m.imagen_evidencia) {
+                const imgUrl = `/api/moldes/ver-evidencia?ruta=${encodeURIComponent(m.imagen_evidencia)}&token=${token}`;
+                imgHtml = `<div style="position:relative; display:inline-block; width:60px; height:60px;"><img src="${imgUrl}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e0;" alt="Evidencia"><div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div></div>`;
+              }
+              return `
+                <tr>
+                  <td><strong>${m.cota}</strong></td>
+                  <td>${m.medida_estandar}</td>
+                  <td>±${m.tolerancia}</td>
+                  <td><strong>${m.medida_real}</strong></td>
+                  <td><span class="${badgeClass}">${m.estado}</span></td>
+                  <td>${imgHtml}</td>
+                </tr>
+              `;
+            }).join('');
+          }
+          document.getElementById('modalDetalleInspeccion').style.display = 'flex';
+        } else {
+          alert('Error cargando detalle de inspección');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    function cerrarModalDetalleInspeccion() {
+      document.getElementById('modalDetalleInspeccion').style.display = 'none';
+    }
+
+    function renderizarHistorial(insps) {
+      const tbody = document.getElementById('tablaHistorialInspecciones');
+      if (insps.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#a0aec0;">No hay inspecciones que coincidan con los filtros.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = insps.map(i => `
+        <tr>
+          <td>#${i.id}</td>
+          <td>${i.fecha}</td>
+          <td><strong>${i.responsable}</strong></td>
+          <td>${i.lote || '-'}</td>
+          <td><button class="btn sm" onclick="verDetalleInspeccion(${i.id})">🔍 Ver</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function filtrarHistorial() {
+      const fFecha = document.getElementById('filtroHistFecha').value.toLowerCase();
+      const fResp = document.getElementById('filtroHistResp').value.toLowerCase();
+      const fLote = document.getElementById('filtroHistLote').value.toLowerCase();
+
+      const filtradas = listaInspeccionesActuales.filter(i => {
+        const fechaStr = (i.fecha || '').toLowerCase();
+        const respStr = (i.responsable || '').toLowerCase();
+        const loteStr = (i.lote || '').toLowerCase();
+
+        return fechaStr.includes(fFecha) &&
+               respStr.includes(fResp) &&
+               loteStr.includes(fLote);
+      });
+
+      renderizarHistorial(filtradas);
+    }
+
+    async function eliminarCota(id, nombre) {
+      const motivo = prompt(`Motivo obligatorio para eliminar la cota ${nombre}:`);
+      if (!motivo || !motivo.trim()) {
+        alert('El motivo es obligatorio para eliminar una cota.');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/moldes/cotas/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ motivo: motivo.trim() })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('¡Cota eliminada con éxito!');
+          seleccionarReferencia(referenciaActual);
+        } else {
+          alert(data.error || 'Error eliminando cota');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (
+        (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || e.key === 'i' || e.key === 'j')) ||
+        e.key === 'F12'
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    async function init() {
+      await checkAuth();
+      await cargarReferencias();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revisión Circuitos SMD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; user-select: none; -webkit-user-select: none; }
+    .protected-overlay { position: absolute; inset: 0; z-index: 50; background: transparent; cursor: default; }
+
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); flex-shrink: 0; }
+    .header-left h1 { font-size: 22px; font-weight: 600; }
+    .header-left p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+    .btn-header { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-header:hover { background: rgba(255,255,255,0.35); }
+    .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+    .btn-logout:hover { background: rgba(255,255,255,0.35); }
+
+    .main-container { display: flex; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
+    .left-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow: hidden; min-width: 0; max-height: calc(100vh - 100px); }
+    .right-panel { width: 320px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; max-height: calc(100vh - 100px); }
+
+    .photos-section { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 20px; flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; position: relative; }
+    .photos-title { font-size: 28px; font-weight: 700; text-align: center; letter-spacing: 1px; color: #444; margin-bottom: 15px; flex-shrink: 0; }
+    .photos-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; }
+    .photo-card { position: relative; border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid #e0e0e0; background: #f8f8f8; transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; max-width: 90%; max-height: 90%; }
+    .photo-card:hover { border-color: #667eea; transform: scale(1.01); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3); }
+    .photo-card img { max-width: 520px; max-height: 380px; width: auto; height: auto; object-fit: contain; display: block; }
+    .photo-card .photo-name { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; font-size: 12px; padding: 25px 10px 10px; opacity: 0; transition: opacity 0.2s; text-align: center; }
+    .photo-card:hover .photo-name { opacity: 1; }
+
+    /* Badge flotante NECESITA PRUEBA */
+    .prueba-badge {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      animation: pulseBadge 2s infinite;
+    }
+    .prueba-badge.visible { display: flex; }
+    @keyframes pulseBadge {
+      0% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+      50% { transform: scale(1.03); box-shadow: 0 6px 25px rgba(255, 71, 87, 0.6); }
+      100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+    }
+    .prueba-badge button {
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .prueba-badge button:hover { background: rgba(255,255,255,0.4); }
+
+    /* Panel de pestañas (Observaciones / Recomendaciones) */
+    .tabs-panel { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; min-height: 200px; max-height: 340px; flex-shrink: 0; }
+    .tabs-header { display: flex; border-bottom: 1px solid #eee; background: #fafbfc; flex-shrink: 0; }
+    .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #888; transition: all 0.15s; border-bottom: 3px solid transparent; }
+    .tab-btn:hover { color: #667eea; background: #f0f3ff; }
+    .tab-btn.active { color: #667eea; border-bottom-color: #667eea; background: white; }
+    .tabs-content { flex: 1; overflow-y: auto; padding: 15px; display: none; }
+    .tabs-content.active { display: flex; flex-direction: column; gap: 10px; }
+
+    .rec-list { display: flex; flex-direction: column; gap: 10px; }
+    .rec-bubble { background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); border-left: 4px solid #667eea; border-radius: 0 10px 10px 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; color: #444; word-break: break-word; position: relative; }
+    .rec-bubble-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .rec-bubble-author { font-size: 12px; font-weight: 700; color: #667eea; }
+    .rec-bubble-date { font-size: 11px; color: #aaa; }
+    .rec-bubble-text { white-space: pre-wrap; }
+    .rec-bubble-delete { position: absolute; top: 8px; right: 8px; background: #ff4757; color: white; border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+    .rec-bubble:hover .rec-bubble-delete { opacity: 1; }
+    .rec-bubble-delete:hover { background: #e04040; }
+    .rec-empty { color: #999; font-style: italic; font-size: 14px; padding: 10px 0; }
+
+    .rec-form { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border-top: 1px solid #eee; padding-top: 12px; }
+    .rec-textarea { width: 100%; min-height: 55px; max-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .rec-textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .rec-actions { display: flex; justify-content: flex-end; }
+    .btn-enviar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 9px 24px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity 0.2s, transform 0.1s; }
+    .btn-enviar:hover { opacity: 0.9; }
+    .btn-enviar:active { transform: scale(0.97); }
+    .btn-enviar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .rec-readonly { display: flex; align-items: center; gap: 10px; color: #888; font-size: 13px; padding: 12px 16px; background: #f8f9fa; border-radius: 10px; border: 1px dashed #ddd; flex-shrink: 0; }
+
+    /* Observaciones en pestaña */
+    .obs-textarea { width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .obs-textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .obs-textarea:read-only { background: #f8f9fa; color: #666; }
+    .obs-meta { font-size: 11px; color: #aaa; text-align: right; margin-top: 4px; }
+    .obs-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+    .ref-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ref-count { background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+    .ref-search { padding: 12px 15px; border-bottom: 1px solid #eee; }
+    .ref-search input { width: 100%; padding: 10px 12px 10px 35px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center; }
+    .ref-search input:focus { border-color: #667eea; }
+    .ref-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .ref-item { padding: 12px 15px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #444; border: 1px solid transparent; transition: all 0.15s; word-break: break-all; display: flex; justify-content: space-between; align-items: center; }
+    .ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
+    .ref-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: transparent; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35); }
+    .ref-item .prueba-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; display: none; flex-shrink: 0; }
+    .ref-item .prueba-dot.visible { display: inline-block; }
+
+    .lightbox-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
+    .lightbox-overlay.active { display: flex; }
+    .lightbox-toolbar { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 1002; background: rgba(30,30,30,0.8); padding: 8px 16px; border-radius: 30px; backdrop-filter: blur(4px); }
+    .lightbox-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .lightbox-btn:hover { background: rgba(255,255,255,0.3); }
+    .lightbox-close { position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; z-index: 1002; transition: all 0.2s; }
+    .lightbox-close:hover { background: rgba(255,80,80,0.6); }
+    .lightbox-img-container { width: 90vw; height: 85vh; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; }
+    .lightbox-img-container:active { cursor: grabbing; }
+    .lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.1s ease-out; transform-origin: center center; user-select: none; }
+    .lightbox-info { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 13px; background: rgba(0,0,0,0.5); padding: 6px 16px; border-radius: 20px; }
+
+    .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .login-box { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 360px; }
+    .login-box h2 { text-align: center; margin-bottom: 25px; color: #444; font-size: 22px; }
+    .login-box input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .login-box input:focus { border-color: #667eea; }
+    .login-box button { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .login-box button:hover { opacity: 0.9; }
+    .login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+
+    @media (max-width: 1024px) {
+      .main-container { flex-direction: column; height: auto; min-height: calc(100vh - 70px); }
+      .left-panel { width: 100%; min-width: auto; }
+      .right-panel { width: 100%; height: 300px; min-height: 250px; }
+      .photos-section { min-height: 300px; }
+      .photo-card img { max-width: 100%; max-height: 280px; }
+      .tabs-panel { max-height: none; }
+      .ref-item { padding: 14px; font-size: 15px; }
+      .btn-enviar, .btn-header { padding: 14px 28px; font-size: 16px; }
+      .rec-textarea, .obs-textarea { min-height: 100px; font-size: 16px; }
+      .header { flex-wrap: wrap; padding: 10px 15px; }
+      .header-left h1 { font-size: 18px; }
+      .prueba-badge { bottom: 10px; right: 10px; padding: 10px 14px; font-size: 13px; }
+    }
+
+    .lightbox-obs-panel {
+      position: absolute;
+      right: 20px;
+      top: 70px;
+      width: 260px;
+      max-height: 75vh;
+      background: rgba(20, 20, 35, 0.88);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 16px 18px;
+      color: white;
+      font-size: 13px;
+      overflow-y: auto;
+      z-index: 1001;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .lightbox-obs-panel h4 {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #a0a0ff;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: 8px;
+    }
+    .lightbox-obs-panel p {
+      margin: 0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: #ddd;
+      font-size: 13px;
+    }
+    .lightbox-obs-panel .obs-empty {
+      color: #888;
+      font-style: italic;
+    }
+    .lightbox-obs-panel.hidden { display: none; }
+    .lightbox-btn.active { background: rgba(102, 126, 234, 0.5); border-color: rgba(102, 126, 234, 0.7); }
+    @media (max-width: 1024px) {
+      .lightbox-obs-panel {
+        position: relative;
+        right: auto;
+        top: auto;
+        width: 90%;
+        max-height: 200px;
+        margin: 15px auto 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <h2>🔐 Revisión Circuitos SMD</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-left">
+      <h1>📋 Revisión Circuitos SMD</h1>
+      <p>Sistema de inspección de imágenes</p>
+    </div>
+    <div class="header-right">
+      <a href="index.html" class="btn-header" id="btnVolverPortal">&larr; Volver al Portal</a>
+      <span>Sesión activa: <strong id="userName">--</strong></span>
+      <button class="btn-header" id="btnGestion" style="display:none;" onclick="window.location.href='/referencias.html'">⚙️ Referencias</button>
+      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-container" id="appMain" style="display:none;">
+    <div class="left-panel">
+      <div class="photos-section">
+        <div class="photos-title" id="photoTitle">📷 Selecciona una referencia</div>
+        <div class="photos-wrapper" id="photosWrapper">
+          <div style="color:#999;font-size:14px;">Selecciona una referencia para ver su foto</div>
+        </div>
+
+        <!-- Badge flotante NECESITA PRUEBA -->
+        <div class="prueba-badge" id="pruebaBadge">
+          <span>⚠️ NECESITA PRUEBA</span>
+          <button onclick="marcarPruebaHecha()" id="btnPruebaHecha">Marcar como probada</button>
+        </div>
+      </div>
+
+      <!-- Panel de Pestañas: Observaciones / Recomendaciones -->
+      <div class="tabs-panel" id="tabsPanel" style="display:none;">
+        <div class="tabs-header">
+          <button class="tab-btn active" onclick="switchTab('observaciones')" id="tabObs">📋 Observaciones</button>
+          <button class="tab-btn" onclick="switchTab('recomendaciones')" id="tabRec">📝 Recomendaciones</button>
+        </div>
+
+        <!-- Contenido Observaciones -->
+        <div class="tabs-content active" id="contentObs">
+          <div id="obsContainer" style="display:flex;flex-direction:column;gap:8px;height:100%;">
+            <textarea class="obs-textarea" id="obsTextarea" placeholder="No hay observaciones para esta referencia..."></textarea>
+            <div class="obs-meta" id="obsMeta"></div>
+            <div class="obs-actions" id="obsActions"></div>
+          </div>
+        </div>
+
+        <!-- Contenido Recomendaciones -->
+        <div class="tabs-content" id="contentRec">
+          <div id="recListaContainer" style="flex:1;overflow-y:auto;"></div>
+          <div id="recFormContainer" style="flex-shrink:0;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="ref-header">
+        <span>📑 Referencias</span>
+        <span class="ref-count" id="refCount">0</span>
+      </div>
+      <div class="ref-search">
+        <input type="text" id="refSearch" placeholder="Buscar referencia..." oninput="filtrarReferencias()">
+      </div>
+      <div class="ref-list" id="refList"></div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightboxBtn()">&times;</button>
+    <div class="lightbox-toolbar">
+      <button class="lightbox-btn" onclick="zoomOut(event)" title="Alejar">−</button>
+      <button class="lightbox-btn" onclick="zoomReset(event)" title="Restablecer">⟲</button>
+      <button class="lightbox-btn" onclick="zoomIn(event)" title="Acercar">+</button>
+      <button class="lightbox-btn" onclick="toggleObsPanel(event)" title="Mostrar/Ocultar observaciones" id="btnToggleObs">📋</button>
+    </div>
+    <div class="lightbox-img-container" id="imgContainer" style="position: relative;">
+      <img class="lightbox-img" id="lightboxImg" src="" alt="">
+      <div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>
+    </div>
+    <div class="lightbox-obs-panel" id="lightboxObsPanel">
+      <h4>📋 Observaciones</h4>
+      <p id="lightboxObsText">Cargando...</p>
+    </div>
+    <div class="lightbox-info" id="lightboxInfo">Scroll para zoom · Arrastra para mover</div>
+  </div>
+
+  <script>
+    // ==================== ESTADO ====================
+    let token = localStorage.getItem('token');
+    let usuarioActual = null;
+    let permisosUsuario = [];
+    let referencias = [];
+    let referenciaActiva = null;
+    let datosActuales = null;
+    let zoomLevel = 1, isDragging = false, startX, startY, translateX = 0, translateY = 0;
+    let rolesCache = [];
+    let tabActiva = 'observaciones';
+
+    // ==================== LOGIN ====================
+    async function doLogin() {
+      const user = document.getElementById('loginUser').value.trim();
+      const pass = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      err.style.display = 'none';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: user, contrasena: pass })
+        });
+        const data = await res.json();
+        if (data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          usuarioActual = { nombre: data.usuario, rol: data.rol };
+          initApp();
+        } else {
+          err.textContent = data.error || 'Error al iniciar sesión';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'No se pudo conectar al servidor';
+        err.style.display = 'block';
+      }
+    }
+
+    async function doLogout() {
+      await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      localStorage.removeItem('token'); token = null; location.reload();
+    }
+
+    // ==================== INICIO ====================
+    async function initApp() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+
+      try {
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        document.getElementById('userName').textContent = me.usuario || 'Usuario';
+        usuarioActual = me;
+      } catch (e) {}
+
+      await cargarMisPermisos();
+
+      if (tienePermiso('gestion.ver')) {
+        document.getElementById('btnGestion').style.display = 'inline-flex';
+      }
+
+      const btnVolver = document.getElementById('btnVolverPortal');
+      if (btnVolver) {
+        btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+      }
+
+      renderTabObservaciones();
+      renderTabRecomendaciones();
+      cargarReferencias();
+    }
+
+    if (token) {
+      fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(async r => { if (r.ok) { usuarioActual = await r.json(); initApp(); } else localStorage.removeItem('token'); })
+        .catch(() => localStorage.removeItem('token'));
+    }
+
+    // ==================== PERMISOS ====================
+    async function cargarMisPermisos() {
+      try {
+        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        rolesCache = data.roles || [];
+        const miRol = rolesCache.find(r => r.nombre === usuarioActual.rol);
+        permisosUsuario = miRol ? miRol.permisos.map(p => p.codigo) : [];
+      } catch (e) { permisosUsuario = []; }
+    }
+
+    function tienePermiso(codigo) {
+      return permisosUsuario.includes(codigo);
+    }
+
+    // ==================== TABS ====================
+    function switchTab(tab) {
+      tabActiva = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab' + (tab === 'observaciones' ? 'Obs' : 'Rec')).classList.add('active');
+      document.getElementById('content' + (tab === 'observaciones' ? 'Obs' : 'Rec')).classList.add('active');
+      if (tab === 'observaciones' && referenciaActiva) cargarObservaciones();
+      if (tab === 'recomendaciones' && referenciaActiva) cargarRecomendaciones();
+    }
+
+    // ==================== REFERENCIAS ====================
+    async function cargarReferencias() {
+      try {
+        const res = await fetch('/api/referencias', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        referencias = data.referencias || [];
+        renderReferencias(referencias);
+        filtrarReferencias();
+      } catch (e) { console.error('Error cargando referencias:', e); }
+    }
+
+    function renderReferencias(lista) {
+      const container = document.getElementById('refList');
+      document.getElementById('refCount').textContent = lista.length;
+      container.innerHTML = '';
+      lista.forEach(ref => {
+        const div = document.createElement('div');
+        div.className = 'ref-item' + (ref === referenciaActiva ? ' active' : '');
+        div.innerHTML = `<span>${ref}</span><span class="prueba-dot" id="dot-${escapeHtml(ref)}" title="Necesita prueba"></span>`;
+        div.onclick = () => seleccionarReferencia(ref);
+        container.appendChild(div);
+      });
+    }
+
+    function filtrarReferencias() {
+      const q = document.getElementById('refSearch').value.toLowerCase();
+      renderReferencias(referencias.filter(r => r.toLowerCase().includes(q)));
+    }
+
+    async function seleccionarReferencia(ref) {
+      referenciaActiva = ref;
+      filtrarReferencias();
+      document.getElementById('photoTitle').textContent = '📷 ' + referenciaActiva;
+
+      // Mostrar panel de pestañas
+      const tabsPanel = document.getElementById('tabsPanel');
+      const puedeVerObs = tienePermiso('observaciones.ver');
+      const puedeVerRec = tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear');
+      if (puedeVerObs || puedeVerRec) {
+        tabsPanel.style.display = 'flex';
+        document.getElementById('tabObs').style.display = puedeVerObs ? 'block' : 'none';
+        document.getElementById('tabRec').style.display = puedeVerRec ? 'block' : 'none';
+        // Por defecto mostrar Observaciones primero
+        if (puedeVerObs) switchTab('observaciones');
+        else if (puedeVerRec) switchTab('recomendaciones');
+      } else {
+        tabsPanel.style.display = 'none';
+      }
+
+      // Cargar foto
+      try {
+        const res = await fetch('/api/fotos/' + encodeURIComponent(ref), { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        const wrapper = document.getElementById('photosWrapper');
+        wrapper.innerHTML = '';
+        if (data.fotos && data.fotos.length > 0) {
+          data.fotos.forEach(foto => {
+            const card = document.createElement('div');
+            card.className = 'photo-card';
+            card.onclick = () => openLightbox(foto.data, foto.nombre);
+            card.innerHTML = `<img src="${foto.data}" alt="${foto.nombre}"><div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div><div class="photo-name">${foto.nombre}</div>`;
+            wrapper.appendChild(card);
+          });
+        } else {
+          wrapper.innerHTML = '<div style="color:#999;font-size:14px;">No hay foto para esta referencia</div>';
+        }
+      } catch (e) { console.error('Error cargando fotos:', e); }
+
+      // Cargar datos de referencia (para necesita_prueba)
+      try {
+        const res = await fetch('/api/imagen/' + encodeURIComponent(ref), { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) {
+          const data = await res.json();
+          datosActuales = data.datos || {};
+          mostrarBadgePrueba();
+        }
+      } catch (e) {}
+
+      await cargarObservaciones();
+      await cargarRecomendaciones();
+    }
+
+    // ==================== BADGE NECESITA PRUEBA ====================
+    function mostrarBadgePrueba() {
+      const badge = document.getElementById('pruebaBadge');
+      const btn = document.getElementById('btnPruebaHecha');
+      if (!datosActuales || !datosActuales.version_id) {
+        badge.classList.remove('visible');
+        return;
+      }
+      if (datosActuales.necesita_prueba === 1 || datosActuales.necesita_prueba === '1') {
+        badge.classList.add('visible');
+        btn.style.display = tienePermiso('referencias.editar') ? 'inline-block' : 'none';
+      } else {
+        badge.classList.remove('visible');
+      }
+      const dot = document.getElementById('dot-' + referenciaActiva);
+      if (dot) {
+        dot.classList.toggle('visible', datosActuales.necesita_prueba === 1 || datosActuales.necesita_prueba === '1');
+      }
+    }
+
+    async function marcarPruebaHecha() {
+      if (!datosActuales || !datosActuales.version_id) return;
+      try {
+        const res = await fetch('/api/versiones/' + datosActuales.version_id + '/prueba', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ necesita_prueba: false })
+        });
+        if (res.ok) {
+          datosActuales.necesita_prueba = 0;
+          mostrarBadgePrueba();
+          await cargarReferencias();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Error: ' + (err.error || 'No se pudo actualizar'));
+        }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    // ==================== OBSERVACIONES (Tab) ====================
+    function renderTabObservaciones() {
+      const textarea = document.getElementById('obsTextarea');
+      const actions = document.getElementById('obsActions');
+      if (!textarea || !actions) return;
+
+      if (!tienePermiso('observaciones.ver')) {
+        document.getElementById('obsContainer').innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver observaciones.</span></div>';
+        return;
+      }
+
+      textarea.placeholder = 'No hay observaciones para esta referencia...';
+      if (!tienePermiso('observaciones.editar')) {
+        textarea.readOnly = true;
+        textarea.placeholder = 'No tienes permiso para editar observaciones';
+        actions.innerHTML = '';
+      } else {
+        textarea.readOnly = false;
+        actions.innerHTML = `<button class="btn-enviar" id="btnGuardarObs" onclick="guardarObservacion()">💾 Guardar observación</button>`;
+      }
+    }
+
+    async function cargarObservaciones() {
+      if (!referenciaActiva || !tienePermiso('observaciones.ver')) return;
+      const textarea = document.getElementById('obsTextarea');
+      const meta = document.getElementById('obsMeta');
+      if (!textarea) return;
+      try {
+        const res = await fetch('/api/observaciones/' + encodeURIComponent(referenciaActiva), {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 403) { textarea.value = ''; meta.textContent = ''; return; }
+        const data = await res.json();
+        if (data.observacion) {
+          textarea.value = data.observacion.observacion || '';
+          const fecha = data.observacion.actualizado_en
+            ? new Date(data.observacion.actualizado_en).toLocaleString('es-ES')
+            : '';
+          const autor = data.observacion.actualizado_por_nombre || '';
+          meta.textContent = fecha ? `Última actualización: ${fecha}${autor ? ' por ' + autor : ''}` : '';
+        } else {
+          textarea.value = '';
+          meta.textContent = '';
+        }
+      } catch (e) {
+        textarea.value = '';
+        meta.textContent = '';
+      }
+    }
+
+    async function guardarObservacion() {
+      if (!referenciaActiva) return alert('Selecciona una referencia primero');
+      const textarea = document.getElementById('obsTextarea');
+      const btn = document.getElementById('btnGuardarObs');
+      const texto = textarea.value;
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        const res = await fetch('/api/observaciones/' + encodeURIComponent(referenciaActiva), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ observacion: texto })
+        });
+        if (res.ok) {
+          await cargarObservaciones();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Error: ' + (err.error || 'No se pudo guardar'));
+        }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+      finally { btn.disabled = false; btn.textContent = '💾 Guardar observación'; }
+    }
+
+    // ==================== RECOMENDACIONES (Tab) ====================
+    function renderTabRecomendaciones() {
+      const listaContainer = document.getElementById('recListaContainer');
+      const formContainer = document.getElementById('recFormContainer');
+      if (!listaContainer || !formContainer) return;
+
+      if (tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear')) {
+        listaContainer.innerHTML = '<div class="rec-empty">Selecciona una referencia para ver las recomendaciones.</div>';
+      } else {
+        listaContainer.innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver recomendaciones.</span></div>';
+      }
+
+      if (tienePermiso('recomendaciones.crear')) {
+        formContainer.innerHTML = `
+          <div class="rec-form">
+            <textarea class="rec-textarea" id="recInput" placeholder="Escribe una recomendación..."></textarea>
+            <div class="rec-actions"><button class="btn-enviar" id="btnEnviar" onclick="enviarRecomendacion()">Enviar recomendación</button></div>
+          </div>`;
+      } else {
+        formContainer.innerHTML = '';
+      }
+    }
+
+    async function cargarRecomendaciones() {
+      if (!referenciaActiva) return;
+      const listaContainer = document.getElementById('recListaContainer');
+      if (!listaContainer) return;
+
+      const puedeVer = tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear');
+      if (!puedeVer) {
+        listaContainer.innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver recomendaciones.</span></div>';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/recomendaciones/' + encodeURIComponent(referenciaActiva), { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.status === 403) { listaContainer.innerHTML = '<div class="rec-empty">No tienes permiso para ver recomendaciones.</div>'; return; }
+        const data = await res.json();
+        const lista = data.recomendaciones || [];
+        if (lista.length === 0) { listaContainer.innerHTML = '<div class="rec-empty">No hay recomendaciones para esta referencia.</div>'; return; }
+        let html = '<div class="rec-list">';
+        lista.forEach(rec => {
+          const fecha = new Date(rec.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const deleteBtn = tienePermiso('recomendaciones.eliminar') ? `<button class="rec-bubble-delete" onclick="borrarRecomendacion(${rec.id}, event)" title="Eliminar">×</button>` : '';
+          html += `<div class="rec-bubble">${deleteBtn}<div class="rec-bubble-header"><span class="rec-bubble-author">${escapeHtml(rec.autor)}</span><span class="rec-bubble-date">${fecha}</span></div><div class="rec-bubble-text">${escapeHtml(rec.recomendacion)}</div></div>`;
+        });
+        html += '</div>';
+        listaContainer.innerHTML = html;
+      } catch (e) { listaContainer.innerHTML = '<div class="rec-empty">Error al cargar recomendaciones.</div>'; }
+    }
+
+    async function enviarRecomendacion() {
+      if (!referenciaActiva) { alert('Selecciona una referencia primero'); return; }
+      const input = document.getElementById('recInput');
+      const btn = document.getElementById('btnEnviar');
+      const texto = input.value.trim();
+      if (!texto) { alert('Escribe una recomendación'); return; }
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        const res = await fetch('/api/recomendacion', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ referencia: referenciaActiva, recomendacion: texto })
+        });
+        if (res.ok) { input.value = ''; await cargarRecomendaciones(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'Error al guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+      finally { btn.disabled = false; btn.textContent = 'Enviar recomendación'; }
+    }
+
+    async function borrarRecomendacion(id, event) {
+      event.stopPropagation();
+      if (!confirm('¿Seguro que quieres eliminar esta recomendación?')) return;
+      try {
+        const res = await fetch('/api/recomendacion/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarRecomendaciones();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    // ==================== LIGHTBOX ====================
+    function openLightbox(src, nombre) {
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightboxInfo').textContent = nombre + ' · Scroll para zoom · Arrastra para mover';
+      zoomLevel = 1; translateX = 0; translateY = 0; updateTransform();
+      document.getElementById('lightbox').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      // Asegurar panel visible por defecto
+      document.getElementById('lightboxObsPanel').classList.remove('hidden');
+      document.getElementById('btnToggleObs').classList.add('active');
+      // Cargar observaciones en el panel flotante
+      cargarObservacionesLightbox();
+    }
+
+    async function cargarObservacionesLightbox() {
+      const panel = document.getElementById('lightboxObsText');
+      if (!referenciaActiva) { panel.textContent = 'Sin observaciones'; return; }
+      if (!tienePermiso('observaciones.ver')) { panel.textContent = 'Sin permiso para ver observaciones'; return; }
+      try {
+        const res = await fetch('/api/observaciones/' + encodeURIComponent(referenciaActiva), {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) { panel.textContent = 'No se pudieron cargar las observaciones'; return; }
+        const data = await res.json();
+        if (data.observacion && data.observacion.observacion && data.observacion.observacion.trim()) {
+          panel.textContent = data.observacion.observacion;
+        } else {
+          panel.innerHTML = '<span class="obs-empty">Sin observaciones para esta referencia.</span>';
+        }
+      } catch (e) {
+        panel.textContent = 'Error al cargar observaciones';
+      }
+    }
+    function closeLightbox(e) { if (e.target.id === 'lightbox' || e.target.id === 'imgContainer') { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = ''; } }
+    function closeLightboxBtn() { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = ''; }
+    function zoomIn(e) { e.stopPropagation(); zoomLevel = Math.min(zoomLevel + 0.3, 5); updateTransform(); }
+    function toggleObsPanel(e) {
+      e.stopPropagation();
+      const panel = document.getElementById('lightboxObsPanel');
+      const btn = document.getElementById('btnToggleObs');
+      panel.classList.toggle('hidden');
+      btn.classList.toggle('active');
+    }
+    function zoomOut(e) { e.stopPropagation(); zoomLevel = Math.max(zoomLevel - 0.3, 0.3); if (zoomLevel <= 1) { translateX = 0; translateY = 0; } updateTransform(); }
+    function zoomReset(e) { e.stopPropagation(); zoomLevel = 1; translateX = 0; translateY = 0; updateTransform(); }
+    function updateTransform() { document.getElementById('lightboxImg').style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + zoomLevel + ')'; }
+
+    document.getElementById('imgContainer').addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) zoomLevel = Math.min(zoomLevel + 0.15, 5);
+      else zoomLevel = Math.max(zoomLevel - 0.15, 0.3);
+      if (zoomLevel <= 1) { translateX = 0; translateY = 0; }
+      updateTransform();
+    });
+    const lbContainer = document.getElementById('imgContainer');
+    lbContainer.addEventListener('mousedown', (e) => { if (zoomLevel <= 1) return; isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; lbContainer.style.cursor = 'grabbing'; });
+    window.addEventListener('mousemove', (e) => { if (!isDragging) return; translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform(); });
+    window.addEventListener('mouseup', () => { isDragging = false; lbContainer.style.cursor = 'grab'; });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (
+        (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || e.key === 'i' || e.key === 'j')) ||
+        e.key === 'F12'
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    // ==================== UTILS ====================
+    function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>

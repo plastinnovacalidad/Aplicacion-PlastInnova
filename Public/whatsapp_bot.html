@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Registros WhatsApp - Calidad & Circuitos SMD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+
+    .header { background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 24px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
+    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+    .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-action:hover { background: rgba(255,255,255,0.35); }
+
+    .container { flex: 1; padding: 30px 40px; max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 30px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+    .stat-card { background: white; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px; border-left: 5px solid #25D366; }
+    .stat-icon { font-size: 36px; }
+    .stat-info h3 { font-size: 14px; color: #718096; font-weight: 600; }
+    .stat-info p { font-size: 24px; color: #2d3748; font-weight: 700; margin-top: 4px; }
+
+    .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
+    .section-header { padding: 20px 25px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+    .section-header h2 { font-size: 18px; color: #2d3748; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+    .table-responsive { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    th { background: #edf2f7; color: #4a5568; padding: 12px 16px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #2d3748; }
+    tr:hover { background: #f7fafc; }
+
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge.entrada { background: #c6f6d5; color: #22543d; }
+    .badge.salida { background: #fed7d7; color: #742a2a; }
+    .badge.admin { background: #e2e8f0; color: #4a5568; }
+
+    .btn-sm { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s; }
+    .btn-sm.danger { background: #e53e3e; color: white; }
+    .btn-sm.danger:hover { opacity: 0.85; }
+    .btn-sm.primary { background: #3182ce; color: white; }
+    .btn-sm.primary:hover { opacity: 0.85; }
+
+    .toolbar { display: flex; gap: 10px; align-items: center; }
+    .toolbar select, .toolbar input { padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
+
+    .empty-state { text-align: center; padding: 40px; color: #a0aec0; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>💬 Control de Registros WhatsApp (Bot)</h1>
+      <p>Monitoreo en tiempo real de entradas, salidas y sesiones activas en áreas</p>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <button class="btn-action" onclick="enviarResumenManual()">📊 Enviar Resumen Diario</button>
+      <a href="index.html" class="btn-action">← Volver al Portal</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">🟢</div>
+        <div class="stat-info">
+          <h3>Sesiones Activas Ahora</h3>
+          <p id="statSesionesActivas">0</p>
+        </div>
+      </div>
+      <div class="stat-card" style="border-left-color: #3182ce;">
+        <div class="stat-icon">📋</div>
+        <div class="stat-info">
+          <h3>Registros Totales (Historial)</h3>
+          <p id="statRegistrosTotal">0</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Sessions Section -->
+    <div class="section-card">
+      <div class="section-header">
+        <h2>🟢 Sesiones Activas en Áreas</h2>
+        <button class="btn-sm primary" onclick="cargarDatos()">🔄 Actualizar</button>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Persona</th>
+              <th>Teléfono / ID</th>
+              <th>Área</th>
+              <th>Hora de Entrada</th>
+              <th>Acciones Admin</th>
+            </tr>
+          </thead>
+          <tbody id="tablaSesionesActivas">
+            <tr><td colspan="5" class="empty-state">Cargando sesiones...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Historical Logs Section -->
+    <div class="section-card">
+      <div class="section-header">
+        <h2>📜 Historial de Entradas y Salidas</h2>
+        <div class="toolbar">
+          <select id="filtroLimite" onchange="cargarDatos()">
+            <option value="50">Últimos 50</option>
+            <option value="100" selected>Últimos 100</option>
+            <option value="500">Últimos 500</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Persona</th>
+              <th>Tipo</th>
+              <th>Área</th>
+              <th>Entrada</th>
+              <th>Salida</th>
+              <th>Duración</th>
+              <th>Fecha / Registro</th>
+            </tr>
+          </thead>
+          <tbody id="tablaRegistrosHistorial">
+            <tr><td colspan="8" class="empty-state">Cargando registros...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) location.href = 'index.html';
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (res.ok && data) {
+          document.getElementById('userNameDisplay').textContent = `${data.nombre || data.usuario} (${data.rol || 'Usuario'})`;
+        } else {
+          location.href = 'index.html';
+        }
+      } catch (e) {
+        location.href = 'index.html';
+      }
+    }
+
+    async function cargarDatos() {
+      try {
+        // Cargar sesiones activas
+        const resSes = await fetch('/api/whatsapp/sesiones', { headers: { 'Authorization': 'Bearer ' + token } });
+        const dataSes = await resSes.json();
+        const sesiones = dataSes.sesiones || [];
+
+        document.getElementById('statSesionesActivas').textContent = sesiones.length;
+        const tbodySes = document.getElementById('tablaSesionesActivas');
+        if (sesiones.length === 0) {
+          tbodySes.innerHTML = `<tr><td colspan="5" class="empty-state">No hay sesiones activas en este momento.</td></tr>`;
+        } else {
+          tbodySes.innerHTML = sesiones.map(s => `
+            <tr>
+              <td><strong>${s.nombre}</strong></td>
+              <td><code>${s.telefono}</code></td>
+              <td>📍 <strong>${s.area_nombre}</strong></td>
+              <td>🕐 ${s.entrada}</td>
+              <td>
+                <button class="btn-sm danger" onclick="cerrarSesion('${s.telefono}')">🔴 Cerrar Sesión</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // Cargar historial
+        const limite = document.getElementById('filtroLimite').value;
+        const resReg = await fetch(`/api/whatsapp/registros?limite=${limite}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const dataReg = await resReg.json();
+        const registros = dataReg.registros || [];
+
+        document.getElementById('statRegistrosTotal').textContent = registros.length;
+        const tbodyReg = document.getElementById('tablaRegistrosHistorial');
+        if (registros.length === 0) {
+          tbodyReg.innerHTML = `<tr><td colspan="8" class="empty-state">No hay registros históricos.</td></tr>`;
+        } else {
+          tbodyReg.innerHTML = registros.map(r => `
+            <tr>
+              <td>#${r.id}</td>
+              <td><strong>${r.nombre}</strong> <br><small style="color:#718096">${r.telefono}</small></td>
+              <td>
+                <span class="badge ${r.tipo === 'ENTRADA' ? 'entrada' : 'salida'}">${r.tipo}</span>
+                ${r.cerrado_por_admin ? '<span class="badge admin" title="Cerrado por administrador">Admin</span>' : ''}
+              </td>
+              <td>📍 ${r.area_nombre || '-'}</td>
+              <td>${r.entrada || '-'}</td>
+              <td>${r.salida || '-'}</td>
+              <td><strong>${r.duracion || '-'}</strong></td>
+              <td><small>${new Date(r.timestamp_entrada || r.timestamp_salida || Date.now()).toLocaleString()}</small></td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {
+        console.error('Error cargando datos WhatsApp:', e);
+      }
+    }
+
+    async function cerrarSesion(telefono) {
+      if (!confirm(`¿Estás seguro de cerrar la sesión activa para ${telefono}?`)) return;
+      try {
+        const res = await fetch('/api/whatsapp/cerrar-sesion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ telefono })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('Sesión cerrada correctamente.');
+          cargarDatos();
+        } else {
+          alert(data.error || 'Error cerrando sesión');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    async function enviarResumenManual() {
+      if (!confirm('¿Enviar resumen diario actual al administrador por WhatsApp?')) return;
+      try {
+        const res = await fetch('/api/whatsapp/resumen', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('Resumen enviado exitosamente.');
+        } else {
+          alert(data.error || 'Error enviando resumen');
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+    }
+
+    checkAuth();
+    cargarDatos();
+    setInterval(cargarDatos, 10000); // Auto-refresh every 10s
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "app-circuitos-smd",
+  "version": "1.0.0",
+  "description": "Aplicación para revisar circuitos SMD con fotos y recomendaciones",
+  "main": "app_circuitos.js",
+  "scripts": {
+    "start": "node app_circuitos.js",
+    "dev": "node app_circuitos.js"
+  },
+  "keywords": [
+    "circuitos",
+    "smd",
+    "fotografia"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^2.2.0",
+    "puppeteer": "^21.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.35.3",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1",
+    "whatsapp-web.js": "^1.23.0",
+    "xlsx": "^0.18.5"
+  }
+}

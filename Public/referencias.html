@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración de Referencias - Circuitos SMD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+
+    .header { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); flex-shrink: 0; }
+    .header-left h1 { font-size: 22px; font-weight: 600; }
+    .header-left p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+    .btn-header { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-header:hover { background: rgba(255,255,255,0.35); }
+    .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+    .btn-logout:hover { background: rgba(255,255,255,0.35); }
+
+    .main-container { display: flex; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
+    .left-nav { width: 240px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+    .nav-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; font-weight: 700; font-size: 14px; text-align: center; }
+    .nav-item { padding: 14px 18px; cursor: pointer; font-size: 14px; color: #555; border-left: 4px solid transparent; transition: all 0.15s; display: flex; align-items: center; gap: 10px; }
+    .nav-item:hover { background: #f0f3ff; color: #667eea; border-left-color: #d0d8ff; }
+    .nav-item.active { background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); color: #667eea; border-left-color: #667eea; font-weight: 600; }
+    .nav-item.hidden { display: none; }
+
+    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; }
+    .content-title { font-size: 20px; font-weight: 700; color: #444; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #eee; }
+
+    .form-grid { display: grid; grid-template-columns: 160px 1fr; gap: 14px 18px; align-items: center; max-width: 700px; }
+    .form-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
+    .form-grid input, .form-grid select, .form-grid textarea { padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .form-grid textarea { resize: vertical; min-height: 60px; }
+    .form-grid .file-input { padding: 8px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; cursor: pointer; }
+    .form-grid .file-input:hover { border-color: #667eea; background: #f0f3ff; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; max-width: 700px; }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #f0f0f0; color: #555; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-secondary:hover { background: #e0e0e0; }
+    .form-msg { padding: 12px 16px; border-radius: 8px; margin-top: 15px; font-size: 14px; display: none; }
+    .form-msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+    .form-msg.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+
+    .edit-search { display: flex; gap: 10px; margin-bottom: 20px; max-width: 600px; }
+    .edit-search input { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    .edit-search input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .edit-ref-list { margin-bottom: 20px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 6px; }
+    .edit-ref-item { padding: 10px 14px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; transition: all 0.15s; }
+    .edit-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
+    .edit-ref-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: transparent; }
+
+    .edit-tabs-header { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; gap: 4px; }
+    .edit-tab-btn { padding: 10px 20px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #888; border-bottom: 3px solid transparent; transition: all 0.15s; border-radius: 6px 6px 0 0; }
+    .edit-tab-btn:hover { color: #667eea; background: #f0f3ff; }
+    .edit-tab-btn.active { color: #667eea; border-bottom-color: #667eea; background: #f0f3ff; }
+    .edit-tab-content { display: none; }
+    .edit-tab-content.active { display: block; }
+
+    .info-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 18px; align-items: center; max-width: 700px; margin-bottom: 20px; }
+    .info-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
+    .info-grid .readonly { padding: 10px 12px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; font-size: 14px; color: #666; }
+    .badge-activa { background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
+    .badge-obsoleta { background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
+
+    .section-box { border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-bottom: 20px; background: #fafbfc; }
+    .section-box h4 { font-size: 15px; font-weight: 700; color: #444; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+    .section-box p.desc { font-size: 13px; color: #888; margin-bottom: 15px; }
+
+    .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .login-box { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 360px; }
+    .login-box h2 { text-align: center; margin-bottom: 25px; color: #444; font-size: 22px; }
+    .login-box input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    .login-box button { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+    .rec-empty { color: #999; font-style: italic; font-size: 14px; padding: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <h2>🔐 Administración Referencias</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-left">
+      <h1>📦 Administración de Referencias SMD</h1>
+      <p>Creación y modificación de referencias</p>
+    </div>
+    <div class="header-right">
+      <span>Sesión activa: <strong id="userName">--</strong></span>
+      <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
+      <button class="btn-header" onclick="window.location.href='smd.html'">📋 Revisión</button>
+      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="main-container" id="appMain" style="display:none;">
+    <div class="left-nav">
+      <div class="nav-header">📂 Menú</div>
+      <div class="nav-item active" id="navCrear" onclick="switchSection('crear')">
+        <span>📷</span> Crear Referencia
+      </div>
+      <div class="nav-item" id="navEditar" onclick="switchSection('editar')">
+        <span>🗄️</span> Editar Referencia
+      </div>
+    </div>
+
+    <div class="content-area" id="contentArea">
+      <div id="secCrear">
+        <div class="content-title">📷 Crear Nueva Referencia</div>
+        <div class="form-grid">
+          <label>Código base *</label>
+          <input type="text" id="crearCodigo" placeholder="Ej: REF-001">
+          <label>Carpeta destino</label>
+          <select id="crearCarpetaIdx">
+            <option value="1">C:\\Users\\produ\\OneDrive\\Escritorio\\27.2 Imagen_Circuito</option>
+            <option value="0">E:\\</option>
+          </select>
+          <label>Imagen *</label>
+          <input type="file" id="crearImagen" accept="image/*" class="file-input">
+          <label>Motivo / Observación</label>
+          <textarea id="crearMotivo" placeholder="¿Por qué se crea esta referencia? (opcional)"></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="limpiarCrear()">Limpiar</button>
+          <button class="btn-primary" id="btnCrearRef" onclick="crearReferencia()">Crear referencia</button>
+        </div>
+        <div class="form-msg" id="crearMsg"></div>
+      </div>
+
+      <div id="secEditar" style="display:none;">
+        <div class="content-title">🗄️ Editar Referencia</div>
+        <div class="edit-search">
+          <input type="text" id="editSearchRef" placeholder="Buscar referencia..." oninput="filtrarRefsEditar()">
+        </div>
+        <div class="edit-ref-list" id="editRefList"></div>
+
+        <div id="editFormContainer" style="display:none;">
+          <div class="edit-tabs-header">
+            <button class="edit-tab-btn active" onclick="switchEditTab('info')" id="editTabInfo">📋 Información</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('modif')" id="editTabModif">✏️ Modificación de versión</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('nueva')" id="editTabNueva">🆕 Nueva versión</button>
+          </div>
+
+          <div class="edit-tab-content active" id="editContentInfo">
+            <div class="info-grid">
+              <label>Código base</label>
+              <div class="readonly" id="infoCodigo">--</div>
+              <label>Versión actual</label>
+              <div class="readonly" id="infoVersion">--</div>
+              <label>Estado</label>
+              <div class="readonly" id="infoEstado">--</div>
+              <label>¿Necesita prueba?</label>
+              <div class="readonly">
+                <select id="selectPrueba" onchange="cambiarPrueba()" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;font-size:14px;cursor:pointer;min-width:160px;">
+                  <option value="1">SÍ - PENDIENTE</option>
+                  <option value="0">NO - PROBADA</option>
+                </select>
+              </div>
+              <label>Creado por</label>
+              <div class="readonly" id="infoCreadoPor">--</div>
+              <label>Fecha creación</label>
+              <div class="readonly" id="infoFecha">--</div>
+            </div>
+          </div>
+
+          <div class="edit-tab-content" id="editContentModif">
+            <div class="section-box" style="margin-bottom:0;">
+              <h4>✏️ Modificación de versión actual</h4>
+              <p class="desc">Sube una nueva imagen que reemplazará la versión activa actual.</p>
+              <div class="form-grid">
+                <label>Nueva imagen *</label>
+                <input type="file" id="modifImagen" accept="image/*" class="file-input">
+                <label>Motivo del cambio *</label>
+                <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza la imagen actual?"></textarea>
+              </div>
+              <div class="form-actions" style="margin-top:15px;">
+                <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()">🔄 Reemplazar imagen</button>
+              </div>
+              <div class="form-msg" id="modifMsg"></div>
+            </div>
+          </div>
+
+          <div class="edit-tab-content" id="editContentNueva">
+            <div class="section-box" style="margin-bottom:0;">
+              <h4>🆕 Subir nueva versión</h4>
+              <p class="desc">Esto generará automáticamente la siguiente versión.</p>
+              <div class="form-grid">
+                <label>Carpeta destino</label>
+                <select id="nuevaVerCarpetaIdx">
+                  <option value="1">C:\\Users\\produ\\OneDrive\\Escritorio\\27.2 Imagen_Circuito</option>
+                  <option value="0">E:\\</option>
+                </select>
+                <label>Versión (opcional)</label>
+                <input type="text" id="nuevaVerNumero" placeholder="Ej: V4 (dejar vacío para automático)">
+                <label>Imagen *</label>
+                <input type="file" id="nuevaVerImagen" accept="image/*" class="file-input">
+                <label>Motivo del cambio</label>
+                <textarea id="nuevaVerMotivo" placeholder="¿Por qué se sube esta nueva versión?"></textarea>
+              </div>
+              <div class="form-actions">
+                <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersion()">⬆️ Subir nueva versión</button>
+              </div>
+              <div class="form-msg" id="nuevaVerMsg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('token');
+    let usuarioActual = null;
+    let permisosUsuario = [];
+    let referencias = [];
+    let referenciaEditando = null;
+    let datosEditando = null;
+    let seccionActual = 'crear';
+    let editTabActiva = 'info';
+
+    async function doLogin() {
+      const user = document.getElementById('loginUser').value.trim();
+      const pass = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      err.style.display = 'none';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: user, contrasena: pass })
+        });
+        const data = await res.json();
+        if (data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          usuarioActual = { nombre: data.usuario, rol: data.rol };
+          initApp();
+        } else {
+          err.textContent = data.error || 'Error al iniciar sesión';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'No se pudo conectar al servidor';
+        err.style.display = 'block';
+      }
+    }
+
+    async function doLogout() {
+      await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      localStorage.removeItem('token'); token = null; location.reload();
+    }
+
+    async function initApp() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+      try {
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        document.getElementById('userName').textContent = me.usuario || 'Usuario';
+        usuarioActual = me;
+      } catch (e) {}
+      await cargarMisPermisos();
+      if (!tienePermiso('gestion.ver')) {
+        alert('No tienes permiso para acceder a administración de referencias.');
+        location.href = 'index.html';
+        return;
+      }
+      if (tienePermiso('referencias.crear')) document.getElementById('navCrear').classList.remove('hidden');
+      else document.getElementById('navCrear').classList.add('hidden');
+      if (tienePermiso('referencias.editar')) document.getElementById('navEditar').classList.remove('hidden');
+      else document.getElementById('navEditar').classList.add('hidden');
+
+      const btnVolver = document.getElementById('btnVolverPortal');
+      if (btnVolver) {
+        btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+      }
+      
+      await cargarReferencias();
+      switchSection(tienePermiso('referencias.crear') ? 'crear' : 'editar');
+    }
+
+    if (token) {
+      fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(async r => { if (r.ok) { usuarioActual = await r.json(); initApp(); } else localStorage.removeItem('token'); })
+        .catch(() => localStorage.removeItem('token'));
+    }
+
+    async function cargarMisPermisos() {
+      try {
+        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        const rolesCache = data.roles || [];
+        const miRol = rolesCache.find(r => r.nombre === usuarioActual.rol);
+        permisosUsuario = miRol ? miRol.permisos.map(p => p.codigo) : [];
+      } catch (e) { permisosUsuario = []; }
+    }
+
+    function tienePermiso(codigo) {
+      return permisosUsuario.includes(codigo);
+    }
+
+    function switchSection(sec) {
+      seccionActual = sec;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('secCrear').style.display = 'none';
+      document.getElementById('secEditar').style.display = 'none';
+      const navMap = { crear: 'navCrear', editar: 'navEditar' };
+      if (navMap[sec]) document.getElementById(navMap[sec]).classList.add('active');
+      document.getElementById('sec' + sec.charAt(0).toUpperCase() + sec.slice(1)).style.display = 'block';
+      if (sec === 'editar') renderEditarSection();
+    }
+
+    function switchEditTab(tab) {
+      editTabActiva = tab;
+      document.querySelectorAll('.edit-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.edit-tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('editTab' + (tab.charAt(0).toUpperCase() + tab.slice(1))).classList.add('active');
+      document.getElementById('editContent' + (tab.charAt(0).toUpperCase() + tab.slice(1))).classList.add('active');
+    }
+
+    function limpiarCrear() {
+      document.getElementById('crearCodigo').value = '';
+      document.getElementById('crearImagen').value = '';
+      document.getElementById('crearMotivo').value = '';
+      document.getElementById('crearMsg').style.display = 'none';
+    }
+
+    async function crearReferencia() {
+      const codigo = document.getElementById('crearCodigo').value.trim();
+      const carpetaIdx = document.getElementById('crearCarpetaIdx').value;
+      const fileInput = document.getElementById('crearImagen');
+      const motivo = document.getElementById('crearMotivo').value.trim();
+      const msg = document.getElementById('crearMsg');
+      msg.style.display = 'none';
+      if (!codigo) { alert('Ingrese un código base'); return; }
+      if (fileInput.files.length === 0) { alert('Seleccione una imagen'); return; }
+
+      const fd = new FormData();
+      fd.append('codigo_base', codigo);
+      fd.append('carpeta_idx', carpetaIdx);
+      fd.append('imagen', fileInput.files[0]);
+      fd.append('motivo', motivo);
+
+      const btn = document.getElementById('btnCrearRef');
+      btn.disabled = true; btn.textContent = 'Creando...';
+      try {
+        const res = await fetch('/api/referencias', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success';
+          msg.textContent = 'Referencia creada exitosamente.';
+          limpiarCrear();
+          await cargarReferencias();
+        } else {
+          msg.className = 'form-msg error';
+          msg.textContent = data.error || 'Error al crear';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error';
+        msg.textContent = 'Error de conexión';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Crear referencia';
+      }
+    }
+
+    async function cargarReferencias() {
+      try {
+        const res = await fetch('/api/referencias', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        referencias = data.referencias || [];
+        if (seccionActual === 'editar') renderEditarSection();
+      } catch (e) { referencias = []; }
+    }
+
+    function renderEditarSection() {
+      filtrarRefsEditar();
+    }
+
+    function filtrarRefsEditar() {
+      const q = (document.getElementById('editSearchRef').value || '').toLowerCase();
+      const list = document.getElementById('editRefList');
+      list.innerHTML = '';
+      const filtradas = referencias.filter(r => r.toLowerCase().includes(q));
+      if (filtradas.length === 0) {
+        list.innerHTML = '<div class="rec-empty" style="padding:10px;">No se encontraron referencias</div>';
+        return;
+      }
+      filtradas.forEach(codigoBase => {
+        const item = document.createElement('div');
+        item.className = 'edit-ref-item' + (referenciaEditando === codigoBase ? ' active' : '');
+        item.textContent = codigoBase;
+        item.onclick = (e) => seleccionarRefEditar(codigoBase, e);
+        list.appendChild(item);
+      });
+    }
+
+    async function seleccionarRefEditar(codigoBase, e) {
+      referenciaEditando = codigoBase;
+      document.querySelectorAll('.edit-ref-item').forEach(el => el.classList.remove('active'));
+      if (e && e.target) e.target.classList.add('active');
+      await cargarDatosEdicion(codigoBase);
+    }
+
+    async function cargarDatosEdicion(codigoBase) {
+      try {
+        const res = await fetch(`/api/imagen/${encodeURIComponent(codigoBase)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        datosEditando = data.datos || {};
+        document.getElementById('infoCodigo').textContent = datosEditando.codigo_base || codigoBase;
+        document.getElementById('infoVersion').textContent = datosEditando.version_actual || 'Sin versión';
+        document.getElementById('infoEstado').textContent = datosEditando.estado || '--';
+        const selPrueba = document.getElementById('selectPrueba');
+        selPrueba.value = (datosEditando.necesita_prueba === 1) ? '1' : '0';
+        document.getElementById('infoCreadoPor').textContent = datosEditando.creado_por || '--';
+        document.getElementById('infoFecha').textContent = datosEditando.fecha_creacion || '--';
+
+        document.getElementById('editFormContainer').style.display = 'block';
+        switchEditTab('info');
+      } catch (e) { alert('Error cargando detalles'); }
+    }
+
+    async function cambiarPrueba() {
+      if (!datosEditando || !datosEditando.version_id) return;
+      const val = parseInt(document.getElementById('selectPrueba').value);
+      const verId = datosEditando.version_id;
+      try {
+        const res = await fetch(`/api/versiones/${verId}/prueba`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ necesita_prueba: val })
+        });
+        if (res.ok) {
+          datosEditando.necesita_prueba = val;
+        } else {
+          alert('Error al actualizar estado de prueba');
+        }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function modificarVersionActual() {
+      if (!datosEditando || !datosEditando.codigo_base) return;
+      const fileInput = document.getElementById('modifImagen');
+      const motivo = document.getElementById('modifMotivo').value.trim();
+      const msg = document.getElementById('modifMsg');
+      msg.style.display = 'none';
+      if (fileInput.files.length === 0) { alert('Seleccione la nueva imagen'); return; }
+      if (!motivo) { alert('Ingrese el motivo del cambio'); return; }
+
+      const fd = new FormData();
+      fd.append('imagen', fileInput.files[0]);
+      fd.append('motivo', motivo);
+
+      try {
+        const res = await fetch(`/api/referencias/${encodeURIComponent(datosEditando.codigo_base)}/modificar-version`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success';
+          msg.textContent = 'Versión modificada exitosamente.';
+          document.getElementById('modifImagen').value = '';
+          document.getElementById('modifMotivo').value = '';
+          await cargarDatosEdicion(referenciaEditando);
+        } else {
+          msg.className = 'form-msg error';
+          msg.textContent = data.error || 'Error al modificar';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+
+    async function subirNuevaVersion() {
+      if (!datosEditando || !datosEditando.codigo_base) return;
+      const carpetaIdx = document.getElementById('nuevaVerCarpetaIdx').value;
+      const versionNum = document.getElementById('nuevaVerNumero').value.trim();
+      const fileInput = document.getElementById('nuevaVerImagen');
+      const motivo = document.getElementById('nuevaVerMotivo').value.trim();
+      const msg = document.getElementById('nuevaVerMsg');
+      msg.style.display = 'none';
+      if (fileInput.files.length === 0) { alert('Seleccione la imagen para la nueva versión'); return; }
+
+      const fd = new FormData();
+      fd.append('carpeta_idx', carpetaIdx);
+      if (versionNum) fd.append('version', versionNum);
+      fd.append('imagen', fileInput.files[0]);
+      fd.append('motivo', motivo);
+
+      try {
+        const res = await fetch(`/api/referencias-codigo/${encodeURIComponent(datosEditando.codigo_base)}/versiones`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success';
+          msg.textContent = 'Nueva versión subida exitosamente.';
+          document.getElementById('nuevaVerNumero').value = '';
+          document.getElementById('nuevaVerImagen').value = '';
+          document.getElementById('nuevaVerMotivo').value = '';
+          await cargarDatosEdicion(referenciaEditando);
+        } else {
+          msg.className = 'form-msg error';
+          msg.textContent = data.error || 'Error al subir';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+  </script>
+</body>
+</html>

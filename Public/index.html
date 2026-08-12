@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Principal - Calidad & Circuitos SMD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 24px; font-weight: 600; }
+    .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
+    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+    .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+    .btn-logout:hover { background: rgba(255,255,255,0.35); }
+
+    .main-portal { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
+    .portal-title { text-align: center; margin-bottom: 40px; }
+    .portal-title h2 { font-size: 32px; color: #2d3748; font-weight: 700; margin-bottom: 10px; }
+    .portal-title p { font-size: 16px; color: #718096; }
+
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px; width: 100%; max-width: 900px; }
+    
+    .portal-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); transition: transform 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; cursor: pointer; border: 1px solid #e2e8f0; text-decoration: none; color: inherit; }
+    .portal-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2); border-color: #cbd5e0; }
+
+    .card-banner { height: 160px; display: flex; align-items: center; justify-content: center; color: white; font-size: 48px; }
+    .card-banner.smd { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .card-banner.garantias { background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); }
+
+    .card-body { padding: 30px; display: flex; flex-direction: column; flex: 1; }
+    .card-body h3 { font-size: 22px; color: #2d3748; margin-bottom: 12px; font-weight: 600; }
+    .card-body p { font-size: 14px; color: #718096; line-height: 1.6; margin-bottom: 20px; flex: 1; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 14px; }
+    .card-footer.smd-color { color: #667eea; }
+    .card-footer.garantias-color { color: #dd6b20; }
+    .card-footer span { display: inline-flex; align-items: center; gap: 6px; }
+
+    /* Login Overlay */
+    .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .login-box { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 380px; }
+    .login-box h2 { text-align: center; margin-bottom: 8px; color: #2d3748; font-size: 24px; }
+    .login-box p { text-align: center; color: #718096; font-size: 13px; margin-bottom: 25px; }
+    .login-box input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .login-box input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
+    .login-box button { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .login-box button:hover { opacity: 0.9; }
+    .login-error { color: #e53e3e; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Login Overlay -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <h2>Bienvenido</h2>
+      <p>Sistema Integrado de Calidad y Circuitos</p>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Ingresar al Sistema</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header">
+    <div>
+      <h1>Sistema de Calidad y Control</h1>
+      <p>Plataforma Centralizada - Circuitos SMD & Garantías</p>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <button class="btn-logout" onclick="window.location.href='gestion.html'" title="Gestión y Permisos" style="font-size: 16px; padding: 6px 12px; display:none;" id="btnGestionHeader">⚙️</button>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div class="main-portal">
+    <div class="portal-title">
+      <h2>Seleccione un Módulo de Trabajo</h2>
+      <p>Elija la herramienta a la que desea acceder</p>
+    </div>
+
+    <div class="cards-grid">
+      <!-- Card SMD -->
+      <a href="smd.html" class="portal-card">
+        <div class="card-banner smd">⚡</div>
+        <div class="card-body">
+          <h3>Módulo Circuitos SMD</h3>
+          <p>Revisión detallada de circuitos SMD, visualización de fotografías de alta resolución, control de versiones, observaciones y recomendaciones técnicas.</p>
+          <div class="card-footer smd-color">
+            <span>Abrir Módulo SMD</span> &rarr;
+          </div>
+        </div>
+      </a>
+
+      <!-- Card Garantias -->
+      <a href="garantias.html" class="portal-card">
+        <div class="card-banner garantias">📋</div>
+        <div class="card-body">
+          <h3>Tablero y Gestión de Garantías</h3>
+          <p>Gestión centralizada de garantías, autocompletado rápido por NIT de cliente, búsqueda de referencias de producto terminado y panel analítico completo.</p>
+          <div class="card-footer garantias-color">
+            <span>Abrir Módulo de Garantías</span> &rarr;
+          </div>
+        </div>
+      </a>
+
+      <!-- Card WhatsApp Bot -->
+      <a href="whatsapp_bot.html" class="portal-card" id="cardWhatsApp" style="display: none;">
+        <div class="card-banner" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);">💬</div>
+        <div class="card-body">
+          <h3>Control de Registros WhatsApp</h3>
+          <p>Supervisión en tiempo real de entradas y salidas de personal por áreas a través del bot de WhatsApp, control de sesiones activas y reportes diarios.</p>
+          <div class="card-footer" style="color: #25D366;">
+            <span>Abrir Módulo WhatsApp</span> &rarr;
+          </div>
+        </div>
+      </a>
+
+      <!-- Card Metrologia -->
+      <a href="metrologia.html" class="portal-card" id="cardMetrologia" style="display: none;">
+        <div class="card-banner" style="background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);">📐</div>
+        <div class="card-body">
+          <h3>Metrología y Planos de Molde</h3>
+          <p>Gestión avanzada de planos técnicos de moldes, control de cotas, tolerancias máximas y mínimas, registro de inspecciones reales y auditoría de cambios.</p>
+          <div class="card-footer" style="color: #3182ce;">
+            <span>Abrir Módulo Metrología</span> &rarr;
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+
+    async function cargarMisPermisos() {
+      try {
+        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        const rolesCache = data.roles || [];
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        const miRol = rolesCache.find(r => r.nombre === me.rol);
+        permisosUsuario = miRol ? miRol.permisos.map(p => p.codigo) : [];
+      } catch (e) { permisosUsuario = []; }
+    }
+
+    function tienePermiso(codigo) {
+      return permisosUsuario.includes(codigo);
+    }
+
+    async function checkSession() {
+      if (!token) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        return;
+      }
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (res.ok && data) {
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('userNameDisplay').textContent = `${data.nombre || data.usuario} (${data.rol_nombre || data.rol || 'Usuario'})`;
+          
+          await cargarMisPermisos();
+
+          const btnGestion = document.getElementById('btnGestionHeader');
+          if (btnGestion) {
+            btnGestion.style.display = (tienePermiso('roles.gestionar') || tienePermiso('gestion.ver')) ? 'inline-block' : 'none';
+          }
+
+          const cardWA = document.getElementById('cardWhatsApp');
+          if (cardWA) {
+            cardWA.style.display = (tienePermiso('whatsapp.bot.ver') || tienePermiso('gestion.ver')) ? 'flex' : 'none';
+          }
+
+          const cardMet = document.getElementById('cardMetrologia');
+          if (cardMet) {
+            cardMet.style.display = (tienePermiso('metrologia.ver') || tienePermiso('gestion.ver')) ? 'flex' : 'none';
+          }
+
+          // If user does not have garantias.ver and gestion.ver (e.g. Operario), redirect directly to smd.html
+          if (!tienePermiso('garantias.ver') && !tienePermiso('gestion.ver')) {
+            location.href = 'smd.html';
+            return;
+          }
+        } else {
+          localStorage.removeItem('token');
+          token = null;
+          document.getElementById('loginOverlay').style.display = 'flex';
+        }
+      } catch (e) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+      }
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      if (!u || !p) {
+        err.textContent = 'Ingrese usuario y contraseña';
+        err.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: u, contrasena: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          await checkSession();
+        } else {
+          err.textContent = data.error || 'Credenciales inválidas';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'Error de conexión';
+        err.style.display = 'block';
+      }
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      location.reload();
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>

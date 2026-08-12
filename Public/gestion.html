@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Roles y Usuarios - Circuitos SMD</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+
+    .header { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); flex-shrink: 0; }
+    .header-left h1 { font-size: 22px; font-weight: 600; }
+    .header-left p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+    .btn-header { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-header:hover { background: rgba(255,255,255,0.35); }
+    .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+    .btn-logout:hover { background: rgba(255,255,255,0.35); }
+
+    .main-container { display: flex; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
+    .left-nav { width: 240px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+    .nav-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; font-weight: 700; font-size: 14px; text-align: center; }
+    .nav-item { padding: 14px 18px; cursor: pointer; font-size: 14px; color: #555; border-left: 4px solid transparent; transition: all 0.15s; display: flex; align-items: center; gap: 10px; }
+    .nav-item:hover { background: #f0f3ff; color: #667eea; border-left-color: #d0d8ff; }
+    .nav-item.active { background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); color: #667eea; border-left-color: #667eea; font-weight: 600; }
+    .nav-item.hidden { display: none; }
+
+    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; }
+    .content-title { font-size: 20px; font-weight: 700; color: #444; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #eee; }
+
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; }
+    .admin-table td { padding: 10px 12px; border-bottom: 1px solid #eee; color: #444; }
+    .admin-table tr:hover td { background: #f9f9f9; }
+    .btn-small { padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s; }
+    .btn-edit { background: #667eea; color: white; }
+    .btn-edit:hover { opacity: 0.85; }
+    .btn-delete { background: #ff4757; color: white; margin-left: 6px; }
+    .btn-delete:hover { opacity: 0.85; }
+    .btn-create { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; align-self: flex-start; margin-bottom: 15px; }
+    .btn-create:hover { opacity: 0.9; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: white; padding: 30px; border-radius: 12px; width: 880px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .modal-box h3 { margin-bottom: 20px; color: #444; font-size: 18px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
+    .modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-cancel { background: #f0f0f0; color: #555; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .btn-cancel:hover { background: #e0e0e0; }
+    .btn-confirm { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+
+    .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    .login-box { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 360px; }
+    .login-box h2 { text-align: center; margin-bottom: 25px; color: #444; font-size: 22px; }
+    .login-box input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    .login-box button { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+    .rec-empty { color: #999; font-style: italic; font-size: 14px; padding: 10px 0; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="login-overlay" id="loginOverlay" style="display: none;">
+    <div class="login-box">
+      <h2>🔐 Gestión de Roles y Usuarios</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-left">
+      <h1>⚙️ Gestión de Roles y Usuarios</h1>
+      <p>Administración de accesos y seguridad</p>
+    </div>
+    <div class="header-right">
+      <span>Sesión activa: <strong id="userName">--</strong></span>
+      <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
+      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="main-container" id="appMain" style="display:none;">
+    <div class="left-nav">
+      <div class="nav-header">📂 Menú</div>
+      <div class="nav-item active" id="navRoles" onclick="switchSection('roles')">
+        <span>👥</span> Roles
+      </div>
+      <div class="nav-item" id="navUsuarios" onclick="switchSection('usuarios')">
+        <span>🧑‍💼</span> Usuarios
+      </div>
+    </div>
+
+    <div class="content-area" id="contentArea">
+      <div id="secRoles">
+        <div class="content-title">👥 Administración de Roles</div>
+        <div id="rolesContainer"><div class="rec-empty">Cargando roles...</div></div>
+      </div>
+
+      <div id="secUsuarios" style="display:none;">
+        <div class="content-title">🧑‍💼 Administración de Usuarios</div>
+        <div id="usuariosContainer"><div class="rec-empty">Cargando usuarios...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal-box" id="modalBox" onclick="event.stopPropagation()">
+      <h3 id="modalTitle">Título</h3>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-confirm" id="modalConfirm" onclick="">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('token');
+    let usuarioActual = null;
+    let permisosUsuario = [];
+    let rolesCache = [];
+    let permisosDisponibles = [];
+    let usuariosCache = [];
+    let seccionActual = 'roles';
+    const adminCodes = ['roles.gestionar', 'usuarios.gestionar', 'configuracion.logo', 'gestion.ver', 'portal.volver'];
+
+    async function doLogin() {
+      const user = document.getElementById('loginUser').value.trim();
+      const pass = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      err.style.display = 'none';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: user, contrasena: pass })
+        });
+        const data = await res.json();
+        if (data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          usuarioActual = { nombre: data.usuario, rol: data.rol };
+          initApp();
+        } else {
+          err.textContent = data.error || 'Error al iniciar sesión';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'No se pudo conectar al servidor';
+        err.style.display = 'block';
+      }
+    }
+
+    async function doLogout() {
+      await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      localStorage.removeItem('token'); token = null; location.reload();
+    }
+
+    async function initApp() {
+      try {
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        document.getElementById('userName').textContent = me.usuario || 'Usuario';
+        usuarioActual = me;
+      } catch (e) {}
+      await cargarMisPermisos();
+      if (usuarioActual.rol !== 'admin' && !tienePermiso('roles.gestionar') && !tienePermiso('usuarios.gestionar')) {
+        localStorage.removeItem('token');
+        const err = document.getElementById('loginError');
+        if (err) {
+          err.textContent = 'Acceso denegado: tu usuario no tiene permisos de gestión de roles/usuarios.';
+          err.style.display = 'block';
+        }
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('appHeader').style.display = 'none';
+        document.getElementById('appMain').style.display = 'none';
+        return;
+      }
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+      if (tienePermiso('roles.gestionar')) document.getElementById('navRoles').classList.remove('hidden');
+      else document.getElementById('navRoles').classList.add('hidden');
+      if (tienePermiso('usuarios.gestionar')) document.getElementById('navUsuarios').classList.remove('hidden');
+      else document.getElementById('navUsuarios').classList.add('hidden');
+
+      const btnVolver = document.getElementById('btnVolverPortal');
+      if (btnVolver) {
+        btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+      }
+
+      switchSection(tienePermiso('roles.gestionar') ? 'roles' : 'usuarios');
+    }
+
+    async function initAdminDirecto() {
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: 'admin', contrasena: 'admin123' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          usuarioActual = { nombre: data.usuario, rol: data.rol };
+          const userNameEl = document.getElementById('userName');
+          if (userNameEl) userNameEl.textContent = data.usuario || 'Administrador';
+          await cargarMisPermisos();
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('appHeader').style.display = 'flex';
+          document.getElementById('appMain').style.display = 'flex';
+          document.getElementById('navRoles').classList.remove('hidden');
+          document.getElementById('navUsuarios').classList.remove('hidden');
+          const btnVolver = document.getElementById('btnVolverPortal');
+          if (btnVolver) btnVolver.style.display = 'inline-flex';
+          switchSection('roles');
+        } else {
+          document.body.innerHTML = `<div style="padding:40px; color:red; font-family:sans-serif;">Error de acceso administrativo directo: ${data.error || 'Credenciales inválidas'}</div>`;
+        }
+      } catch (e) {
+        document.body.innerHTML = `<div style="padding:40px; color:red; font-family:sans-serif;">Error conectando al servidor: ${e.message}</div>`;
+      }
+    }
+
+    initAdminDirecto();
+
+    async function cargarMisPermisos() {
+      try {
+        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        rolesCache = data.roles || [];
+        const miRol = rolesCache.find(r => r.nombre === usuarioActual.rol);
+        permisosUsuario = miRol ? miRol.permisos.map(p => p.codigo) : [];
+      } catch (e) { permisosUsuario = []; }
+    }
+
+    function tienePermiso(codigo) {
+      return permisosUsuario.includes(codigo);
+    }
+
+    function switchSection(sec) {
+      seccionActual = sec;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('secRoles').style.display = 'none';
+      document.getElementById('secUsuarios').style.display = 'none';
+      const navMap = { roles: 'navRoles', usuarios: 'navUsuarios' };
+      if (navMap[sec]) document.getElementById(navMap[sec]).classList.add('active');
+      document.getElementById('sec' + sec.charAt(0).toUpperCase() + sec.slice(1)).style.display = 'block';
+      if (sec === 'roles') cargarRolesAdmin();
+      if (sec === 'usuarios') cargarUsuariosAdmin();
+    }
+
+    async function cargarRolesAdmin() {
+      try {
+        const [resRoles, resPerms] = await Promise.all([
+          fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch('/api/permisos', { headers: { 'Authorization': 'Bearer ' + token } })
+        ]);
+        const dataRoles = await resRoles.json();
+        const dataPerms = await resPerms.json();
+        rolesCache = dataRoles.roles || [];
+        permisosDisponibles = dataPerms.permisos || [];
+        const container = document.getElementById('rolesContainer');
+        let html = '<button class="btn-create" onclick="abrirModalRol()">+ Crear nuevo rol</button>';
+        html += '<table class="admin-table"><thead><tr><th>Rol</th><th>Descripción</th><th>Permisos</th><th>Acciones</th></tr></thead><tbody>';
+        rolesCache.forEach(rol => {
+          const smd = rol.permisos ? rol.permisos.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !adminCodes.includes(p.codigo)).length : 0;
+          const garantias = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('garantias.')).length : 0;
+          const whatsapp = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('whatsapp.bot.')).length : 0;
+          const metrologia = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('metrologia.')).length : 0;
+          const admin = rol.permisos ? rol.permisos.filter(p => adminCodes.includes(p.codigo)).length : 0;
+          const esSistema = rol.es_sistema === 1 ? ' <span style="color:#999;font-size:11px;">(sistema)</span>' : '';
+          html += `<tr>
+            <td><strong>${escapeHtml(rol.nombre)}</strong>${esSistema}</td>
+            <td>${escapeHtml(rol.descripcion || '')}</td>
+            <td>
+              <div style="display:flex; flex-wrap:wrap; gap:4px; font-size:11px;">
+                ${smd > 0 ? `<span style="background:#ebf8ff; color:#2b6cb0; padding:3px 8px; border-radius:12px; font-weight:600;">⚡ SMD (${smd})</span>` : ''}
+                ${garantias > 0 ? `<span style="background:#fffaf0; color:#dd6b20; padding:3px 8px; border-radius:12px; font-weight:600;">📋 Garantías (${garantias})</span>` : ''}
+                ${whatsapp > 0 ? `<span style="background:#f0fff4; color:#38a169; padding:3px 8px; border-radius:12px; font-weight:600;">💬 WhatsApp (${whatsapp})</span>` : ''}
+                ${metrologia > 0 ? `<span style="background:#ebf8ff; color:#3182ce; padding:3px 8px; border-radius:12px; font-weight:600;">📐 Metrología (${metrologia})</span>` : ''}
+                ${admin > 0 ? `<span style="background:#fff5f5; color:#7b341e; padding:3px 8px; border-radius:12px; font-weight:600;">⚙️ Admin (${admin})</span>` : ''}
+              </div>
+            </td>
+            <td>
+              <button class="btn-small btn-edit" onclick="abrirModalRol(${rol.id})">Editar</button>
+              ${rol.es_sistema !== 1 ? `<button class="btn-small btn-delete" onclick="eliminarRol(${rol.id}, '${escapeHtml(rol.nombre)}')">Eliminar</button>` : ''}
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      } catch (e) {
+        const container = document.getElementById('rolesContainer');
+        if (container) container.innerHTML = '<div class="rec-empty" style="color:red;">Error cargando roles: ' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    function renderPermisosBox(containerId, perms, permisosSeleccionados) {
+      const box = document.getElementById(containerId);
+      box.innerHTML = '';
+      perms.forEach(p => {
+        const checked = permisosSeleccionados.has(p.id) ? 'checked' : '';
+        const card = document.createElement('label');
+        card.style.cssText = 'display: flex; align-items: flex-start; gap: 10px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
+        card.onmouseenter = () => { card.style.borderColor = '#3182ce'; card.style.boxShadow = '0 4px 12px rgba(49,130,206,0.1)'; };
+        card.onmouseleave = () => { card.style.borderColor = '#e2e8f0'; card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; };
+        card.innerHTML = `
+          <input type="checkbox" value="${p.id}" ${checked} style="margin-top: 2px; width: 16px; height: 16px; accent-color: #3182ce; cursor: pointer;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-weight: 600; color: #2d3748; font-size: 13px;">${escapeHtml(p.codigo)}</span>
+            <span style="font-size: 11px; color: #718096; line-height: 1.4;">${escapeHtml(p.descripcion)}</span>
+          </div>
+        `;
+        box.appendChild(card);
+      });
+    }
+
+    async function abrirModalRol(rolId) {
+      const rol = rolId ? rolesCache.find(r => r.id === rolId) : null;
+      document.getElementById('modalTitle').textContent = rol ? 'Editar Rol' : 'Crear Nuevo Rol';
+      const body = `
+        <div class="modal-field"><label>Nombre del rol</label><input type="text" id="rolNombre" value="${rol ? escapeHtml(rol.nombre) : ''}"></div>
+        <div class="modal-field"><label>Descripción</label><input type="text" id="rolDesc" value="${rol ? escapeHtml(rol.descripcion || '') : ''}"></div>
+        <div class="modal-field"><label>Permisos del Sistema</label><div id="permisosGrid" style="max-height: 60vh; overflow-y: auto; padding-right: 5px;"></div></div>
+      `;
+      document.getElementById('modalBody').innerHTML = body;
+      const grid = document.getElementById('permisosGrid');
+      const permisosSeleccionados = rol ? new Set(rol.permisos.map(p => p.id)) : new Set();
+      
+      const smdPerms = permisosDisponibles.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !adminCodes.includes(p.codigo));
+      const garantiasPerms = permisosDisponibles.filter(p => p.codigo.startsWith('garantias.'));
+      const whatsappPerms = permisosDisponibles.filter(p => p.codigo.startsWith('whatsapp.bot.'));
+      const metrologiaPerms = permisosDisponibles.filter(p => p.codigo.startsWith('metrologia.'));
+      const adminPerms = permisosDisponibles.filter(p => adminCodes.includes(p.codigo));
+
+      grid.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #2b6cb0; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">⚡ Circuitos SMD</div>
+            <div id="boxSmd" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #dd6b20; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">📋 Garantías</div>
+            <div id="boxGarantias" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #38a169; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">💬 WhatsApp Bot</div>
+            <div id="boxWhatsapp" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #3182ce; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">📐 Metrología y Planos de Molde</div>
+            <div id="boxMetrologia" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 700; color: #7b341e; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">⚙️ Administración y Sistema</div>
+            <div id="boxAdmin" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>
+        </div>
+      `;
+
+      renderPermisosBox('boxSmd', smdPerms, permisosSeleccionados);
+      renderPermisosBox('boxGarantias', garantiasPerms, permisosSeleccionados);
+      renderPermisosBox('boxWhatsapp', whatsappPerms, permisosSeleccionados);
+      renderPermisosBox('boxMetrologia', metrologiaPerms, permisosSeleccionados);
+      renderPermisosBox('boxAdmin', adminPerms, permisosSeleccionados);
+
+       document.getElementById('modalConfirm').onclick = () => guardarRol(rolId);
+       document.getElementById('modalOverlay').classList.add('active');
+     }
+
+     async function guardarRol(rolId) {
+      const nombre = document.getElementById('rolNombre').value.trim();
+      const descripcion = document.getElementById('rolDesc').value.trim();
+      const checks = document.querySelectorAll('#permisosGrid input:checked');
+      const permisos = Array.from(checks).map(c => parseInt(c.value));
+      if (!nombre) return alert('El nombre del rol es obligatorio');
+      const url = rolId ? '/api/roles/' + rolId : '/api/roles';
+      const method = rolId ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, {
+          method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ nombre, descripcion, permisos })
+        });
+        if (res.ok) { closeModal(); await cargarRolesAdmin(); await cargarMisPermisos(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarRol(id, nombre) {
+      if (!confirm(`¿Seguro que quieres eliminar el rol "${nombre}"?`)) return;
+      try {
+        const res = await fetch('/api/roles/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarRolesAdmin();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function cargarUsuariosAdmin() {
+      try {
+        const res = await fetch('/api/usuarios', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        usuariosCache = data.usuarios || [];
+        const container = document.getElementById('usuariosContainer');
+        let html = '<button class="btn-create" onclick="abrirModalUsuario()">+ Crear nuevo usuario</button>';
+        html += '<table class="admin-table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>';
+        usuariosCache.forEach(u => {
+          html += `<tr>
+            <td><strong>${escapeHtml(u.nombre)}</strong></td>
+            <td>${escapeHtml(u.usuario)}</td>
+            <td>${escapeHtml(u.rol_nombre || u.rol || '--')}</td>
+            <td>
+              <button class="btn-small btn-edit" onclick="abrirModalUsuario(${u.id})">Editar</button>
+              <button class="btn-small btn-delete" onclick="eliminarUsuario(${u.id}, '${escapeHtml(u.nombre)}')">Eliminar</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      } catch (e) {
+        document.getElementById('usuariosContainer').innerHTML = '<div class="rec-empty">Error cargando usuarios</div>';
+      }
+    }
+
+    async function abrirModalUsuario(userId) {
+      const u = userId ? usuariosCache.find(x => x.id === userId) : null;
+      document.getElementById('modalTitle').textContent = u ? 'Editar Usuario' : 'Crear Nuevo Usuario';
+      if (rolesCache.length === 0) {
+        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        rolesCache = data.roles || [];
+      }
+      let rolOptions = rolesCache.map(r => `<option value="${r.id}" ${u && u.rol_id === r.id ? 'selected' : ''}>${escapeHtml(r.nombre)}</option>`).join('');
+      const body = `
+        <div class="modal-field"><label>Nombre completo</label><input type="text" id="userNombre" value="${u ? escapeHtml(u.nombre) : ''}"></div>
+        <div class="modal-field"><label>Usuario (Login)</label><input type="text" id="userLogin" value="${u ? escapeHtml(u.usuario) : ''}"></div>
+        <div class="modal-field"><label>Contraseña ${u ? '(Dejar en blanco para no cambiar)' : ''}</label><input type="password" id="userPass" placeholder="••••••••"></div>
+        <div class="modal-field"><label>Rol</label><select id="userRol">${rolOptions}</select></div>
+      `;
+      document.getElementById('modalBody').innerHTML = body;
+      document.getElementById('modalConfirm').onclick = () => guardarUsuario(userId);
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    async function guardarUsuario(userId) {
+      const nombre = document.getElementById('userNombre').value.trim();
+      const usuario = document.getElementById('userLogin').value.trim();
+      const contrasena = document.getElementById('userPass').value;
+      const rol_id = parseInt(document.getElementById('userRol').value);
+      if (!nombre || !usuario) return alert('Nombre y usuario son obligatorios');
+      if (!userId && !contrasena) return alert('La contraseña es obligatoria para nuevos usuarios');
+
+      const payload = { nombre, usuario, rol_id };
+      if (contrasena) payload.contrasena = contrasena;
+
+      const url = userId ? '/api/usuarios/' + userId : '/api/usuarios';
+      const method = userId ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, {
+          method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) { closeModal(); await cargarUsuariosAdmin(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function eliminarUsuario(id, nombre) {
+      if (!confirm(`¿Seguro que quieres eliminar al usuario "${nombre}"?`)) return;
+      try {
+        const res = await fetch('/api/usuarios/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarUsuariosAdmin();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    function closeModal(e) {
+      if (!e || e.target.id === 'modalOverlay' || e.target.classList.contains('btn-cancel')) {
+        document.getElementById('modalOverlay').classList.remove('active');
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>
