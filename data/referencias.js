@@ -106,6 +106,19 @@ function retirarOtrasVersionesActivas(referenciaId, idQueQuedaActiva) {
   );
 }
 
+// Antes de aplicar la red de seguridad de arriba, esto deja ver QUÉ filas
+// se van a retirar (id + imagen_ruta) — así quien la llama puede mover el
+// archivo de cada una a obsoletas antes de marcarla, en vez de solo
+// cambiarle el estado en la base de datos y dejar la foto abandonada en la
+// carpeta de fotos activas (ver uso en routes/referencias.js, junto a
+// marcarVersionObsoletaConRuta/marcarVersionObsoleta).
+function listarOtrasVersionesActivas(referenciaId, idQueQuedaActiva) {
+  return getDb().all(
+    "SELECT id, imagen_ruta FROM versiones WHERE referencia_id = ? AND LOWER(estado) = 'activa' AND id != ?",
+    [referenciaId, idQueQuedaActiva]
+  );
+}
+
 function marcarVersionObsoletaConRuta(imagenRuta, id) {
   return getDb().run('UPDATE versiones SET estado = ?, imagen_ruta = ? WHERE id = ?', ['obsoleta', imagenRuta, id]);
 }
@@ -179,6 +192,7 @@ module.exports = {
   buscarVersionActivaMasReciente,
   buscarVersionActivaPrimera,
   retirarOtrasVersionesActivas,
+  listarOtrasVersionesActivas,
   existeVersion,
   marcarVersionObsoletaConRuta,
   marcarVersionObsoleta,

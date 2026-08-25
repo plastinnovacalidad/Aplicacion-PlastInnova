@@ -360,12 +360,27 @@
       // solo abría esta página sin contexto, que era justo la queja de
       // Julio ("no me trae los valores").
       const codigoDeepLink = new URLSearchParams(location.search).get('editar');
-      if (codigoDeepLink && tienePermiso('referencias.editar') && referencias.includes(codigoDeepLink)) {
-        switchSection('editar');
-        await seleccionarRefEditar(codigoDeepLink);
-        filtrarRefsEditar(); // para que quede resaltada en la lista, igual que si se hubiera hecho clic
-        switchEditTab('modif');
-        return;
+      if (codigoDeepLink) {
+        if (tienePermiso('referencias.editar') && referencias.includes(codigoDeepLink)) {
+          switchSection('editar');
+          await seleccionarRefEditar(codigoDeepLink);
+          filtrarRefsEditar(); // para que quede resaltada en la lista, igual que si se hubiera hecho clic
+          switchEditTab('modif');
+          return;
+        }
+        // El botón "↗ Editar Referencia" de Valores y Cableado se muestra
+        // con el permiso 'gestion.ver', pero abrir la referencia acá exige
+        // 'referencias.editar' — hoy todo rol con 'gestion.ver' también
+        // tiene 'referencias.editar', así que esto no pasa en la práctica,
+        // pero si algún día se crea un rol que tenga uno sin el otro, antes
+        // esta página simplemente se abría vacía sin explicar por qué (el
+        // link "no hacía nada"). Ahora al menos se avisa qué pasó, en vez
+        // de fallar en silencio.
+        if (!tienePermiso('referencias.editar')) {
+          alert('No tienes permiso para editar referencias de Circuitos SMD.');
+        } else if (!referencias.includes(codigoDeepLink)) {
+          alert(`No se encontró la referencia "${codigoDeepLink}" en Circuitos SMD.`);
+        }
       }
 
       switchSection(tienePermiso('referencias.crear') ? 'crear' : 'editar');
@@ -490,6 +505,21 @@
           if (!formasCableadoConocidas.includes(forma)) {
             formasCableadoConocidas.push(forma);
             formasCableadoConocidas.sort();
+            // Actualizar el array en memoria no le agrega la opción al
+            // <select> que ya está pintado en pantalla — antes esto dejaba
+            // "9999.jpg" fuera del desplegable hasta recargar la página
+            // (aunque la foto sí se hubiera subido bien). Se agrega la
+            // opción nueva al <select> de este mismo campo sin tocar su
+            // selección actual (sigue en "+ Nueva forma..." con el texto
+            // que el usuario ya escribió).
+            const sel = document.getElementById(`${prefix}_forma_cableado_select`);
+            if (sel && !Array.from(sel.options).some(o => o.value === forma)) {
+              const opt = document.createElement('option');
+              opt.value = forma;
+              opt.textContent = forma;
+              const optNueva = sel.querySelector('option[value="__nueva__"]');
+              sel.insertBefore(opt, optNueva);
+            }
           }
           await cargarPreviewFotoCableado(prefix);
         } else {
@@ -926,6 +956,13 @@
       const msg = document.getElementById('nuevaVerMsg');
       msg.style.display = 'none';
       if (fileInput.files.length === 0) { alert('Seleccione la imagen para la nueva versión'); return; }
+      // El backend (POST /referencias-codigo/:codigo/versiones) ya exige
+      // el motivo y devuelve 400 si falta — antes "Modificación de versión"
+      // sí lo pedía en pantalla pero "Nueva versión" no, así que acá el
+      // usuario solo se enteraba de que faltaba después de que el servidor
+      // rechazara la petición. Se valida acá también, igual que ya se hace
+      // en modificarVersionActual(), para que el aviso salga de inmediato.
+      if (!motivo) { alert('Ingrese el motivo del cambio'); return; }
 
       const fd = new FormData();
       fd.append('carpeta_idx', carpetaIdx);

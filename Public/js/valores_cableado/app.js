@@ -161,8 +161,6 @@ const ValoresCableadoApp = (() => {
     const imgs = p.imagenes || [];
     const imgCircuito = imgs.find(i => i.tipo === 'circuito');
     const imgCableado = imgs.find(i => i.tipo === 'cableado');
-    const puedeGestionar = tienePermiso('valores_cableado.gestion');
-    const puedeGestionarSmd = tienePermiso('gestion.ver');
 
     const fmt = (v) => (v !== null && v !== undefined && v !== '' ? escapeHtml(String(v)) : '—');
     const fmtNum = (v) => {
@@ -222,13 +220,11 @@ const ValoresCableadoApp = (() => {
               <div class="vc-foto-content" id="vc-foto-circuito-content">
                 ${imgCircuito ? `<span class="vc-foto-placeholder">Cargando…</span>` : '<span class="vc-foto-placeholder">Sin imagen de circuito</span>'}
               </div>
-              ${puedeGestionarSmd ? `<a href="referencias.html?editar=${encodeURIComponent(p.codigo_completo || '')}" target="_blank" class="vc-foto-edit-link" title="Abre esta referencia en Crear Referencia, en Modificación de versión, con los valores y cableado actuales ya cargados">↗ Editar Referencia</a>` : ''}
             </div>
             <div class="vc-foto-box" id="vc-foto-cableado">
               <div class="vc-foto-content" id="vc-foto-cableado-content">
                 ${imgCableado ? `<span class="vc-foto-placeholder">Cargando…</span>` : '<span class="vc-foto-placeholder">Sin imagen de cableado</span>'}
               </div>
-              ${puedeGestionar && imgCableado ? `<button type="button" class="vc-foto-upload-btn" data-forma-cableado="${escapeHtml(imgCableado.forma_cableado)}" title="Subir o cambiar la foto de esta forma de cableado">📤</button>` : ''}
             </div>
           </div>
 
@@ -303,23 +299,6 @@ const ValoresCableadoApp = (() => {
 
     main.querySelectorAll('.vc-version-chip').forEach(btn => {
       btn.addEventListener('click', () => cambiarVersion(btn.dataset.version));
-    });
-
-    // Antes forma_cableado (texto libre que Julio escribe al crear la
-    // referencia) se interpolaba directamente en un onclick="...('...')"
-    // inline. escapeHtml() protege atributos HTML normales, pero un
-    // atributo de evento es distinto: el navegador primero HTML-decodifica
-    // el valor y DESPUÉS lo compila como JavaScript — así que un valor con
-    // una comilla codificada como &#39; se decodificaba de vuelta a ' antes
-    // de ejecutarse, cerrando la cadena de JS antes de tiempo y permitiendo
-    // inyectar código. Se usa el mismo patrón data-atributo + addEventListener
-    // que ya usan los chips de versión arriba, donde el valor nunca se trata
-    // como código.
-    main.querySelectorAll('.vc-foto-upload-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        subirFotoCableado(btn.dataset.formaCableado);
-      });
     });
 
     if (imgCircuito) cargarFotoCircuito(imgCircuito.version_id);

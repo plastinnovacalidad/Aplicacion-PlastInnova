@@ -577,9 +577,19 @@
       if (!versionSeleccionadaId) {
         try {
           const res = await fetch('/api/fotos/' + encodeURIComponent(referenciaActiva), { headers: { 'Authorization': 'Bearer ' + token } });
-          const data = await res.json();
           if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
-          renderFotos(data.fotos);
+          // Antes no se revisaba res.ok acá (a diferencia de la rama de
+          // /api/fotos-version/ más abajo, que sí lo hace) — si el servidor
+          // respondía con un error (403, 500, etc.) esto intentaba leer
+          // data.fotos de un cuerpo de error, mostrando "No hay foto para
+          // esta referencia" en vez de reflejar que algo falló.
+          if (res.ok) {
+            const data = await res.json();
+            if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+            renderFotos(data.fotos);
+          } else {
+            renderFotos([]);
+          }
         } catch (e) {
           console.error('Error cargando fotos:', e);
           if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;

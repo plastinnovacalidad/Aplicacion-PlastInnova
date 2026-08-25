@@ -16,6 +16,31 @@ const valoresData = require('../data/valoresCableado');
 
 const router = express.Router();
 
+// Reemplaza a refData.retirarOtrasVersionesActivas() en los dos lugares que
+// la usaban como "red de seguridad" (crear nueva versión / modificar
+// versión actual): antes esa red solo cambiaba el estado en la base de
+// datos de cualquier OTRA fila que hubiera quedado 'activa' por error, pero
+// dejaba su archivo de foto tal cual estaba, en la carpeta de fotos activas
+// — con el tiempo esas fotos huérfanas se iban acumulando ahí mezcladas con
+// las de verdad vigentes. Ahora, igual que ya se hace con la versión
+// "principal" que se retira más arriba en cada ruta, se mueve cada foto a
+// obsoletas si todavía existe en disco antes de marcar la fila.
+async function retirarOtrasVersionesActivasConArchivos(referenciaId, idQueQuedaActiva) {
+  const strays = await refData.listarOtrasVersionesActivas(referenciaId, idQueQuedaActiva);
+  for (const stray of strays) {
+    if (stray.imagen_ruta && fs.existsSync(stray.imagen_ruta)) {
+      const fechaSufijo = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const ext = path.extname(stray.imagen_ruta);
+      const nombreBase = path.basename(stray.imagen_ruta, ext);
+      const destinoObsoleto = path.join(OBSOLETAS_DIR, nombreBase + '_' + fechaSufijo + '_huerfana' + ext);
+      moverArchivo(stray.imagen_ruta, destinoObsoleto);
+      await refData.marcarVersionObsoletaConRuta(destinoObsoleto, stray.id);
+    } else {
+      await refData.marcarVersionObsoleta(stray.id);
+    }
+  }
+}
+
 // ======================== REFERENCIAS Y VERSIONES ========================
 
 router.post('/referencias', validarToken, requerirPermiso('referencias.crear'), upload.single('imagen'), async (req, res) => {
@@ -73,7 +98,14 @@ router.post('/referencias', validarToken, requerirPermiso('referencias.crear'), 
 
 // Crear nueva versión usando código_base (para el panel de edición)
 router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerirPermiso('versiones.crear'), upload.single('imagen'), async (req, res) => {
-  const codigoBase = decodeURIComponent(req.params.codigo_base || '');
+  // Express ya decodifica req.params.codigo_base una vez al enrutar la
+  // petición (incluso "%2F" en un segmento con nombre, como ya se
+  // documentó en routes/valoresCableado.js) — volver a llamar
+  // decodeURIComponent() acá lo decodificaba una SEGUNDA vez. Mientras el
+  // código no tuviera un "%" de verdad esto no se notaba, pero un código
+  // con un "%" suelto (ej. "SUP-50%-OFF") hacía que este decode extra
+  // lanzara "URI malformed" y la petición fallara con un error genérico.
+  const codigoBase = req.params.codigo_base || '';
   const { motivo, version: versionManual } = req.body;
   const usuarioId = req.usuario.id;
 
@@ -153,7 +185,7 @@ router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerir
       // quedaron OTRAS versiones también marcadas 'activa' para esta misma
       // referencia, se retiran aquí — así la referencia queda con una sola
       // versión activa (la que se acaba de crear) de una vez por todas.
-      await refData.retirarOtrasVersionesActivas(referenciaId, resultVer.lastID);
+      await retirarOtrasVersionesActivasConArchivos(referenciaId, resultVer.lastID);
 
       // Las cotas eléctricas y la configuración de cableado (elec_mediciones,
       // elec_rangos_revision, elec_config_cableado) están guardadas por
@@ -211,12 +243,21 @@ router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerir
 
 // Modificar versión actual (reemplaza imagen, misma versión, mueve anterior a obsoletas)
 router.post('/referencias/:codigo_base/modificar-version', validarToken, requerirPermiso('referencias.editar'), upload.single('imagen'), async (req, res) => {
-  const codigoBase = decodeURIComponent(req.params.codigo_base || '');
+  // Mismo motivo que en /referencias-codigo/.../versiones más arriba:
+  // Express ya decodifica este parámetro, un decode extra acá era
+  // redundante y podía lanzar "URI malformed".
+  const codigoBase = req.params.codigo_base || '';
   const { motivo } = req.body;
   const usuarioId = req.usuario.id;
 
   if (!codigoBase) { if (req.file) fs.unlinkSync(req.file.path); return res.status(400).json({ error: 'codigo_base requerido' }); }
   if (!req.file) return res.status(400).json({ error: 'Debe subir una imagen para reemplazar la versión actual' });
+  // Misma exigencia que ya tiene "Nueva versión" (línea ~82) — antes esta
+  // ruta aceptaba modificar la versión activa sin ningún motivo, mientras
+  // que crear una versión sí lo exigía; quedaba una referencia con menos
+  // trazabilidad para el caso que en la práctica es el más delicado
+  // (reemplazar la imagen que ya está en producción).
+  if (!motivo || !motivo.trim()) { if (req.file) fs.unlinkSync(req.file.path); return res.status(400).json({ error: 'El motivo del cambio es obligatorio' }); }
   if (!(await validarOBorrar(req, res, req.file.path))) return;
 
   try {
@@ -256,7 +297,7 @@ router.post('/referencias/:codigo_base/modificar-version', validarToken, requeri
       await refData.marcarNecesitaPrueba(versionActiva.id, 1);
       // Misma red de seguridad que en "nueva versión": si esta referencia
       // tenía otra fila también marcada 'activa' por error, se retira aquí.
-      await refData.retirarOtrasVersionesActivas(ref.id, versionActiva.id);
+      await retirarOtrasVersionesActivasConArchivos(ref.id, versionActiva.id);
 
       await refData.insertarSeguimientoCambios(
         ref.id, 'modificacion',
@@ -305,7 +346,9 @@ router.get('/referencias', validarToken, requerirPermiso('referencias.ver'), asy
 }));
 
 router.get('/fotos/*', validarToken, requerirPermiso('referencias.ver'), asyncHandler(async (req, res) => {
-  const codigoBase = decodeURIComponent(req.params[0] || '');
+  // Mismo motivo que las rutas de arriba — Express también decodifica el
+  // parámetro comodín (req.params[0]) de una ruta "/fotos/*".
+  const codigoBase = req.params[0] || '';
   const nombreUsuario = req.usuario.nombre || 'Inspector';
 
   const ref = await refData.buscarIdReferenciaPorCodigo(codigoBase);
@@ -355,7 +398,8 @@ router.get('/fotos-version/:version_id', validarToken, requerirPermiso('referenc
 
 // GET datos de referencia para edición (simplificado)
 router.get('/imagen/:referencia', validarToken, requerirPermiso('referencias.ver'), asyncHandler(async (req, res) => {
-  const codigoBase = decodeURIComponent(req.params.referencia || '');
+  // Mismo motivo que las rutas de arriba.
+  const codigoBase = req.params.referencia || '';
   const ref = await refData.buscarReferenciaConCreador(codigoBase);
   if (!ref) return res.status(404).json({ error: 'Referencia no encontrada' });
 
@@ -387,7 +431,8 @@ router.put('/versiones/:id/prueba', validarToken, requerirPermiso('referencias.e
 }));
 
 router.get('/versiones/:codigo_base', validarToken, requerirPermiso('referencias.ver'), asyncHandler(async (req, res) => {
-  const codigoBase = decodeURIComponent(req.params.codigo_base || '');
+  // Mismo motivo que las rutas de arriba.
+  const codigoBase = req.params.codigo_base || '';
   const ref = await refData.buscarIdReferenciaPorCodigo(codigoBase);
   if (!ref) return res.status(404).json({ error: 'Referencia no encontrada' });
   const versiones = await refData.listarVersionesPorReferencia(ref.id);
@@ -395,7 +440,8 @@ router.get('/versiones/:codigo_base', validarToken, requerirPermiso('referencias
 }));
 
 router.get('/seguimiento/:codigo_base', validarToken, requerirPermiso('referencias.ver'), asyncHandler(async (req, res) => {
-  const codigoBase = decodeURIComponent(req.params.codigo_base || '');
+  // Mismo motivo que las rutas de arriba.
+  const codigoBase = req.params.codigo_base || '';
   const ref = await refData.buscarIdReferenciaPorCodigo(codigoBase);
   if (!ref) return res.status(404).json({ error: 'Referencia no encontrada' });
   const seguimiento = await refData.listarSeguimientoPorReferencia(codigoBase);
