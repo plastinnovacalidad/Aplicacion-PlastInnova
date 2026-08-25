@@ -109,6 +109,26 @@
     .valores-foto-upload-btn:hover { background: #e0e7ff; }
     .valores-check-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #555; cursor: pointer; }
 
+    /* Foto actual de la versión que se está editando (pestaña "Modificación
+       de versión"), a la izquierda, con la foto + cotas eléctricas + cableado
+       a la derecha — mismo patrón de dos columnas que ya usa "Crear
+       Referencia (Planos)" de Metrología (Public/referencias_metrologia.html,
+       ver #planoActualBoxModif). Julio pidió que acá también se vea la foto
+       actual junto con los valores, para poder editar ambos sin cambiar de
+       pantalla. */
+    .ref-edit-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+    .ref-edit-right { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    #fotoActualBox { min-width: 0; }
+    .foto-actual-viewer { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #fafafa; min-height: 220px; display: flex; align-items: center; justify-content: center; position: relative; }
+    .foto-actual-viewer img { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; }
+    /* Igual que en Circuitos SMD (smd.html): un overlay transparente encima
+       de la foto que bloquea el clic derecho y arrastrar-para-guardar,
+       porque la foto ya trae la marca de agua con el nombre de quien la ve. */
+    .protected-overlay { position: absolute; inset: 0; z-index: 5; background: transparent; cursor: default; }
+    @media (max-width: 1080px) {
+      .ref-edit-layout { grid-template-columns: 1fr; }
+    }
+
   </style>
 </head>
 <body>
@@ -217,42 +237,59 @@
           </div>
 
           <div class="edit-tab-content" id="editContentModif">
-            <div class="section-box" style="margin-bottom:15px;">
-              <h4>✏️ Modificación de versión actual</h4>
-              <p class="desc">Sube una nueva imagen que reemplazará la versión activa actual.</p>
-              <div class="form-grid">
-                <label>Nueva imagen *</label>
-                <input type="file" id="modifImagen" accept="image/*" class="file-input">
-                <label>Motivo del cambio *</label>
-                <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza la imagen actual?"></textarea>
+            <!-- Foto actual a la izquierda (igual que "Plano actual" en
+                 Crear Referencia de Metrología) y a la derecha, apiladas, la
+                 subida de nueva imagen + las cotas eléctricas y
+                 especificaciones de cableado — así se ve la foto mientras se
+                 editan los valores, sin tener que ir a otra pantalla. -->
+            <div class="ref-edit-layout">
+              <div class="section-box" id="fotoActualBox" style="margin-bottom:0;">
+                <h4>📷 Foto actual</h4>
+                <p class="desc">Versión activa: <strong id="fotoActualVersionLabel">--</strong></p>
+                <div id="fotoActualViewer" class="foto-actual-viewer">
+                  <div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>
+                </div>
               </div>
-              <div class="form-actions" style="margin-top:15px;">
-                <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()">🔄 Reemplazar imagen</button>
-              </div>
-              <div class="form-msg" id="modifMsg"></div>
-            </div>
 
-            <!-- Antes esto vivía en su propia pestaña ("⚡ Valores y
-                 Cableado"), separada de "Modificación de versión" — Julio
-                 pidió que quedaran juntas porque ambas se editan sobre la
-                 misma versión actual, para no tener que cambiar de pestaña
-                 para ver/corregir los valores de la versión que se está
-                 modificando. Se precarga con los datos que ya tiene esa
-                 versión (ver cargarValoresEdicion) para poder corregir solo
-                 lo que cambió, en vez de partir de cero. -->
-            <div class="section-box" id="modifValoresBox" style="display:none; margin-bottom:0; max-width:1200px;">
-              <h4>⚡ Cotas y especificaciones de cableado</h4>
-              <p class="desc">Se editan sobre la versión actual: <strong id="editValoresVersionLabel">--</strong>.</p>
-              <div class="valores-fieldsets-row" id="editValoresFields"></div>
-              <div class="form-actions" style="margin-top:15px;">
-                <button class="btn-primary" id="btnGuardarValores" onclick="guardarValoresEdicion()">💾 Guardar valores y cableado</button>
+              <div class="ref-edit-right">
+                <div class="section-box" style="margin-bottom:0;">
+                  <h4>✏️ Modificación de versión actual</h4>
+                  <p class="desc">Sube una nueva imagen que reemplazará la versión activa actual.</p>
+                  <div class="form-grid">
+                    <label>Nueva imagen *</label>
+                    <input type="file" id="modifImagen" accept="image/*" class="file-input">
+                    <label>Motivo del cambio *</label>
+                    <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza la imagen actual?"></textarea>
+                  </div>
+                  <div class="form-actions" style="margin-top:15px;">
+                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()">🔄 Reemplazar imagen</button>
+                  </div>
+                  <div class="form-msg" id="modifMsg"></div>
+                </div>
+
+                <!-- Antes esto vivía en su propia pestaña ("⚡ Valores y
+                     Cableado"), separada de "Modificación de versión" — Julio
+                     pidió que quedaran juntas porque ambas se editan sobre la
+                     misma versión actual, para no tener que cambiar de pestaña
+                     para ver/corregir los valores de la versión que se está
+                     modificando. Se precarga con los datos que ya tiene esa
+                     versión (ver cargarValoresEdicion) para poder corregir solo
+                     lo que cambió, en vez de partir de cero. -->
+                <div class="section-box" id="modifValoresBox" style="display:none; margin-bottom:0;">
+                  <h4>⚡ Cotas y especificaciones de cableado</h4>
+                  <p class="desc">Se editan sobre la versión actual: <strong id="editValoresVersionLabel">--</strong>.</p>
+                  <div class="valores-fieldsets-row" id="editValoresFields"></div>
+                  <div class="form-actions" style="margin-top:15px;">
+                    <button class="btn-primary" id="btnGuardarValores" onclick="guardarValoresEdicion()">💾 Guardar valores y cableado</button>
+                  </div>
+                  <div class="form-msg" id="editValoresMsg"></div>
+                </div>
               </div>
-              <div class="form-msg" id="editValoresMsg"></div>
             </div>
           </div>
 
           <div class="edit-tab-content" id="editContentNueva">
-            <div class="section-box" style="margin-bottom:0;">
+            <div class="section-box" style="margin-bottom:15px;">
               <h4>🆕 Subir nueva versión</h4>
               <p class="desc">Esto generará automáticamente la siguiente versión.</p>
               <div class="form-grid">
@@ -268,11 +305,26 @@
                 <label>Motivo del cambio</label>
                 <textarea id="nuevaVerMotivo" placeholder="¿Por qué se sube esta nueva versión?"></textarea>
               </div>
-              <div class="form-actions">
-                <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersion()">⬆️ Subir nueva versión</button>
-              </div>
-              <div class="form-msg" id="nuevaVerMsg"></div>
             </div>
+
+            <!-- Cotas y cableado de la nueva versión — a diferencia de
+                 "Modificación de versión" (que trae precargados los valores
+                 de la versión activa para corregir lo que haga falta), acá
+                 va en blanco a propósito: Julio pidió que una versión nueva
+                 empiece sin heredar en silencio los valores de la anterior,
+                 ya que puede tener especificaciones distintas. Se completa
+                 ahora o, si se deja vacío, después desde "Modificación de
+                 versión" una vez creada. -->
+            <div class="section-box" id="nuevaValoresBox" style="display:none; margin-bottom:0;">
+              <h4>⚡ Cotas y especificaciones de cableado (opcional)</h4>
+              <p class="desc">Valores eléctricos y configuración de cableado de esta nueva versión. Se pueden completar ahora o más adelante desde "Modificación de versión".</p>
+              <div class="valores-fieldsets-row" id="nuevaValoresFields"></div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersion()">⬆️ Subir nueva versión</button>
+            </div>
+            <div class="form-msg" id="nuevaVerMsg"></div>
           </div>
 
           <!-- Historial centralizado de esta referencia (creación, cambios
@@ -343,6 +395,16 @@
         if (puedeValoresCableado) {
           await cargarFormasCableado();
           document.getElementById('crearValoresFields').innerHTML = renderCamposValores('crearVal');
+        }
+      }
+      // Mismo bloque, pero para la pestaña "Nueva versión" del panel de
+      // edición — va en blanco (ver comentario en el HTML), no se precarga
+      // con nada.
+      const nuevaValoresBox = document.getElementById('nuevaValoresBox');
+      if (nuevaValoresBox) {
+        nuevaValoresBox.style.display = puedeValoresCableado ? 'block' : 'none';
+        if (puedeValoresCableado) {
+          document.getElementById('nuevaValoresFields').innerHTML = renderCamposValores('nuevaVal');
         }
       }
       const btnVolver = document.getElementById('btnVolverPortal');
@@ -813,6 +875,42 @@
       await cargarDatosEdicion(codigoBase);
     }
 
+    // Foto actual de la versión activa, en la pestaña "Modificación de
+    // versión" (ver .ref-edit-layout más arriba) — mismo endpoint protegido
+    // con marca de agua que usa Circuitos SMD (/api/fotos-version/:id), para
+    // que Julio vea la foto que se va a reemplazar mientras corrige los
+    // valores/cableado de esa misma versión, sin tener que ir a otra pantalla.
+    async function cargarFotoActualEdicion(versionId, codigoBaseEnCurso) {
+      const viewer = document.getElementById('fotoActualViewer');
+      if (!versionId) {
+        viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
+        return;
+      }
+      viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Cargando…</div>';
+      try {
+        const res = await fetch(`/api/fotos-version/${versionId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        // Misma protección que el resto de cargarDatosEdicion: si el usuario
+        // ya seleccionó otra referencia mientras esperábamos esta respuesta,
+        // no pisar la foto que sí corresponde a la selección actual.
+        if (referenciaEditando !== codigoBaseEnCurso) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (referenciaEditando !== codigoBaseEnCurso) return;
+          const foto = data.fotos && data.fotos[0];
+          if (foto) {
+            viewer.innerHTML = `<img src="${foto.data}" alt="${escapeHtml(foto.nombre || '')}"><div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>`;
+          } else {
+            viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
+          }
+        } else {
+          viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
+        }
+      } catch (e) {
+        if (referenciaEditando !== codigoBaseEnCurso) return;
+        viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Error al cargar la foto</div>';
+      }
+    }
+
     async function cargarDatosEdicion(codigoBase, preservarTab) {
       try {
         const res = await fetch(`/api/imagen/${encodeURIComponent(codigoBase)}`, { headers: { 'Authorization': 'Bearer ' + token } });
@@ -832,6 +930,10 @@
         selPrueba.value = (datosEditando.necesita_prueba === 1) ? '1' : '0';
         document.getElementById('infoCreadoPor').textContent = datosEditando.creado_por || '--';
         document.getElementById('infoFecha').textContent = datosEditando.fecha_creacion || '--';
+
+        document.getElementById('fotoActualVersionLabel').textContent = datosEditando.version_actual || 'Sin versión';
+        await cargarFotoActualEdicion(datosEditando.version_id, codigoBase);
+        if (referenciaEditando !== codigoBase) return;
 
         const modifValoresBox = document.getElementById('modifValoresBox');
         if (tienePermiso('valores_cableado.gestion')) {
@@ -978,9 +1080,20 @@
         if (res.ok) {
           msg.className = 'form-msg success'; msg.style.display = 'block';
           msg.textContent = 'Nueva versión subida exitosamente.';
+          // Si tiene permiso de Valores y Cableado y llenó (aunque sea
+          // parcialmente) el bloque de cotas/cableado de esta pestaña, se
+          // guarda de una vez contra la versión recién creada — mismo
+          // patrón que ya usa crearReferencia() con 'crearVal'. Si lo dejó
+          // en blanco, esto simplemente no guarda nada (la versión queda
+          // sin ficha todavía, para completarse después).
+          if (tienePermiso('valores_cableado.gestion') && data.version && data.version.id) {
+            const okValores = await guardarValoresParaVersion(data.version.id, 'nuevaVal');
+            if (!okValores) msg.textContent += ' (No se pudieron guardar las cotas/especificaciones — puedes completarlas luego desde "Modificación de versión".)';
+          }
           document.getElementById('nuevaVerNumero').value = '';
           document.getElementById('nuevaVerImagen').value = '';
           document.getElementById('nuevaVerMotivo').value = '';
+          if (document.getElementById('nuevaValoresFields').innerHTML) llenarCamposValores('nuevaVal', {});
           await cargarDatosEdicion(referenciaEditando, true);
         } else {
           msg.className = 'form-msg error'; msg.style.display = 'block';
