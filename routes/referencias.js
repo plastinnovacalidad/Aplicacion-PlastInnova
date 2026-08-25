@@ -191,36 +191,20 @@ router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerir
       // elec_rangos_revision, elec_config_cableado) están guardadas por
       // version_id, no por referencia — así que una versión recién creada
       // nace sin ninguno de esos datos, aunque la versión anterior sí los
-      // tuviera. Antes esto hacía que "Valores y Cableado" mostrara todo en
-      // blanco justo después de crear una versión nueva en Circuitos SMD
-      // (los datos viejos seguían existiendo, pero colgados de la versión
-      // ahora obsoleta). Para que Julio siga viendo lo que ya sabíamos de
-      // esta referencia (y solo tenga que corregir lo que de verdad cambió),
-      // se copian esos datos de la versión anterior a la nueva en el momento
-      // de crearla.
-      if (versionActiva) {
-        const fichaAnterior = await valoresData.obtenerFichaVersion(versionActiva.id);
-        // Antes esta lista solo revisaba 11 de los 18 campos que en
-        // realidad devuelve obtenerFichaVersion() — le faltaban
-        // amperaje_min_medias, amperaje_min_altas, amperaje_max,
-        // potencia_min_medias, potencia_min_altas, potencia_max y
-        // empujar_cables. Si una versión anterior solo tenía datos en esos
-        // 7 campos (y nada en los otros 11), tieneDatosPrevios daba false
-        // y guardarFichaVersion() nunca se llamaba — así que TODOS los
-        // valores eléctricos de esa versión se perdían al crear la
-        // siguiente, en silencio. Ahora se revisan los campos "de datos"
-        // de la ficha automáticamente (excluyendo version_id/version/
-        // codigo_base, que son metadatos, no valores capturados), así que
-        // un campo nuevo que se agregue a la ficha en el futuro queda
-        // cubierto sin tener que acordarse de venir a actualizar esta lista.
-        const CAMPOS_METADATA_FICHA = new Set(['version_id', 'version', 'codigo_base']);
-        const tieneDatosPrevios = fichaAnterior && Object.entries(fichaAnterior).some(
-          ([campo, valor]) => !CAMPOS_METADATA_FICHA.has(campo) && valor != null
-        );
-        if (tieneDatosPrevios) {
-          await valoresData.guardarFichaVersion(resultVer.lastID, fichaAnterior);
-        }
-      }
+      // tuviera.
+      //
+      // Antes (ver historial de este archivo) esto copiaba automáticamente
+      // la ficha de la versión anterior a la nueva, para que Julio no viera
+      // todo en blanco justo después de crear una versión. Julio pidió
+      // cambiar ese comportamiento: ahora "Nueva versión" tiene su propio
+      // bloque de cotas/cableado en pantalla (Public/referencias.html,
+      // pestaña "🆕 Nueva versión"), pero A PROPÓSITO en blanco — una
+      // versión nueva puede tener especificaciones distintas a la anterior,
+      // así que ya no se hereda nada en silencio. Si el usuario llena ese
+      // bloque, el propio frontend guarda esos valores contra la versión
+      // recién creada (PUT /valores-cableado/productos/:version_id); si lo
+      // deja vacío, la versión queda sin ficha hasta completarla luego
+      // desde "Modificación de versión".
 
       await refData.insertarSeguimientoCambios(
         referenciaId, 'nueva_version',

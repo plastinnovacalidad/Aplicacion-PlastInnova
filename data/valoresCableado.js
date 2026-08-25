@@ -122,7 +122,7 @@ async function actualizarImagenRutaVersion(versionId, nuevaRuta) {
 async function existeVersion(versionId) {
   const db = getDb();
   const row = await db.get(
-    `SELECT v.id, v.version, r.codigo_base FROM versiones v JOIN referencias r ON r.id = v.referencia_id WHERE v.id = ?`,
+    `SELECT v.id, v.version, r.codigo_base, r.id as referencia_id FROM versiones v JOIN referencias r ON r.id = v.referencia_id WHERE v.id = ?`,
     [versionId]
   );
   return row || null;
