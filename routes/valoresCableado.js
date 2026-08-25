@@ -8,8 +8,59 @@ const { aplicarMarcaDeAgua } = require('../utils/logo');
 const { upload } = require('../utils/upload');
 const { CARPETA_FOTOS_CABLEADO, CARPETAS_FOTOS, OBSOLETAS_DIR } = require('../settings/paths');
 const valoresData = require('../data/valoresCableado');
+const refData = require('../data/referencias');
 
 const router = express.Router();
+
+// Nombres legibles de cada campo de la ficha, para armar el mensaje de
+// auditoría cuando se edita ("Voltaje: 12 → 14"), en vez de mostrar los
+// nombres de columna crudos (voltaje_revision, amperaje_min_medias, etc.).
+// Mismas etiquetas que ya usa el formulario en Public/referencias.html.
+const ETIQUETAS_CAMPOS_FICHA = {
+  voltaje_revision: 'Voltaje (Revisión 14V)',
+  amperaje_medias: 'Amperaje medias (bajas)',
+  potencia_medias: 'Potencia medias',
+  amperaje_altas: 'Amperaje altas',
+  potencia_altas: 'Potencia altas',
+  voltaje_min: 'Voltaje mínimo',
+  amperaje_min_medias: 'Amperaje mín. (medias)',
+  potencia_min_medias: 'Potencia mín. (medias)',
+  amperaje_min_altas: 'Amperaje mín. (altas)',
+  potencia_min_altas: 'Potencia mín. (altas)',
+  voltaje_max: 'Voltaje máximo',
+  amperaje_max: 'Amperaje máximo',
+  potencia_max: 'Potencia máxima',
+  posicion_punto: 'Posición punto',
+  referencia_cable: 'Referencia cable',
+  forma_cableado: 'Forma de cableado',
+  cortar_puntas: 'Cortar puntas',
+  empujar_cables: 'Empujar cables',
+};
+const CAMPOS_BOOLEANOS_FICHA = new Set(['cortar_puntas', 'empujar_cables']);
+
+// Compara la ficha que ya estaba guardada contra la que se acaba de mandar
+// a guardar, y arma la lista de campos que realmente cambiaron — para que
+// el historial diga qué se corrigió (ej. "Voltaje (Revisión 14V): 12 → 14")
+// en vez de un genérico "valores editados" sin detalle. Los campos vacíos
+// (null/undefined/'') antes y después no cuentan como cambio.
+function compararFichaValores(anterior, nueva) {
+  const cambios = [];
+  for (const campo of Object.keys(ETIQUETAS_CAMPOS_FICHA)) {
+    const esBooleano = CAMPOS_BOOLEANOS_FICHA.has(campo);
+    const formatear = (v) => {
+      if (esBooleano) return (v === 1 || v === true || v === '1') ? 'Sí' : 'No';
+      return (v === null || v === undefined || v === '') ? '(vacío)' : String(v);
+    };
+    const valorAntes = anterior ? anterior[campo] : null;
+    const valorDespues = nueva ? nueva[campo] : null;
+    const antesTxt = formatear(valorAntes);
+    const despuesTxt = formatear(valorDespues);
+    if (antesTxt !== despuesTxt) {
+      cambios.push({ campo, etiqueta: ETIQUETAS_CAMPOS_FICHA[campo], antes: antesTxt, despues: despuesTxt });
+    }
+  }
+  return cambios;
+}
 
 // forma_cableado siempre debería ser un nombre de archivo simple (ej.
 // "1017.jpg", ver comentarios más abajo) — nunca una ruta. Si contiene "/",
@@ -165,8 +216,26 @@ router.put('/valores-cableado/productos/:version_id', validarToken, puedeGestion
   const version = await valoresData.existeVersion(versionId);
   if (!version) return res.status(404).json({ error: 'Esa versión no existe — créala primero desde Circuitos SMD' });
 
+  // Se compara ANTES de guardar (contra lo que ya había en la base de
+  // datos) para poder dejar en el historial exactamente qué cambió — Julio
+  // pidió que quede registrado "cómo se cambió X valor por otro", no solo
+  // que "se editaron valores". Si no cambió nada realmente (el usuario le
+  // dio Guardar sin tocar nada) no se registra nada nuevo en el historial.
+  const fichaAnterior = await valoresData.obtenerFichaVersion(versionId);
+  const cambios = compararFichaValores(fichaAnterior, req.body || {});
+
   await valoresData.guardarFichaVersion(versionId, req.body || {});
-  res.json({ success: true, version_id: versionId, codigo_base: version.codigo_base, version: version.version });
+
+  if (cambios.length > 0) {
+    const mensaje = cambios.map(c => `${c.etiqueta}: ${c.antes} → ${c.despues}`).join('; ');
+    await refData.insertarSeguimientoCambios(
+      version.referencia_id, 'valores_editados',
+      { accion: 'Valores y cableado editados', version: version.version, cambios },
+      req.usuario.id, mensaje
+    );
+  }
+
+  res.json({ success: true, version_id: versionId, codigo_base: version.codigo_base, version: version.version, cambios: cambios.length });
 }));
 
 module.exports = router;
