@@ -6,13 +6,6 @@
     "rol": "admin",
     "loginTime": "2026-07-28T15:09:42.183Z"
   },
-  "et4cou6ekpemsndd48s": {
-    "id": 1,
-    "nombre": "Administrador",
-    "usuario": "admin",
-    "rol_id": 1,
-    "rol": "admin"
-  },
   "i1ek4fftmzomsnde45l": {
     "id": 1,
     "nombre": "Administrador",
@@ -48,13 +41,6 @@
     "rol_id": 1,
     "rol": "admin"
   },
-  "jp2ajfciytmsqa954c": {
-    "id": 1,
-    "nombre": "Administrador",
-    "usuario": "admin",
-    "rol_id": 1,
-    "rol": "admin"
-  },
   "674bqmdb28nmsqanfml": {
     "id": 1,
     "nombre": "Administrador",
@@ -76,11 +62,35 @@
     "rol_id": 1,
     "rol": "admin"
   },
-  "lbkrj2608lmsqbanth": {
+  "qe5pkc26ermmsqip05c": {
     "id": 1,
     "nombre": "Administrador",
     "usuario": "admin",
     "rol_id": 1,
     "rol": "admin"
+  },
+  "rvajkfy32mmsrwqjap": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin",
+    "ultimaActividad": 1786649194562
+  },
+  "0by705dkrtumt770vti": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin",
+    "ultimaActividad": 1787598336631
+  },
+  "vhbkhmegl7mt8mg3px": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin",
+    "ultimaActividad": 1787664814366
   }
 }

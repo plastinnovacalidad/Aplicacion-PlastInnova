@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calidad General - Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+    .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; overflow-y: auto; }
+    .content-area { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; }
+
+    .kpis { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+    .kpi-tile { flex: 1; min-width: 180px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
+    .kpi-tile .kpi-num { font-size: 26px; font-weight: 800; color: #2d3748; }
+    .kpi-tile .kpi-label { font-size: 12px; color: #718096; font-weight: 600; margin-top: 2px; }
+    .kpi-tile.danger .kpi-num { color: #c53030; }
+    .kpi-tile.warning .kpi-num { color: #b7791f; }
+
+    .charts-row { display: flex; gap: 18px; margin-bottom: 25px; flex-wrap: wrap; }
+    .chart-box { flex: 1; min-width: 320px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
+    .chart-box h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; }
+    .chart-box canvas { max-height: 260px; }
+
+    .aviso-datos { background: #ebf8ff; border: 1px solid #bee3f8; color: #2c5282; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; margin-bottom: 18px; }
+
+    .prod-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+    .prod-controls input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; width: 260px; max-width: 100%; }
+
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; cursor: pointer; user-select: none; }
+    .admin-table th:hover { color: var(--brand-primary); }
+    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; }
+    .admin-table tr:hover td { background: #f9f9f9; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .pill-danger { background: #fff5f5; color: #c53030; }
+    .pill-ok { background: #f0fff4; color: #38a169; }
+    .pill-muted { background: #f0f0f0; color: #888; }
+    .pill-warning { background: #fffaf0; color: #b7791f; }
+
+    .panel-grid { display: flex; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; align-items: stretch; }
+    .panel-card { flex: 1; min-width: 320px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
+    .panel-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; display: flex; align-items: center; justify-content: space-between; }
+    .mini-kpis { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    .mini-kpi { flex: 1; min-width: 100px; background: #f8fafc; border: 1px solid #edf2f7; border-radius: 8px; padding: 8px 10px; text-align: center; }
+    .mini-kpi .num { font-size: 18px; font-weight: 800; color: #2d3748; }
+    .mini-kpi .num.danger { color: #c53030; }
+    .mini-kpi .lbl { font-size: 10.5px; color: #718096; font-weight: 600; }
+    .mini-list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+    .mini-list li { padding: 6px 0; border-bottom: 1px dashed #edf2f7; display: flex; justify-content: space-between; gap: 8px; }
+    .mini-list li:last-child { border-bottom: none; }
+    .mini-subtitle { font-size: 11.5px; color: #a0aec0; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; }
+    .empty-hint { color: #a0aec0; text-align: center; padding: 14px 0; font-size: 12.5px; }
+    .wpp-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #edf2f7; font-size: 13px; }
+    .wpp-item:last-child { border-bottom: none; }
+    .wpp-dot { width: 8px; height: 8px; border-radius: 50%; background: #38a169; display: inline-block; margin-right: 8px; flex-shrink: 0; }
+    .feed-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 25px; }
+    .feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f1f1; }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-icon { font-size: 16px; }
+    .feed-body { flex: 1; font-size: 13px; color: #444; }
+    .feed-meta { font-size: 11px; color: #a0aec0; margin-top: 3px; }
+    .badge-tipo { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; margin-right: 6px; }
+    .badge-recomendacion { background: #ebf8ff; color: #2b6cb0; }
+    .badge-observacion { background: #fffaf0; color: #b7791f; }
+    .btn-toggle-tabla { background: #f8fafc; border: 1px solid #e2e8f0; color: #2d3748; border-radius: 6px; padding: 7px 16px; font-size: 12.5px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+    .btn-toggle-tabla:hover { background: #edf2f7; }
+  </style>
+</head>
+<body>
+  <div class="login-overlay" id="loginOverlay" style="display: none;">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>🏆 Calidad General</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div class="header-left">
+        <h1>🏆 Calidad General</h1>
+        <p>Tablero de control: Garantías, Muestreos ISO 2859, Metrología, Circuitos SMD y WhatsApp Bot</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span>Sesión activa: <strong id="userName">--</strong></span>
+      <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
+      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="main-container" id="appMain" style="display:none;">
+    <div class="content-area">
+      <div class="aviso-datos">
+        ℹ️ Este es el tablero de control general de Calidad: cruza <strong>Garantías</strong> y <strong>Muestreos ISO 2859</strong> por producto terminado, y además reúne <strong>Medidas de Metrología</strong>, los <strong>últimos comentarios de Circuitos SMD</strong> y quién está <strong>activo en el bot de WhatsApp</strong> — todo en un solo lugar para revisar de un vistazo. Circuitos SMD no entra en el cruce de arriba porque maneja su propio catálogo de tarjetas/componentes, a otro nivel.
+      </div>
+
+      <div class="kpis" id="kpisContainer"></div>
+
+      <div class="charts-row">
+        <div class="chart-box">
+          <h4>Garantías por mes</h4>
+          <canvas id="chartGarantias"></canvas>
+        </div>
+        <div class="chart-box">
+          <h4>Lotes muestreados vs. rechazados por mes</h4>
+          <canvas id="chartLotes"></canvas>
+        </div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel-card">
+          <h4>🛠️ Medidas (Metrología)</h4>
+          <div id="metrologiaContenido"><div class="empty-hint">Cargando...</div></div>
+        </div>
+        <div class="panel-card">
+          <h4>📱 Activos en el bot de WhatsApp</h4>
+          <div id="whatsappContenido"><div class="empty-hint">Cargando...</div></div>
+        </div>
+      </div>
+
+      <div class="feed-card">
+        <h4 style="margin:0 0 6px 0; font-size:14px; color:#4a5568;">🗨️ Últimos comentarios y recomendaciones — Circuitos SMD</h4>
+        <div id="comentariosContenido"><div class="empty-hint">Cargando...</div></div>
+      </div>
+
+      <div class="feed-card">
+        <h4 style="margin:0 0 6px 0; font-size:14px; color:#4a5568;">🔍 Últimos muestreos realizados (ISO 2859)</h4>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Módulo</th><th>Lote</th><th>Referencia</th><th>Tipo</th><th>Analista</th><th>Cantidad</th><th>Decisión</th>
+              </tr>
+            </thead>
+            <tbody id="tablaMuestreos"><tr><td colspan="8" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+        <div style="text-align:center;">
+          <button class="btn-toggle-tabla" id="btnToggleMuestreos" onclick="alternarMostrarMuestreos()" style="display:none;"></button>
+        </div>
+      </div>
+
+      <div class="prod-controls">
+        <div style="font-weight:700; color:#2d3748;">📦 Resumen por producto</div>
+        <input type="text" id="buscarProducto" placeholder="Buscar por referencia..." oninput="renderizarTablaProductos()">
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th onclick="ordenarPor('referencia')">Producto</th>
+              <th onclick="ordenarPor('lotes_muestreados')">Lotes Muestreados</th>
+              <th onclick="ordenarPor('lotes_rechazados')">Lotes Rechazados</th>
+              <th onclick="ordenarPor('pct_rechazo')">% Rechazo</th>
+              <th onclick="ordenarPor('garantias')">Garantías</th>
+              <th>Causal más frecuente</th>
+            </tr>
+          </thead>
+          <tbody id="tablaProductos"><tr><td colspan="6" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+      <div style="text-align:center;">
+        <button class="btn-toggle-tabla" id="btnToggleProductos" onclick="alternarMostrarTodos()" style="display:none;"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script src="js/auth-comun.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let usuarioActual = null;
+    let permisosUsuario = [];
+    let productosCache = [];
+    let ordenActual = { campo: 'garantias', asc: false };
+    let chartGarantiasInstance = null;
+    let chartLotesInstance = null;
+    let mostrarTodosProductos = false;
+    const LIMITE_PRODUCTOS_DEFAULT = 15;
+    let muestreosCache = [];
+    let mostrarTodosMuestreos = false;
+    const LIMITE_MUESTREOS_DEFAULT = 15;
+
+    async function initApp() {
+      try {
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        document.getElementById('userName').textContent = me.usuario || 'Usuario';
+        usuarioActual = me;
+      } catch (e) {}
+      await cargarMisPermisos();
+      if (usuarioActual.rol !== 'admin' && !tienePermiso('calidad.ver')) {
+        localStorage.removeItem('token');
+        const err = document.getElementById('loginError');
+        if (err) {
+          err.textContent = 'Acceso denegado: tu usuario no tiene permiso para ver el tablero de Calidad General.';
+          err.style.display = 'block';
+        }
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('appHeader').style.display = 'none';
+        document.getElementById('appMain').style.display = 'none';
+        return;
+      }
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+
+      const btnVolver = document.getElementById('btnVolverPortal');
+      if (btnVolver) btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+
+      await Promise.all([
+        cargarTendencias(),
+        cargarProductos(),
+        cargarMetrologia(),
+        cargarComentariosSMD(),
+        cargarWhatsappActivos(),
+        cargarMuestreosRecientes(),
+      ]);
+    }
+
+    function checkSession() {
+      if (token) initApp();
+      else document.getElementById('loginOverlay').style.display = 'flex';
+    }
+    checkSession();
+
+    async function cargarMisPermisos() {
+      const roles = await cargarPermisosConUsuarioActual();
+    }
+
+    async function cargarTendencias() {
+      try {
+        const res = await fetch('/api/calidad/tendencias?meses=12', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        renderizarCharts(data);
+      } catch (e) {
+        console.error('Error cargando tendencias:', e);
+      }
+    }
+
+    function renderizarCharts(data) {
+      const ctxG = document.getElementById('chartGarantias').getContext('2d');
+      const ctxL = document.getElementById('chartLotes').getContext('2d');
+      if (chartGarantiasInstance) chartGarantiasInstance.destroy();
+      if (chartLotesInstance) chartLotesInstance.destroy();
+
+      chartGarantiasInstance = new Chart(ctxG, {
+        type: 'line',
+        data: {
+          labels: data.garantias_por_mes.map(x => x.mes),
+          datasets: [{ label: 'Garantías', data: data.garantias_por_mes.map(x => x.cantidad), borderColor: '#dd6b20', backgroundColor: 'rgba(221,107,32,0.1)', tension: 0.3, fill: true }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+
+      chartLotesInstance = new Chart(ctxL, {
+        type: 'bar',
+        data: {
+          labels: data.lotes_por_mes.map(x => x.mes),
+          datasets: [
+            { label: 'Muestreados', data: data.lotes_por_mes.map(x => x.total), backgroundColor: '#2c7a7b' },
+            { label: 'Rechazados', data: data.lotes_por_mes.map(x => x.rechazados), backgroundColor: '#c53030' }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    async function cargarProductos() {
+      try {
+        const res = await fetch('/api/calidad/productos', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error('Respuesta inesperada: ' + JSON.stringify(data).slice(0, 200));
+        productosCache = data;
+        renderizarKpis();
+        renderizarTablaProductos();
+      } catch (e) {
+        console.error('Error cargando /api/calidad/productos:', e);
+        document.getElementById('tablaProductos').innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Error cargando datos. Si acabas de actualizar la app, reinicia el servidor. Detalle en la consola del navegador (F12).</td></tr>';
+      }
+    }
+
+    function renderizarKpis() {
+      const totalGarantias = productosCache.reduce((s, p) => s + p.garantias, 0);
+      const totalLotes = productosCache.reduce((s, p) => s + p.lotes_muestreados, 0);
+      const totalRechazados = productosCache.reduce((s, p) => s + p.lotes_rechazados, 0);
+      const productosConGarantiasSinMuestreo = productosCache.filter(p => p.garantias > 0 && p.lotes_muestreados === 0).length;
+      const pctRechazoGeneral = totalLotes > 0 ? Math.round((totalRechazados / totalLotes) * 1000) / 10 : 0;
+
+      document.getElementById('kpisContainer').innerHTML = `
+        <div class="kpi-tile"><div class="kpi-num">${totalGarantias}</div><div class="kpi-label">Garantías totales</div></div>
+        <div class="kpi-tile"><div class="kpi-num">${totalLotes}</div><div class="kpi-label">Lotes muestreados</div></div>
+        <div class="kpi-tile ${pctRechazoGeneral > 15 ? 'danger' : ''}"><div class="kpi-num">${pctRechazoGeneral}%</div><div class="kpi-label">% Rechazo general</div></div>
+        <div class="kpi-tile ${productosConGarantiasSinMuestreo > 0 ? 'warning' : ''}"><div class="kpi-num">${productosConGarantiasSinMuestreo}</div><div class="kpi-label">Productos con garantías sin muestreo</div></div>
+      `;
+    }
+
+    async function cargarMetrologia() {
+      const cont = document.getElementById('metrologiaContenido');
+      try {
+        const res = await fetch('/api/calidad/metrologia', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!data || typeof data !== 'object') throw new Error('Respuesta inesperada: ' + JSON.stringify(data).slice(0, 200));
+        renderizarMetrologia(data);
+      } catch (e) {
+        console.error('Error cargando /api/calidad/metrologia:', e);
+        cont.innerHTML = '<div class="empty-hint">Error cargando datos de Metrología. Si acabas de actualizar la app, reinicia el servidor.</div>';
+      }
+    }
+
+    function renderizarMetrologia(data) {
+      const cont = document.getElementById('metrologiaContenido');
+      const pct = data.pct_fuera_tolerancia;
+      const pctTxt = pct === null || pct === undefined ? '--' : pct + '%';
+      let html = `
+        <div class="mini-kpis">
+          <div class="mini-kpi"><div class="num">${data.total_medidas || 0}</div><div class="lbl">Medidas tomadas</div></div>
+          <div class="mini-kpi"><div class="num ${pct > 15 ? 'danger' : ''}">${pctTxt}</div><div class="lbl">Fuera de tolerancia</div></div>
+          <div class="mini-kpi"><div class="num">${data.total_inspecciones || 0}</div><div class="lbl">Inspecciones</div></div>
+        </div>
+      `;
+      if (!data.total_medidas) {
+        html += '<div class="empty-hint">Aún no hay mediciones registradas en Metrología.</div>';
+        cont.innerHTML = html;
+        return;
+      }
+      if (data.top_referencias_problema && data.top_referencias_problema.length > 0) {
+        html += '<div class="mini-subtitle">Referencias con más medidas fuera de tolerancia</div><ul class="mini-list">' +
+          data.top_referencias_problema.map(r => `<li><span>${escapeHtml(r.referencia)}</span><strong>${r.medidas_fuera_tolerancia}</strong></li>`).join('') +
+          '</ul>';
+      }
+      if (data.ultimas_fuera_tolerancia && data.ultimas_fuera_tolerancia.length > 0) {
+        html += '<div class="mini-subtitle">Últimas medidas fuera de tolerancia</div><ul class="mini-list">' +
+          data.ultimas_fuera_tolerancia.map(m => `<li><span>${escapeHtml(m.referencia)} · ${escapeHtml(m.cota)} (${m.medida_real} vs ${m.medida_estandar})</span><span style="color:#a0aec0;">${escapeHtml(m.fecha || '')}</span></li>`).join('') +
+          '</ul>';
+      } else {
+        html += '<div class="empty-hint">Sin medidas fuera de tolerancia registradas.</div>';
+      }
+      cont.innerHTML = html;
+    }
+
+    async function cargarComentariosSMD() {
+      const cont = document.getElementById('comentariosContenido');
+      try {
+        const res = await fetch('/api/calidad/comentarios-smd?limite=8', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error('Respuesta inesperada: ' + JSON.stringify(data).slice(0, 200));
+        renderizarComentarios(data);
+      } catch (e) {
+        console.error('Error cargando /api/calidad/comentarios-smd:', e);
+        cont.innerHTML = '<div class="empty-hint">Error cargando comentarios de Circuitos SMD. Si acabas de actualizar la app, reinicia el servidor.</div>';
+      }
+    }
+
+    function renderizarComentarios(data) {
+      const cont = document.getElementById('comentariosContenido');
+      if (!data || data.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Todavía no hay recomendaciones ni observaciones registradas en Circuitos SMD.</div>';
+        return;
+      }
+      cont.innerHTML = data.map(c => {
+        const esRecomendacion = c.tipo === 'recomendacion';
+        const badge = esRecomendacion
+          ? '<span class="badge-tipo badge-recomendacion">Recomendación</span>'
+          : '<span class="badge-tipo badge-observacion">Observación</span>';
+        const fechaTxt = c.fecha ? new Date(c.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        return `<div class="feed-item">
+          <div class="feed-icon">${esRecomendacion ? '💡' : '📝'}</div>
+          <div class="feed-body">
+            ${badge}<strong>${escapeHtml(c.referencia || '')}</strong>
+            <div>${escapeHtml(c.texto || '')}</div>
+            <div class="feed-meta">${escapeHtml(c.autor || 'Sistema')} · ${fechaTxt}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function cargarWhatsappActivos() {
+      const cont = document.getElementById('whatsappContenido');
+      try {
+        const res = await fetch('/api/calidad/whatsapp-activos', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!data || typeof data !== 'object') throw new Error('Respuesta inesperada: ' + JSON.stringify(data).slice(0, 200));
+        renderizarWhatsapp(data);
+      } catch (e) {
+        console.error('Error cargando /api/calidad/whatsapp-activos:', e);
+        cont.innerHTML = '<div class="empty-hint">Error cargando sesiones activas. Si acabas de actualizar la app, reinicia el servidor.</div>';
+      }
+    }
+
+    function renderizarWhatsapp(data) {
+      const cont = document.getElementById('whatsappContenido');
+      if (!data.permitido) {
+        cont.innerHTML = '<div class="empty-hint">Tu usuario no tiene permiso para ver el detalle del bot de WhatsApp.</div>';
+        return;
+      }
+      if (!data.sesiones || data.sesiones.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Nadie está activo en este momento.</div>';
+        return;
+      }
+      cont.innerHTML = data.sesiones.map(s => `
+        <div class="wpp-item">
+          <span><span class="wpp-dot"></span><strong>${escapeHtml(s.nombre || s.telefono || '')}</strong> — 📍 ${escapeHtml(s.area_nombre || '')}</span>
+          <span style="color:#718096;">🕐 ${escapeHtml(s.entrada || '')}</span>
+        </div>
+      `).join('');
+    }
+
+    async function cargarMuestreosRecientes() {
+      try {
+        // Se trae un límite alto de una sola vez (hoy no llegan a ser
+        // muchos) y el "mostrar todos" de abajo es puramente visual, igual
+        // que en la tabla de productos — evita ida y vuelta al servidor
+        // solo por desplegar la lista.
+        const res = await fetch('/api/calidad/muestreos-recientes?limite=200', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error('Respuesta inesperada: ' + JSON.stringify(data).slice(0, 200));
+        muestreosCache = data;
+        renderizarMuestreos();
+      } catch (e) {
+        console.error('Error cargando /api/calidad/muestreos-recientes:', e);
+        document.getElementById('tablaMuestreos').innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error cargando muestreos. Si acabas de actualizar la app, reinicia el servidor. Detalle en la consola del navegador (F12).</td></tr>';
+      }
+    }
+
+    function alternarMostrarMuestreos() {
+      mostrarTodosMuestreos = !mostrarTodosMuestreos;
+      renderizarMuestreos();
+    }
+
+    function decisionPill(decision) {
+      const okays = ['Seguir', 'Aceptado', 'Aprobado', 'Liberar'];
+      const malas = ['Rechazado', 'Parar', 'Rechazar'];
+      const enRevision = ['Alerta', 'Reclasificar', 'Reclasificado', 'Reparar', 'Reparacion'];
+      const clase = okays.includes(decision) ? 'pill-ok' : (malas.includes(decision) ? 'pill-danger' : (enRevision.includes(decision) ? 'pill-warning' : 'pill-muted'));
+      return `<span class="pill ${clase}">${escapeHtml(decision || '--')}</span>`;
+    }
+
+    function renderizarMuestreos() {
+      const tbody = document.getElementById('tablaMuestreos');
+      const btnToggle = document.getElementById('btnToggleMuestreos');
+
+      if (!muestreosCache || muestreosCache.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#a0aec0;">Todavía no se han registrado muestreos.</td></tr>';
+        btnToggle.style.display = 'none';
+        return;
+      }
+
+      let filas = muestreosCache;
+      if (filas.length > LIMITE_MUESTREOS_DEFAULT) {
+        btnToggle.style.display = 'inline-block';
+        btnToggle.textContent = mostrarTodosMuestreos
+          ? '▲ Mostrar solo los últimos ' + LIMITE_MUESTREOS_DEFAULT
+          : `▼ Mostrar todos (${filas.length})`;
+        if (!mostrarTodosMuestreos) filas = filas.slice(0, LIMITE_MUESTREOS_DEFAULT);
+      } else {
+        btnToggle.style.display = 'none';
+      }
+
+      tbody.innerHTML = filas.map(m => {
+        const moduloTxt = m.modulo === 'Produccion' ? '⚙️ Producción' : '📦 Recepción';
+        const tipoTxt = (m.tipo || '').replace(/_/g, ' ');
+        return `<tr>
+          <td>${escapeHtml(m.fecha_hora || '')}</td>
+          <td>${moduloTxt}</td>
+          <td><strong>${escapeHtml(m.id_lote)}</strong></td>
+          <td>${escapeHtml(m.referencia || '')}</td>
+          <td>${escapeHtml(tipoTxt)}</td>
+          <td>${escapeHtml(m.analista || '')}</td>
+          <td>${m.cantidad_muestreada}</td>
+          <td>${decisionPill(m.decision)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function ordenarPor(campo) {
+      if (ordenActual.campo === campo) ordenActual.asc = !ordenActual.asc;
+      else { ordenActual.campo = campo; ordenActual.asc = true; }
+      renderizarTablaProductos();
+    }
+
+    function alternarMostrarTodos() {
+      mostrarTodosProductos = !mostrarTodosProductos;
+      renderizarTablaProductos();
+    }
+
+    function renderizarTablaProductos() {
+      const q = document.getElementById('buscarProducto').value.trim().toLowerCase();
+      let filas = productosCache.filter(p => !q || p.referencia.toLowerCase().includes(q));
+
+      filas = filas.slice().sort((a, b) => {
+        let va = a[ordenActual.campo], vb = b[ordenActual.campo];
+        if (va === null || va === undefined) va = -1;
+        if (vb === null || vb === undefined) vb = -1;
+        if (typeof va === 'string') return ordenActual.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+        return ordenActual.asc ? va - vb : vb - va;
+      });
+
+      const totalFiltradas = filas.length;
+      // La lista completa de productos molesta si son cientos — por defecto
+      // se ven solo los primeros (según el orden activo, que arranca en más
+      // garantías primero) y hay un botón para desplegar el resto. Al
+      // buscar algo puntual, mejor mostrar todos los que coincidan.
+      const btnToggle = document.getElementById('btnToggleProductos');
+      if (!q && totalFiltradas > LIMITE_PRODUCTOS_DEFAULT) {
+        btnToggle.style.display = 'inline-block';
+        btnToggle.textContent = mostrarTodosProductos
+          ? '▲ Mostrar solo los primeros ' + LIMITE_PRODUCTOS_DEFAULT
+          : `▼ Mostrar todos (${totalFiltradas})`;
+        if (!mostrarTodosProductos) filas = filas.slice(0, LIMITE_PRODUCTOS_DEFAULT);
+      } else {
+        btnToggle.style.display = 'none';
+      }
+
+      const tbody = document.getElementById('tablaProductos');
+      if (filas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#a0aec0;">Sin resultados</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filas.map(p => {
+        const pctTxt = p.pct_rechazo === null ? '<span class="pill pill-muted">Sin datos</span>' :
+          `<span class="pill ${p.pct_rechazo > 15 ? 'pill-danger' : 'pill-ok'}">${p.pct_rechazo}%</span>`;
+        const sinMuestreo = p.garantias > 0 && p.lotes_muestreados === 0
+          ? ' <span class="pill pill-danger" title="Tiene garantías pero ningún lote muestreado">Sin muestreo</span>' : '';
+        return `<tr>
+          <td><strong>${escapeHtml(p.referencia)}</strong>${sinMuestreo}</td>
+          <td>${p.lotes_muestreados}</td>
+          <td>${p.lotes_rechazados}</td>
+          <td>${pctTxt}</td>
+          <td>${p.garantias}</td>
+          <td>${p.causal_frecuente ? escapeHtml(p.causal_frecuente) : '--'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>

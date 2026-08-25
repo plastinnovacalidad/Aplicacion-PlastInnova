@@ -4,34 +4,69 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Metrología y Planos de Molde - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .header { background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-shrink: 0; }
-    .header h1 { font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    /* Header: estructura y color institucional vienen de css/comun.css;
+       aquí solo la variable de sombra, que es distinta al valor por defecto. */
+    .header { --header-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 22px; font-weight: 600; }
     .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
     .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
     .btn-action:hover { background: rgba(255,255,255,0.35); }
 
-    .main-layout { display: flex; flex: 1; height: calc(100vh - 70px); overflow: hidden; width: 100%; }
+    /* padding/gap agregados para que la lista quede como una tarjeta
+       flotante (igual que en circuitos SMD), en vez de pegada al borde;
+       el alto se ajusta 30px de más (15px arriba + 15px abajo) para
+       compensar ese padding nuevo. */
+    .main-layout { display: flex; flex: 1; height: calc(100vh - 100px); overflow: hidden; width: 100%; padding: 15px; gap: 15px; }
 
-    /* Sidebar selector */
-    .sidebar { width: 340px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; flex-shrink: 0; height: 100%; }
-    .sidebar-header { padding: 15px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-    .sidebar-header-top { display: flex; justify-content: space-between; align-items: center; }
-    .sidebar-header h3 { font-size: 16px; color: #2d3748; font-weight: 600; }
-    .search-input { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
-    .search-input:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+    /* Sidebar selector: ahora es una tarjeta blanca redondeada con sombra
+       (como .lista-panel de circuitos SMD), en vez de un panel de bordes
+       cuadrados pegado al header y al borde izquierdo. */
+    .sidebar { width: 340px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; flex-shrink: 0; height: 100%; overflow: hidden; }
 
-    .refs-list { flex: 1; overflow-y: auto; }
-    .ref-item { padding: 12px 20px; border-bottom: 1px solid #edf2f7; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
-    .ref-item:hover { background: #f7fafc; }
-    .ref-item.active { background: #ebf8ff; border-left: 4px solid #3182ce; }
-    .ref-item h4 { font-size: 14px; color: #2d3748; font-weight: 600; }
+    /* Mismo encabezado azul + contador + buscador con lupa que usan
+       Circuitos SMD (.ref-header/.ref-search) y Valores y Cableado
+       (.vc-sidebar-header/.vc-search-box) — antes este panel tenía un
+       encabezado gris con un botón verde "+ Nueva", que no hacía juego con
+       el resto de módulos. El botón de crear se mueve debajo del buscador
+       como su propia fila (acá sí hace falta: a diferencia de SMD/Valores,
+       Metrología tiene su propio catálogo, no comparte el de Crear
+       Referencia). */
+    .sidebar-header {
+      background: var(--brand-primary-gradient); color: #fff; padding: 15px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .ref-count { background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+
+    .ref-search { padding: 12px 15px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+    .search-input {
+      width: 100%; padding: 10px 12px 10px 35px; border: 1px solid #ddd; border-radius: 8px;
+      font-size: 13px; outline: none; transition: border-color 0.2s;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center;
+    }
+    .search-input:focus { border-color: var(--brand-primary); }
+
+    .refs-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .ref-item {
+      padding: 10px 12px; margin-bottom: 6px; border-radius: 8px; cursor: pointer;
+      border: 1px solid transparent; transition: all 0.15s;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
+    .ref-item.active { background: var(--brand-primary-gradient); border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }
+    .ref-item h4 { font-size: 13px; color: #2d3748; font-weight: 600; }
     .ref-item p { font-size: 11px; color: #718096; margin-top: 2px; }
-    .badge-cotas { background: #e2e8f0; color: #4a5568; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .ref-item.active h4, .ref-item.active p { color: #fff; }
+    .badge-cotas { background: #e2e8f0; color: #4a5568; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+    .ref-item.active .badge-cotas { background: rgba(255,255,255,0.28); color: #fff; }
 
     /* Content Area */
     .content-area { flex: 1; background: #eef2f7; height: 100%; overflow-y: auto; padding: 25px 40px; display: flex; flex-direction: column; gap: 20px; }
@@ -42,14 +77,22 @@
 
     .panel-card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; flex-direction: column; margin-bottom: 40px; }
     .panel-card.active { display: flex; }
-    .panel-header { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    /* El propio ".panel-header" (fondo gris) redondea sus esquinas de
+       arriba para que combinen con las de ".panel-card" que lo contiene,
+       en vez de recortarlo con overflow:hidden en el padre — eso rompía el
+       scroll de la página cuando el contenido (ej. el plano de 700px + las
+       cotas debajo) era más alto que la pantalla, porque un elemento con
+       overflow:hidden dentro de un contenedor flex puede encogerse más
+       chico que su contenido en vez de desbordarse para que se pueda
+       hacer scroll. */
+    .panel-header { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
     .panel-header h2 { font-size: 18px; color: #2d3748; font-weight: 600; }
     .panel-body { padding: 25px 30px; display: flex; flex-direction: column; gap: 25px; }
 
     /* Tabs */
-    .tabs { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-    .tab-btn { background: none; border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #718096; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-    .tab-btn.active { background: #3182ce; color: white; }
+    /* .tabs / .tab-btn: estilo compartido en css/comun.css (Fase A de
+       unificación de menús); el color activo usa la variable --header-bg
+       de "body" de arriba, así queda azul, igual que antes. */
 
     .tab-content { display: none; flex-direction: column; gap: 25px; }
     .tab-content.active { display: flex; }
@@ -71,9 +114,9 @@
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 12px; font-weight: 600; color: #4a5568; }
     .form-group input, .form-group textarea, .form-group select { padding: 10px 14px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
-    .form-group input:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+    .form-group input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.15); }
 
-    .btn { padding: 10px 20px; background: #3182ce; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn { padding: 10px 20px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
     .btn:hover { opacity: 0.9; }
     .btn.success { background: #38a169; }
     .btn.sm { padding: 6px 12px; font-size: 12px; }
@@ -82,35 +125,87 @@
     .badge.conforme { background: #c6f6d5; color: #22543d; }
     .badge.fuera { background: #fed7d7; color: #742a2a; }
 
+    /* Estado de la cota en la tabla de "Toma de Medidas": antes era una
+       etiqueta con palabra ("CONFORME", "FUERA TOL."); ahora es un solo
+       ícono redondo para que quepa más apretado en tablet — el texto sigue
+       disponible como "title" (tooltip) para quien pase el mouse. Es una
+       clase aparte de ".badge" (que se sigue usando, sin cambios, en el
+       historial de inspecciones con la palabra completa). */
+    .badge-icono { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 14px; font-weight: 700; }
+    .badge-icono.pendiente { background: #e2e8f0; color: #4a5568; }
+    .badge-icono.conforme { background: #c6f6d5; color: #22543d; }
+    .badge-icono.fuera { background: #fed7d7; color: #742a2a; }
+
     .medida-input { width: 110px; padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: 600; text-align: center; font-size: 13px; }
+
+    /* Botón compacto de "+" para agregar la foto de evidencia de una cota,
+       en vez del selector de archivo ancho de siempre ("Choose File / No
+       file chosen"), que en tablet ocupaba demasiado espacio. */
+    .btn-foto-cota { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; border: 1px dashed #a0aec0; cursor: pointer; color: #718096; font-size: 18px; font-weight: 700; background: white; }
+    .btn-foto-cota:hover { background: #f0f4f8; border-color: #718096; }
+    .btn-foto-cota.tiene-foto { border-style: solid; border-color: #38a169; color: #38a169; background: #f0fff4; }
+    .btn-foto-cota input[type="file"] { display: none; }
+
+    /* Tabla de "Toma de Medidas en Cotas": columnas más juntas que el resto
+       de tablas del módulo, para que quepan mejor en pantallas de tablet. */
+    .tabla-cotas-compacta th, .tabla-cotas-compacta td { padding: 8px 8px; }
   </style>
+  <!-- pdf.js: dibuja los planos PDF nosotros mismos (en un <canvas>), en vez
+       de dejárselo al navegador con un iframe. Los tablets (sobre todo
+       Android) no traen el visor de PDF integrado que sí tiene Chrome de
+       escritorio, así que un plano en iframe ahí simplemente no se veía —
+       solo salía un enlace de "abrir" que mandaba a otra pestaña. Con esto
+       se ve igual en computador, tablet y celular. Se sirve localmente
+       (Public/js/vendor) para no depender de un CDN externo. -->
+  <script src="js/vendor/pdf.min.js"></script>
 </head>
 <body>
 
-  <div class="header">
-    <div>
-      <h1>📐 Módulo de Metrología y Planos de Molde</h1>
-      <p>Control de planos, cotas, tolerancias e inspección metrológica de moldes</p>
-    </div>
-    <div class="header-right">
-      <span id="userNameDisplay">Usuario</span>
-      <a href="index.html" class="btn-action">← Volver al Portal</a>
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>📐 Metrología y Planos de Molde</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
     </div>
   </div>
 
-  <div class="main-layout">
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1>📐 Módulo de Metrología y Planos de Molde</h1>
+        <p>Control de planos, cotas, tolerancias e inspección metrológica de moldes</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-action" id="btnVolverPortal">← Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div class="main-layout" id="appMain" style="display:none;">
     <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-header-top">
-          <h3>Referencias</h3>
-          <button class="btn sm success" id="btnNuevaRefSidebar" onclick="abrirModalNuevaReferencia()" style="display:none;">+ Nueva</button>
-        </div>
+        <span>📐 Referencias</span>
+        <span class="ref-count" id="refCount">0</span>
+      </div>
+      <div class="ref-search">
         <input type="text" id="searchInput" class="search-input" placeholder="Buscar referencia..." oninput="filtrarReferencias()">
       </div>
       <div class="refs-list" id="refsList">
         <div style="padding: 20px; text-align: center; color: #a0aec0;">Cargando referencias...</div>
       </div>
+      <!-- Crear referencias, subir nueva versión o reemplazar el plano
+           actual se hace desde su propio módulo de administración
+           ("Crear Referencia (Planos)", accesible desde el Portal) — Julio
+           pidió quitar de acá el atajo directo, para que quien necesite
+           crear o modificar una referencia entre por ese módulo en vez de
+           por la pantalla de inspección. -->
     </div>
 
     <!-- Content -->
@@ -125,14 +220,12 @@
           <h2 id="refTitleDisplay">Referencia: -</h2>
           <div style="display:flex; align-items:center; gap:12px;">
             <span id="refMetaDisplay" style="font-size: 12px; color: #718096;"></span>
-            <button class="btn sm" id="btnSubirVersion" onclick="abrirModalNuevaVersion()" style="display:none;">📄 Subir Versión</button>
           </div>
         </div>
         <div class="panel-body">
           <div class="tabs">
             <button class="tab-btn active" id="tabBtnInspeccion" onclick="switchTab('tabInspeccion', this)">📋 Inspección & Cotas</button>
             <button class="tab-btn" id="tabBtnHistorial" onclick="switchTab('tabHistorial', this)" style="display:none;">📊 Historial</button>
-            <button class="tab-btn" id="tabBtnCambios" onclick="switchTab('tabCambios', this)" style="display:none;">📜 Auditoría de Cambios</button>
           </div>
 
           <!-- TAB 1: INSPECCIÓN & COTAS -->
@@ -141,22 +234,28 @@
             <div class="viewer-container">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="font-size: 15px; color: #2d3748;">Plano Activo (Altura de 700px)</h3>
-                <button class="btn sm" onclick="abrirZoomPlano()">🔍 Ampliar / Pantalla Completa</button>
+                <span style="font-size: 12px; color: #a0aec0;">🔍 Clic en el plano para ampliar</span>
               </div>
-              <div class="blueprint-viewer" id="blueprintViewerTop">
+              <div class="blueprint-viewer" id="blueprintViewerTop" onclick="abrirZoomPlano()" style="cursor: pointer;" title="Clic para ampliar el plano">
                 <div style="color: #a0aec0; text-align: center;">Cargando plano...</div>
               </div>
             </div>
 
-            <!-- Inspection Header Metadata (Submitted once per batch) -->
-            <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0;" id="secDatosInspeccion">
-              <h3 style="font-size: 15px; margin-bottom: 12px; color: #2d3748;">Datos Generales de la Inspección</h3>
+            <!-- Inspection Header Metadata (Submitted once per batch).
+                 Fecha/Responsable/Molde se autocompletan solos (fecha de hoy,
+                 usuario de la sesión, referencia seleccionada) y no aportan
+                 nada verlos en pantalla, pero sus valores se siguen llenando
+                 y enviando igual que antes (para el historial, auditoría,
+                 etc.) — solo están ocultos con "display:none", el JS de más
+                 abajo no cambió. Lote sí se deja visible porque lo escribe
+                 la persona que hace la inspección. -->
+            <div style="background: #f8fafc; padding: 16px 20px; border-radius: 10px; border: 1px solid #e2e8f0;" id="secDatosInspeccion">
               <div class="form-grid">
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                   <label>Fecha de Inspección</label>
                   <input type="date" id="inspFecha" readonly style="background:#edf2f7; cursor:not-allowed;">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                   <label>Responsable</label>
                   <input type="text" id="inspResponsable" placeholder="Nombre del inspector" readonly style="background:#edf2f7; cursor:not-allowed;">
                 </div>
@@ -164,21 +263,25 @@
                   <label>Lote</label>
                   <input type="text" id="inspLote" placeholder="Número de lote">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                   <label>Molde (Referencia)</label>
                   <input type="text" id="inspMolde" placeholder="Identificador molde" readonly style="background:#edf2f7; cursor:not-allowed;">
                 </div>
               </div>
             </div>
 
-            <!-- Cotas table with per-cota photo evidence & edit button -->
+            <!-- Cotas table: solo toma de medidas + evidencia fotográfica.
+                 Agregar/editar/eliminar cotas ya no se hace acá — se movió
+                 al módulo de administración (referencias_metrologia.html),
+                 dentro de "Modificación de versión" / "Nueva versión", para
+                 que cualquier cambio a las cotas quede junto con el resto
+                 de la administración de la referencia. -->
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h3 style="font-size: 15px; color: #2d3748;">Toma de Medidas en Cotas & Evidencia Fotográfica</h3>
-                <button class="btn sm success" id="btnAgregarCota" onclick="abrirModalCota()" style="display:none;">+ Agregar Cota</button>
               </div>
               <div class="table-responsive">
-                <table>
+                <table class="tabla-cotas-compacta">
                   <thead>
                     <tr>
                       <th>Cota</th>
@@ -188,12 +291,11 @@
                       <th>Tol. Máxima</th>
                       <th>Medida Real</th>
                       <th>Estado</th>
-                      <th>Foto / Evidencia Cota</th>
-                      <th>Acciones</th>
+                      <th>Foto</th>
                     </tr>
                   </thead>
                   <tbody id="tablaCotasInspeccion">
-                    <tr><td colspan="9" style="text-align:center; color:#a0aec0;">Seleccione una referencia</td></tr>
+                    <tr><td colspan="8" style="text-align:center; color:#a0aec0;">Seleccione una referencia</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -239,25 +341,10 @@
             </div>
           </div>
 
-          <!-- TAB 3: REGISTRO DE CAMBIOS -->
-          <div class="tab-content" id="tabCambios">
-            <h3 style="font-size: 15px; color: #2d3748;">Auditoría y Registro de Cambios</h3>
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Tipo de Cambio</th>
-                    <th>Detalles / Motivo</th>
-                    <th>Hecho Por</th>
-                    <th>Fecha</th>
-                  </tr>
-                </thead>
-                <tbody id="tablaCambiosAuditoria">
-                  <tr><td colspan="4" style="text-align:center; color:#a0aec0;">No hay registros de cambios.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <!-- La pestaña "Auditoría de Cambios" se movió al módulo de
+               administración (referencias_metrologia.html) — ahí queda el
+               control de todos los cambios de la referencia (planos,
+               versiones y cotas) en un solo lugar. -->
 
         </div>
       </div>
@@ -269,36 +356,12 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:white;">
       <h3 style="font-size:18px;">Visualizador Ampliado de Plano</h3>
       <div style="display:flex; gap:10px; align-items:center;">
-        <button class="btn sm" onclick="zoomIn()">🔍+ Acercar</button>
-        <button class="btn sm" onclick="zoomOut()">🔍- Alejar</button>
+        <span style="font-size: 12px; color: #a0aec0;">🔍 Rueda del mouse para hacer zoom · Arrastra para mover · Pellizca en tablet/trackpad</span>
         <button class="btn sm" style="background:#e53e3e;" onclick="cerrarZoomPlano()">✕ Cerrar</button>
       </div>
     </div>
-    <div style="flex:1; background:#1a202c; border-radius:10px; overflow:auto; display:flex; align-items:center; justify-content:center; position:relative;">
+    <div id="zoomScrollWrapper" style="flex:1; background:#1a202c; border-radius:10px; overflow:auto; display:flex; align-items:center; justify-content:center; position:relative; touch-action: pan-x pan-y;">
       <div id="zoomContentContainer" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;"></div>
-    </div>
-  </div>
-
-  <!-- Modal Nueva Versión -->
-  <div id="modalVersion" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
-    <div style="background:white; padding:25px; border-radius:12px; width:420px; display:flex; flex-direction:column; gap:12px;">
-      <h3 style="font-size:16px; color:#2d3748;">Subir Nueva Versión de Plano</h3>
-      <div class="form-group">
-        <label>Número de Versión (ej: V2, V3)</label>
-        <input type="text" id="nuevaVersionNum" placeholder="Automático si se deja vacío">
-      </div>
-      <div class="form-group">
-        <label>Archivo del Plano (PDF o Imagen)</label>
-        <input type="file" id="nuevoArchivoPlano" accept=".pdf,image/*">
-      </div>
-      <div class="form-group">
-        <label>Motivo del Cambio *</label>
-        <textarea id="nuevoMotivoCambio" rows="3" placeholder="Explique por qué se sube esta nueva versión..."></textarea>
-      </div>
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:5px;">
-        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalVersion()">Cancelar</button>
-        <button class="btn sm success" onclick="subirNuevaVersion()">Subir Versión</button>
-      </div>
     </div>
   </div>
 
@@ -332,115 +395,9 @@
     </div>
   </div>
 
-  <!-- Modal Nueva Referencia con Cotas Iniciales -->
-  <div id="modalReferencia" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
-    <div style="background:white; padding:25px; border-radius:12px; width:520px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
-      <h3 style="font-size:16px; color:#2d3748;">Crear Nueva Referencia de Molde & Cotas</h3>
-      <div class="form-group">
-        <label>Código Base de la Referencia * (ej: Iny/Rep/9999)</label>
-        <input type="text" id="nuevaRefCodigo" placeholder="Código base">
-      </div>
-      <div class="form-group">
-        <label>Versión Inicial</label>
-        <input type="text" id="nuevaRefVersion" value="V1" placeholder="V1">
-      </div>
-      <div class="form-group">
-        <label>Archivo del Plano (PDF o Imagen) *</label>
-        <input type="file" id="nuevaRefArchivo" accept=".pdf,image/*">
-      </div>
-      <div class="form-group">
-        <label>Motivo / Observación</label>
-        <textarea id="nuevaRefMotivo" rows="2" placeholder="Motivo de creación..."></textarea>
-      </div>
-
-      <!-- Cotas Iniciales Dinámicas -->
-      <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <label style="font-size:12px; font-weight:600; color:#4a5568; text-transform:uppercase;">Cotas Iniciales</label>
-          <button class="btn sm success" type="button" onclick="agregarFilaCotaModal()">+ Añadir Cota</button>
-        </div>
-        <div style="max-height:160px; overflow-y:auto; border:1px solid #cbd5e0; border-radius:6px; padding:8px;">
-          <table style="width:100%; font-size:12px;" id="tablaCotasModal">
-            <thead>
-              <tr>
-                <th>Cota</th>
-                <th>Estándar</th>
-                <th>Tolerancia (±)</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- filas dinámicas -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
-        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalReferencia()">Cancelar</button>
-        <button class="btn sm success" onclick="crearNuevaReferencia()">Crear Referencia</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Agregar Cota -->
-  <div id="modalCota" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
-    <div style="background:white; padding:25px; border-radius:12px; width:400px; display:flex; flex-direction:column; gap:12px;">
-      <h3 style="font-size:16px; color:#2d3748;">Agregar Nueva Cota</h3>
-      <div class="form-group">
-        <label>Nombre de la Cota (ej: A, B, C)</label>
-        <input type="text" id="nuevaCotaNombre" placeholder="Cota">
-      </div>
-      <div class="form-group">
-        <label>Medida Estándar</label>
-        <input type="number" step="0.001" id="nuevaCotaEstandar" placeholder="0.000">
-      </div>
-      <div class="form-group">
-        <label>Tolerancia (±)</label>
-        <input type="number" step="0.001" id="nuevaCotaTolerancia" placeholder="0.000">
-      </div>
-      <div class="form-group">
-        <label>Motivo</label>
-        <input type="text" id="nuevaCotaMotivo" placeholder="Motivo de adición">
-      </div>
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:5px;">
-        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalCota()">Cancelar</button>
-        <button class="btn sm success" onclick="guardarNuevaCota()">Guardar Cota</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Editar Cota -->
-  <div id="modalEditarCota" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
-    <div style="background:white; padding:25px; border-radius:12px; width:400px; display:flex; flex-direction:column; gap:12px;">
-      <h3 style="font-size:16px; color:#2d3748;">Editar Cota y Tolerancia</h3>
-      <input type="hidden" id="editCotaId">
-      <div class="form-group">
-        <label>Nombre de la Cota</label>
-        <input type="text" id="editCotaNombre" placeholder="Cota">
-      </div>
-      <div class="form-group">
-        <label>Medida Estándar</label>
-        <input type="number" step="0.001" id="editCotaEstandar" placeholder="0.000">
-      </div>
-      <div class="form-group">
-        <label>Tolerancia (±)</label>
-        <input type="number" step="0.001" id="editCotaTolerancia" placeholder="0.000">
-      </div>
-      <div class="form-group">
-        <label>Motivo de la Modificación *</label>
-        <input type="text" id="editCotaMotivo" placeholder="Motivo obligatorio">
-      </div>
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:5px;">
-        <button class="btn sm" style="background:#e2e8f0; color:#4a5568;" onclick="cerrarModalEditarCota()">Cancelar</button>
-        <button class="btn sm success" onclick="guardarEdicionCota()">Guardar Cambios</button>
-      </div>
-    </div>
-  </div>
-
+  <script src="js/comun.js"></script>
   <script>
-    const token = localStorage.getItem('token');
-    if (!token) location.href = 'index.html';
+    let token = localStorage.getItem('token');
 
     let listaReferencias = [];
     let listaInspeccionesActuales = [];
@@ -448,42 +405,58 @@
     let datosReferenciaActual = null;
     let currentZoomLevel = 1;
     let currentPlanoRuta = null;
+    let currentPlanoExtZoom = null;
     let permisosUsuario = [];
 
-    async function cargarMisPermisos() {
-      try {
-        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        const rolesCache = data.roles || [];
-        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
-        const miRol = rolesCache.find(r => r.nombre === me.rol);
-        permisosUsuario = miRol ? miRol.permisos.map(p => p.codigo) : [];
-        aplicarPermisosUI();
-      } catch (e) { permisosUsuario = []; }
+    // El worker de pdf.js hace el trabajo pesado de leer el PDF en un hilo
+    // aparte para no trabar la página. Se sirve desde el mismo servidor
+    // (Public/js/vendor), no desde un CDN externo.
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/vendor/pdf.worker.min.js';
     }
 
-    function tienePermiso(codigo) {
-      return permisosUsuario.includes(codigo);
+    // La lógica (fetch de /api/roles + /api/me) ahora vive en js/comun.js
+    // como cargarPermisosDelUsuario() (era idéntica en garantias.html,
+    // index.html y metrologia.html); aquí solo se conserva la llamada a
+    // aplicarPermisosUI(), que es propia de esta página y solo debe
+    // ejecutarse si la consulta tuvo éxito (igual que antes).
+    async function cargarMisPermisos() {
+      const ok = await cargarPermisosDelUsuario();
+      if (ok) aplicarPermisosUI();
     }
 
     function aplicarPermisosUI() {
       const puedeInspeccionar = tienePermiso('metrologia.inspeccionar') || tienePermiso('metrologia.gestion');
-      const puedeCrearRef = tienePermiso('metrologia.crear_referencia') || tienePermiso('metrologia.gestion');
-      const puedeVersiones = tienePermiso('metrologia.versiones') || tienePermiso('metrologia.gestion');
       const puedeHistorial = tienePermiso('metrologia.historial') || tienePermiso('metrologia.gestion');
-      const puedeAuditoria = tienePermiso('metrologia.auditoria') || tienePermiso('metrologia.gestion');
-      const puedeEditarCotas = tienePermiso('metrologia.editar_cotas') || tienePermiso('metrologia.gestion');
 
-      document.getElementById('btnNuevaRefSidebar').style.display = puedeCrearRef ? 'inline-block' : 'none';
-      document.getElementById('btnSubirVersion').style.display = puedeVersiones ? 'inline-block' : 'none';
-      document.getElementById('btnAgregarCota').style.display = puedeEditarCotas ? 'inline-block' : 'none';
+      // Crear/editar/eliminar cotas, crear referencias, subir/modificar
+      // versiones y ver la auditoría de cambios ya no viven acá — todo eso
+      // se hace desde el módulo de administración ("Crear Referencia
+      // (Planos)", ver referencias_metrologia.html, accesible desde el
+      // Portal), para no mezclar acciones de administración con la pantalla
+      // de inspección diaria. Antes se dejaba acá un enlace de acceso
+      // rápido; Julio pidió quitarlo para que quien necesite crear o
+      // modificar una referencia entre siempre por ese módulo.
       document.getElementById('btnEnviarInspeccion').style.display = puedeInspeccionar ? 'inline-block' : 'none';
       document.getElementById('secDatosInspeccion').style.display = puedeInspeccionar ? 'block' : 'none';
 
       document.getElementById('tabBtnHistorial').style.display = puedeHistorial ? 'inline-block' : 'none';
-      document.getElementById('tabBtnCambios').style.display = puedeAuditoria ? 'inline-block' : 'none';
     }
 
+    // mostrarLogin() y doLogin() ahora viven en js/comun.js (eran idénticas
+    // carácter por carácter en garantias.html, metrologia.html y whatsapp_bot.html).
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      mostrarLogin();
+    }
+
+    // Devuelve true si la sesión es válida y ya se puede mostrar el módulo;
+    // false si se mostró el login (sin sesión o sesión inválida/expirada).
     async function checkAuth() {
       try {
         const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -498,11 +471,20 @@
             respInput.style.backgroundColor = '#edf2f7';
           }
           await cargarMisPermisos();
+          const btnVolver = document.getElementById('btnVolverPortal');
+          if (btnVolver) {
+            btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+          }
+          return true;
         } else {
-          location.href = 'index.html';
+          localStorage.removeItem('token');
+          token = null;
+          mostrarLogin();
+          return false;
         }
       } catch (e) {
-        location.href = 'index.html';
+        mostrarLogin();
+        return false;
       }
     }
 
@@ -511,6 +493,8 @@
         const res = await fetch('/api/moldes/referencias', { headers: { 'Authorization': 'Bearer ' + token } });
         const data = await res.json();
         listaReferencias = data.referencias || [];
+        const refCount = document.getElementById('refCount');
+        if (refCount) refCount.textContent = listaReferencias.length;
         renderizarListaReferencias(listaReferencias);
       } catch (e) {
         document.getElementById('refsList').innerHTML = `<div style="padding:20px; text-align:center; color:#e53e3e;">Error cargando referencias</div>`;
@@ -523,15 +507,23 @@
         listEl.innerHTML = `<div style="padding:20px; text-align:center; color:#a0aec0;">No hay referencias</div>`;
         return;
       }
-      listEl.innerHTML = refs.map(r => `
-        <div class="ref-item ${referenciaActual === r.codigo_base ? 'active' : ''}" onclick="seleccionarReferencia('${r.codigo_base}')">
+      // El código de referencia lo escribe libremente quien lo crea, así que
+      // el manejador de clic se asigna por JS (con el valor real de r) en
+      // vez de insertarlo dentro del atributo onclick como código.
+      listEl.innerHTML = '';
+      refs.forEach(r => {
+        const div = document.createElement('div');
+        div.className = `ref-item ${referenciaActual === r.codigo_base ? 'active' : ''}`;
+        div.innerHTML = `
           <div>
-            <h4>${r.codigo_base}</h4>
-            <p>Versión: ${r.version_activa || 'N/A'}</p>
+            <h4>${escapeHtml(r.codigo_base)}</h4>
+            <p>Versión: ${escapeHtml(r.version_activa || 'N/A')}</p>
           </div>
           <span class="badge-cotas">${r.total_cotas} cotas</span>
-        </div>
-      `).join('');
+        `;
+        div.onclick = () => seleccionarReferencia(r.codigo_base);
+        listEl.appendChild(div);
+      });
     }
 
     function filtrarReferencias() {
@@ -563,30 +555,25 @@
 
         const tbodyCotas = document.getElementById('tablaCotasInspeccion');
         if (data.cotas.length === 0) {
-          tbodyCotas.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#a0aec0;">No hay cotas registradas para esta referencia. Haga clic en "+ Agregar Cota" para añadir una.</td></tr>`;
+          tbodyCotas.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#a0aec0;">No hay cotas registradas para esta referencia. Para añadir o corregir cotas, ve al módulo "Crear Referencia (Planos)".</td></tr>`;
         } else {
           tbodyCotas.innerHTML = data.cotas.map(c => `
             <tr data-cota-id="${c.id}">
-              <td><strong>${c.cota}</strong></td>
+              <td><strong>${escapeHtml(c.cota)}</strong></td>
               <td>${c.medida_estandar}</td>
               <td>±${c.tolerancia}</td>
               <td>${c.tolerancia_minima.toFixed(3)}</td>
               <td>${c.tolerancia_maxima.toFixed(3)}</td>
               <td><input type="number" step="0.001" class="medida-input" placeholder="0.000" oninput="evaluarCota(this, ${c.tolerancia_minima}, ${c.tolerancia_maxima})"></td>
-              <td><span class="badge" style="background:#e2e8f0; color:#4a5568;">Pendiente</span></td>
-              <td><input type="file" accept="image/*" class="cota-img-input" style="font-size:12px;"></td>
+              <td><span class="badge-icono pendiente" title="Pendiente">○</span></td>
               <td>
-                <button class="btn sm" id="btnEditCota_${c.id}" onclick="abrirModalEditarCota(${c.id}, '${c.cota}', ${c.medida_estandar}, ${c.tolerancia})" style="display:none; background:#d69e2e; color:white; padding:4px 8px;" title="Editar Cota">✏️</button>
-                <button class="btn sm" id="btnDeleteCota_${c.id}" onclick="eliminarCota(${c.id}, '${c.cota}')" style="display:none; background:#e53e3e; color:white; padding:4px 8px; margin-left:4px;" title="Eliminar Cota">🗑️</button>
+                <label class="btn-foto-cota" title="Agregar foto">
+                  <input type="file" accept="image/*" class="cota-img-input" onchange="marcarFotoCargada(this)">
+                  <span>+</span>
+                </label>
               </td>
             </tr>
           `).join('');
-          if (tienePermiso('metrologia.editar_cotas') || tienePermiso('metrologia.gestion')) {
-            document.querySelectorAll('[id^="btnEditCota_"]').forEach(btn => btn.style.display = 'inline-block');
-          }
-          if (tienePermiso('metrologia.eliminar_cotas') || tienePermiso('metrologia.gestion')) {
-            document.querySelectorAll('[id^="btnDeleteCota_"]').forEach(btn => btn.style.display = 'inline-block');
-          }
         }
 
         // Historial Inspecciones
@@ -595,22 +582,130 @@
         document.getElementById('filtroHistResp').value = '';
         document.getElementById('filtroHistLote').value = '';
         renderizarHistorial(listaInspeccionesActuales);
-
-        // Auditoria (Excluyendo tipo_cambio = 'inspeccion')
-        document.getElementById('tablaCambiosAuditoria').innerHTML = data.seguimiento.length === 0 ?
-          `<tr><td colspan="4" style="text-align:center; color:#a0aec0;">No hay registros de auditoría de planos o cotas.</td></tr>` :
-          data.seguimiento.map(s => `
-            <tr>
-              <td><strong>${s.tipo_cambio}</strong></td>
-              <td>${s.motivo || '-'} <br><small style="color:#718096">${s.cambio}</small></td>
-              <td>${s.hecho_por_nombre || 'Sistema'}</td>
-              <td><small>${new Date(s.fecha_cambio).toLocaleString()}</small></td>
-            </tr>
-          `).join('');
+        // La auditoría de cambios (data.seguimiento) ya no se muestra acá
+        // — se ve completa desde referencias_metrologia.html.
 
       } catch (e) {
         console.error('Error cargando detalle referencia:', e);
       }
+    }
+
+    // Ajusta "container" para que, cuando el contenido (canvas o imagen) es
+    // más grande que el cuadro (zoom > 100%), se pueda mover con scroll
+    // normal (mouse, rueda o dedo en tablet/celular) en vez de quedar
+    // centrado y sin forma de llegar a las orillas. Con "factorZoom<=1" el
+    // contenido siempre cabe completo, así que ahí sí se centra bonito.
+    function ajustarModoContenedor(container, factorZoom) {
+      if (factorZoom > 1.001) {
+        container.style.display = 'block';
+      } else {
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+      }
+    }
+
+    // Dibuja una página de PDF dentro de "container", ajustada para que
+    // quepa completa en el cuadro (factorZoom=1) o más grande si se está
+    // usando el visor ampliado (factorZoom > 1 al acercar).
+    //
+    // Esto reemplaza al <iframe> con el visor de PDF del navegador: en
+    // tablets (sobre todo Android) no hay un visor de PDF integrado como en
+    // Chrome de escritorio, así que un plano en iframe no se veía — solo
+    // aparecía un enlace de "abrir" que mandaba a otra pestaña. Dibujando el
+    // PDF nosotros mismos con pdf.js en un <canvas> se ve igual en
+    // computador, tablet y celular, y además cada acercamiento es un
+    // redibujado real (no un estiramiento con CSS), así que se ve nítido sin
+    // importar el nivel de zoom ni la pantalla.
+    async function dibujarPdfEnCanvas(fileUrl, container, factorZoom, conOverlay) {
+      container.innerHTML = `<div style="color:#a0aec0; text-align:center; padding:20px;">Cargando plano...</div>`;
+      try {
+        const pdf = await pdfjsLib.getDocument(fileUrl).promise;
+        const page = await pdf.getPage(1);
+        const nativeViewport = page.getViewport({ scale: 1 });
+
+        const contW = container.clientWidth || 1;
+        const contH = container.clientHeight || 1;
+        const fitScale = Math.min(contW / nativeViewport.width, contH / nativeViewport.height);
+        const escalaFinal = fitScale * factorZoom;
+
+        // devicePixelRatio: para que en pantallas de alta densidad (la
+        // mayoría de tablets y celulares actuales) el plano se dibuje a la
+        // resolución real de la pantalla y no se vea borroso.
+        const dpr = window.devicePixelRatio || 1;
+        const viewport = page.getViewport({ scale: escalaFinal });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width * dpr);
+        canvas.height = Math.ceil(viewport.height * dpr);
+        canvas.style.width = Math.ceil(viewport.width) + 'px';
+        canvas.style.height = Math.ceil(viewport.height) + 'px';
+        canvas.style.display = 'block';
+        canvas.style.background = 'white';
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        ajustarModoContenedor(container, factorZoom);
+        container.innerHTML = '';
+        container.appendChild(canvas);
+        if (conOverlay) {
+          const overlay = document.createElement('div');
+          overlay.className = 'protected-overlay';
+          overlay.oncontextmenu = () => false;
+          overlay.ondragstart = () => false;
+          container.appendChild(overlay);
+        }
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      } catch (e) {
+        console.error('Error dibujando PDF:', e);
+        container.innerHTML = `<div style="color:#feb2b2; text-align:center; padding:20px;">No se pudo cargar el plano.</div>`;
+      }
+    }
+
+    // Igual que dibujarPdfEnCanvas, pero para imágenes (jpg/png). Antes se
+    // usaba "object-fit:contain" + transform:scale para el zoom, pero eso no
+    // deja moverse (arrastrar/hacer scroll) cuando la imagen queda más
+    // grande que el cuadro. Aquí, en cambio, se le da un tamaño real en
+    // píxeles según el zoom, así el propio cuadro permite scroll (con mouse,
+    // rueda o dedo) para moverse por la imagen ampliada.
+    function dibujarImagenAjustada(fileUrl, container, factorZoom, conOverlay) {
+      container.innerHTML = `<div style="color:#a0aec0; text-align:center; padding:20px;">Cargando plano...</div>`;
+      return new Promise((resolve) => {
+        const medidor = new Image();
+        medidor.onload = () => {
+          const contW = container.clientWidth || 1;
+          const contH = container.clientHeight || 1;
+          const fitScale = Math.min(contW / medidor.naturalWidth, contH / medidor.naturalHeight);
+          const escalaFinal = fitScale * factorZoom;
+
+          const img = document.createElement('img');
+          img.src = fileUrl;
+          img.alt = 'Plano de Molde';
+          img.style.width = Math.round(medidor.naturalWidth * escalaFinal) + 'px';
+          img.style.height = Math.round(medidor.naturalHeight * escalaFinal) + 'px';
+          img.style.display = 'block';
+          img.style.background = 'white';
+
+          ajustarModoContenedor(container, factorZoom);
+          container.innerHTML = '';
+          container.appendChild(img);
+          if (conOverlay) {
+            const overlay = document.createElement('div');
+            overlay.className = 'protected-overlay';
+            overlay.oncontextmenu = () => false;
+            overlay.ondragstart = () => false;
+            container.appendChild(overlay);
+          }
+          resolve();
+        };
+        medidor.onerror = () => {
+          container.innerHTML = `<div style="color:#feb2b2; text-align:center; padding:20px;">No se pudo cargar el plano.</div>`;
+          resolve();
+        };
+        medidor.src = fileUrl;
+      });
     }
 
     function renderizarVisorPlano(ruta) {
@@ -619,17 +714,30 @@
         viewerTop.innerHTML = `<div style="color: #a0aec0; text-align: center;">No hay plano asociado</div>`;
         return;
       }
-
-      const fileUrl = `/api/moldes/ver-plano?ruta=${encodeURIComponent(ruta)}&token=${token}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+      const fileUrl = `/api/moldes/ver-plano?ruta=${encodeURIComponent(ruta)}`;
       const ext = ruta.split('.').pop().toLowerCase();
-      
-      let html = '';
+
       if (ext === 'pdf') {
-        html = `<iframe src="${fileUrl}" style="width:100%; height:100%; border:none; background:white; overflow:hidden;" scrolling="no"></iframe>`;
+        dibujarPdfEnCanvas(fileUrl, viewerTop, 1, true);
       } else {
-        html = `<img src="${fileUrl}" alt="Plano de Molde" style="width:100%; height:100%; object-fit:contain; background:white;">`;
+        dibujarImagenAjustada(fileUrl, viewerTop, 1, true);
       }
-      viewerTop.innerHTML = html + `<div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>`;
+    }
+
+    // Devuelve una promesa que se resuelve cuando el plano quedó dibujado
+    // (para poder, por ejemplo, ajustar el scroll justo después de un
+    // redibujado nítido — ver finalizarZoom más abajo).
+    function refrescarZoomModal() {
+      const fileUrl = `/api/moldes/ver-plano?ruta=${encodeURIComponent(currentPlanoRuta)}`;
+      const container = document.getElementById('zoomContentContainer');
+      // Sin overlay de protección aquí a propósito: cuando el plano ampliado
+      // es más grande que el cuadro, esa capa (pensada para bloquear clic
+      // derecho / arrastrar-guardar) tapaba también el scroll con el que el
+      // usuario se mueve por el plano, dejándolo "trabado".
+      const promesa = currentPlanoExtZoom === 'pdf'
+        ? dibujarPdfEnCanvas(fileUrl, container, currentZoomLevel, false)
+        : dibujarImagenAjustada(fileUrl, container, currentZoomLevel, false);
+      return promesa.then(() => { lastRenderedZoomLevel = currentZoomLevel; });
     }
 
     function abrirZoomPlano() {
@@ -638,53 +746,173 @@
         return;
       }
       currentZoomLevel = 1;
-      const fileUrl = `/api/moldes/ver-plano?ruta=${encodeURIComponent(currentPlanoRuta)}&token=${token}`;
-      const ext = currentPlanoRuta.split('.').pop().toLowerCase();
-      const container = document.getElementById('zoomContentContainer');
-      
-      let html = '';
-      if (ext === 'pdf') {
-        html = `<iframe src="${fileUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="width:100%; height:100%; border:none; background:white;"></iframe>`;
-      } else {
-        html = `<img id="zoomableImg" src="${fileUrl}" style="max-width:100%; max-height:100%; object-fit:contain; transition:transform 0.2s; background:white;" alt="Plano Ampliado">`;
-      }
-      container.innerHTML = html + `<div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>`;
+      lastRenderedZoomLevel = 1;
+      currentPlanoExtZoom = currentPlanoRuta.split('.').pop().toLowerCase();
+      refrescarZoomModal();
       document.getElementById('modalZoom').style.display = 'flex';
+      document.getElementById('zoomScrollWrapper').style.cursor = 'grab';
     }
 
     function cerrarZoomPlano() {
       document.getElementById('modalZoom').style.display = 'none';
     }
 
-    function zoomIn() {
-      currentZoomLevel += 0.25;
-      const img = document.getElementById('zoomableImg');
-      if (img) img.style.transform = `scale(${currentZoomLevel})`;
+    // --- Acercar/alejar con la rueda del mouse, el "pinch" del trackpad o
+    // los dedos en tablet, sin perder nitidez -----------------------------
+    // (Ya no hay botones de "Acercar"/"Alejar": este gesto es la única
+    // forma de hacer zoom en el visor ampliado.)
+    // Estrategia: mientras el usuario está en pleno gesto (moviendo la
+    // rueda o los dedos), se aplica un zoom "de vista previa" con CSS
+    // (transform:scale), que responde al instante pero, como cualquier
+    // estiramiento con CSS, se ve un poco menos nítido — es normal y dura
+    // solo una fracción de segundo. Apenas el gesto se detiene (~0.2s sin
+    // movimiento), se vuelve a dibujar el plano real a esa resolución
+    // exacta, así que el resultado final siempre queda nítido. Además se
+    // ajusta el scroll para que el punto exacto donde el usuario estaba
+    // haciendo zoom no "salte" de la pantalla.
+    let zoomDebounceTimer = null;
+
+    function elementoPlanoActivo() {
+      return document.querySelector('#zoomContentContainer canvas, #zoomContentContainer img');
     }
 
-    function zoomOut() {
-      if (currentZoomLevel > 0.5) currentZoomLevel -= 0.25;
-      const img = document.getElementById('zoomableImg');
-      if (img) img.style.transform = `scale(${currentZoomLevel})`;
+    function previsualizarZoom(nuevoZoom, clientX, clientY) {
+      nuevoZoom = Math.min(4, Math.max(0.5, nuevoZoom));
+      if (Math.abs(nuevoZoom - currentZoomLevel) < 0.001) return;
+      currentZoomLevel = nuevoZoom;
+
+      const el = elementoPlanoActivo();
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        el.style.transformOrigin = `${clientX - rect.left}px ${clientY - rect.top}px`;
+        el.style.transform = `scale(${currentZoomLevel / lastRenderedZoomLevel})`;
+      }
+
+      clearTimeout(zoomDebounceTimer);
+      zoomDebounceTimer = setTimeout(() => finalizarZoom(clientX, clientY), 220);
     }
+
+    function finalizarZoom(clientX, clientY) {
+      const wrapper = document.getElementById('zoomScrollWrapper');
+      const elViejo = elementoPlanoActivo();
+      let fracX = 0.5, fracY = 0.5;
+      if (elViejo) {
+        const rectViejo = elViejo.getBoundingClientRect();
+        if (rectViejo.width > 0) fracX = Math.min(1, Math.max(0, (clientX - rectViejo.left) / rectViejo.width));
+        if (rectViejo.height > 0) fracY = Math.min(1, Math.max(0, (clientY - rectViejo.top) / rectViejo.height));
+      }
+      const wrapperRect = wrapper.getBoundingClientRect();
+
+      refrescarZoomModal().then(() => {
+        const elNuevo = elementoPlanoActivo();
+        if (!elNuevo) return;
+        wrapper.scrollLeft = wrapperRect.left + fracX * elNuevo.offsetWidth - clientX;
+        wrapper.scrollTop = wrapperRect.top + fracY * elNuevo.offsetHeight - clientY;
+      });
+    }
+
+    // Rueda del mouse (con o sin Ctrl) = zoom centrado en el cursor, igual
+    // que en el visor de fotos de circuitos SMD. Como la rueda ya no queda
+    // libre para el scroll nativo, para moverse por el plano ampliado ahora
+    // se arrastra con el mouse (ver más abajo), igual que en las fotos.
+    document.getElementById('zoomScrollWrapper').addEventListener('wheel', (e) => {
+      if (!elementoPlanoActivo()) return;
+      e.preventDefault();
+      const factor = Math.exp(-e.deltaY * 0.0015);
+      previsualizarZoom(currentZoomLevel * factor, e.clientX, e.clientY);
+    }, { passive: false });
+
+    // Arrastrar con el mouse para moverse por el plano ampliado (antes se
+    // hacía con la rueda normal, pero ahora la rueda siempre hace zoom).
+    let arrastrandoPlano = false, arrastreStartX = 0, arrastreStartY = 0, arrastreScrollLeft = 0, arrastreScrollTop = 0;
+    const zoomWrapperEl = document.getElementById('zoomScrollWrapper');
+
+    zoomWrapperEl.addEventListener('mousedown', (e) => {
+      if (!elementoPlanoActivo()) return;
+      arrastrandoPlano = true;
+      arrastreStartX = e.clientX;
+      arrastreStartY = e.clientY;
+      arrastreScrollLeft = zoomWrapperEl.scrollLeft;
+      arrastreScrollTop = zoomWrapperEl.scrollTop;
+      zoomWrapperEl.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!arrastrandoPlano) return;
+      zoomWrapperEl.scrollLeft = arrastreScrollLeft - (e.clientX - arrastreStartX);
+      zoomWrapperEl.scrollTop = arrastreScrollTop - (e.clientY - arrastreStartY);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!arrastrandoPlano) return;
+      arrastrandoPlano = false;
+      zoomWrapperEl.style.cursor = 'grab';
+    });
+
+    // Pinch con dos dedos en tablet/celular.
+    let pinchDistanciaInicial = null;
+    let pinchZoomInicial = 1;
+
+    function distanciaEntreToques(touches) {
+      return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    }
+
+    document.getElementById('zoomScrollWrapper').addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        pinchDistanciaInicial = distanciaEntreToques(e.touches);
+        pinchZoomInicial = currentZoomLevel;
+      }
+    }, { passive: true });
+
+    document.getElementById('zoomScrollWrapper').addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && pinchDistanciaInicial) {
+        e.preventDefault();
+        const factor = distanciaEntreToques(e.touches) / pinchDistanciaInicial;
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        previsualizarZoom(pinchZoomInicial * factor, midX, midY);
+      }
+    }, { passive: false });
+
+    document.getElementById('zoomScrollWrapper').addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) pinchDistanciaInicial = null;
+    });
 
     function evaluarCota(input, min, max) {
       const val = parseFloat(input.value);
       const row = input.closest('tr');
-      const badge = row.querySelector('.badge');
+      const badge = row.querySelector('.badge-icono');
       if (isNaN(val)) {
-        badge.className = 'badge';
-        badge.style.background = '#e2e8f0';
-        badge.style.color = '#4a5568';
-        badge.textContent = 'Pendiente';
+        badge.className = 'badge-icono pendiente';
+        badge.textContent = '○';
+        badge.title = 'Pendiente';
         return;
       }
       if (val >= min && val <= max) {
-        badge.className = 'badge conforme';
-        badge.textContent = 'CONFORME';
+        badge.className = 'badge-icono conforme';
+        badge.textContent = '✓';
+        badge.title = 'Conforme';
       } else {
-        badge.className = 'badge fuera';
-        badge.textContent = 'FUERA TOL.';
+        badge.className = 'badge-icono fuera';
+        badge.textContent = '✕';
+        badge.title = 'Fuera de tolerancia';
+      }
+    }
+
+    // Da el "vistazo" visual al botón de foto de una cota (el + pasa a ✓
+    // cuando ya hay un archivo elegido), sin cambiar en nada cómo se manda
+    // el archivo al guardar (sigue siendo el mismo <input type="file">).
+    function marcarFotoCargada(input) {
+      const label = input.closest('label');
+      const span = label.querySelector('span');
+      if (input.files && input.files[0]) {
+        label.classList.add('tiene-foto');
+        span.textContent = '✓';
+        label.title = 'Foto cargada: ' + input.files[0].name;
+      } else {
+        label.classList.remove('tiene-foto');
+        span.textContent = '+';
+        label.title = 'Agregar foto';
       }
     }
 
@@ -744,17 +972,19 @@
         const data = await res.json();
         if (res.ok && data.success) {
           alert('¡Registro de inspección guardado con éxito!');
-          document.getElementById('inspResponsable').value = '';
+          // "Responsable" NO se limpia: siempre debe quedar el usuario de la
+          // sesión (antes se vaciaba y, al ser de solo lectura, ya no había
+          // forma de volver a llenarlo sin recargar la página — eso hubiera
+          // impedido guardar una segunda inspección seguida).
           document.getElementById('inspLote').value = '';
           document.getElementById('inspMolde').value = referenciaActual;
           document.getElementById('inspFecha').valueAsDate = new Date();
           document.querySelectorAll('.medida-input').forEach(i => i.value = '');
-          document.querySelectorAll('.cota-img-input').forEach(i => i.value = '');
-          document.querySelectorAll('#tablaCotasInspeccion .badge').forEach(b => {
-            b.className = 'badge';
-            b.style.background = '#e2e8f0';
-            b.style.color = '#4a5568';
-            b.textContent = 'Pendiente';
+          document.querySelectorAll('.cota-img-input').forEach(i => { i.value = ''; marcarFotoCargada(i); });
+          document.querySelectorAll('#tablaCotasInspeccion .badge-icono').forEach(b => {
+            b.className = 'badge-icono pendiente';
+            b.textContent = '○';
+            b.title = 'Pendiente';
           });
         } else {
           alert(data.error || 'Error al guardar inspección');
@@ -764,211 +994,14 @@
       }
     }
 
-    function abrirModalCota() {
-      document.getElementById('modalCota').style.display = 'flex';
-    }
-    function cerrarModalCota() {
-      document.getElementById('modalCota').style.display = 'none';
-    }
-
-    async function guardarNuevaCota() {
-      const cota = document.getElementById('nuevaCotaNombre').value.trim();
-      const medidaEstandar = document.getElementById('nuevaCotaEstandar').value;
-      const tolerancia = document.getElementById('nuevaCotaTolerancia').value;
-      const motivo = document.getElementById('nuevaCotaMotivo').value.trim();
-
-      if (!cota || medidaEstandar === '' || tolerancia === '') {
-        alert('Cota, medida estándar y tolerancia son obligatorias.');
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/moldes/referencias/${encodeURIComponent(referenciaActual)}/cotas`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ cota, medida_estandar: parseFloat(medidaEstandar), tolerancia: parseFloat(tolerancia), motivo: motivo || 'Adición de cota' })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert('¡Cota agregada con éxito!');
-          cerrarModalCota();
-          document.getElementById('nuevaCotaNombre').value = '';
-          document.getElementById('nuevaCotaEstandar').value = '';
-          document.getElementById('nuevaCotaTolerancia').value = '';
-          document.getElementById('nuevaCotaMotivo').value = '';
-          seleccionarReferencia(referenciaActual);
-        } else {
-          alert(data.error || 'Error agregando cota');
-        }
-      } catch (e) {
-        alert('Error de conexión');
-      }
-    }
-
-    function abrirModalEditarCota(id, cota, estandar, toler) {
-      document.getElementById('editCotaId').value = id;
-      document.getElementById('editCotaNombre').value = cota;
-      document.getElementById('editCotaEstandar').value = estandar;
-      document.getElementById('editCotaTolerancia').value = toler;
-      document.getElementById('editCotaMotivo').value = '';
-      document.getElementById('modalEditarCota').style.display = 'flex';
-    }
-
-    function cerrarModalEditarCota() {
-      document.getElementById('modalEditarCota').style.display = 'none';
-    }
-
-    async function guardarEdicionCota() {
-      const id = document.getElementById('editCotaId').value;
-      const cota = document.getElementById('editCotaNombre').value.trim();
-      const medida_estandar = document.getElementById('editCotaEstandar').value;
-      const tolerancia = document.getElementById('editCotaTolerancia').value;
-      const motivo = document.getElementById('editCotaMotivo').value.trim();
-
-      if (!motivo) {
-        alert('El motivo de la modificación es obligatorio.');
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/moldes/cotas/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ cota, medida_estandar: parseFloat(medida_estandar), tolerancia: parseFloat(tolerancia), motivo })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert('¡Cota actualizada con éxito!');
-          cerrarModalEditarCota();
-          seleccionarReferencia(referenciaActual);
-        } else {
-          alert(data.error || 'Error actualizando cota');
-        }
-      } catch (e) {
-        alert('Error de conexión');
-      }
-    }
-
-    function abrirModalNuevaVersion() {
-      document.getElementById('modalVersion').style.display = 'flex';
-    }
-    function cerrarModalVersion() {
-      document.getElementById('modalVersion').style.display = 'none';
-    }
-
-    async function subirNuevaVersion() {
-      const versionNum = document.getElementById('nuevaVersionNum').value.trim();
-      const archivo = document.getElementById('nuevoArchivoPlano').files[0];
-      const motivo = document.getElementById('nuevoMotivoCambio').value.trim();
-
-      if (!archivo) {
-        alert('Debe seleccionar el archivo del plano.');
-        return;
-      }
-      if (!motivo) {
-        alert('El motivo del cambio es obligatorio.');
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('archivo', archivo);
-      formData.append('motivo', motivo);
-      if (versionNum) formData.append('version', versionNum);
-
-      try {
-        const res = await fetch(`/api/moldes/referencias/${encodeURIComponent(referenciaActual)}/versiones`, {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token },
-          body: formData
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert('¡Nueva versión de plano subida con éxito!');
-          document.getElementById('nuevaVersionNum').value = '';
-          document.getElementById('nuevoArchivoPlano').value = '';
-          document.getElementById('nuevoMotivoCambio').value = '';
-          cerrarModalVersion();
-          seleccionarReferencia(referenciaActual);
-        } else {
-          alert(data.error || 'Error subiendo versión');
-        }
-      } catch (e) {
-        alert('Error de conexión');
-      }
-    }
-
-    function abrirModalNuevaReferencia() {
-      document.getElementById('modalReferencia').style.display = 'flex';
-      document.getElementById('tablaCotasModal').querySelector('tbody').innerHTML = '';
-      agregarFilaCotaModal();
-    }
-    function cerrarModalReferencia() {
-      document.getElementById('modalReferencia').style.display = 'none';
-    }
-
-    function agregarFilaCotaModal() {
-      const tbody = document.getElementById('tablaCotasModal').querySelector('tbody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="text" class="cota-nombre" placeholder="Ej: A" style="width:100%; padding:4px;"></td>
-        <td><input type="number" step="0.001" class="cota-estandar" placeholder="0.000" style="width:100%; padding:4px;"></td>
-        <td><input type="number" step="0.001" class="cota-tol" placeholder="0.000" style="width:100%; padding:4px;"></td>
-        <td><button class="btn sm" style="background:#e53e3e; color:white; padding:2px 6px;" onclick="this.closest('tr').remove()">X</button></td>
-      `;
-      tbody.appendChild(tr);
-    }
-
-    async function crearNuevaReferencia() {
-      const codigoBase = document.getElementById('nuevaRefCodigo').value.trim();
-      const version = document.getElementById('nuevaRefVersion').value.trim();
-      const archivo = document.getElementById('nuevaRefArchivo').files[0];
-      const motivo = document.getElementById('nuevaRefMotivo').value.trim();
-
-      if (!codigoBase || !archivo) {
-        alert('El código base y el archivo del plano son obligatorios.');
-        return;
-      }
-
-      const cotasIniciales = [];
-      const filasCotas = document.querySelectorAll('#tablaCotasModal tbody tr');
-      filasCotas.forEach(tr => {
-        const cota = tr.querySelector('.cota-nombre').value.trim();
-        const estandar = tr.querySelector('.cota-estandar').value;
-        const tol = tr.querySelector('.cota-tol').value;
-        if (cota && estandar !== '' && tol !== '') {
-          cotasIniciales.push({ cota, medida_estandar: parseFloat(estandar), tolerancia: parseFloat(tol) });
-        }
-      });
-
-      const formData = new FormData();
-      formData.append('codigo_base', codigoBase);
-      formData.append('version', version || 'V1');
-      formData.append('archivo', archivo);
-      formData.append('motivo', motivo || 'Creación de referencia nueva');
-      formData.append('cotas', JSON.stringify(cotasIniciales));
-
-      try {
-        const res = await fetch('/api/moldes/referencias', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token },
-          body: formData
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert('¡Referencia y cotas creadas con éxito!');
-          cerrarModalReferencia();
-          document.getElementById('nuevaRefCodigo').value = '';
-          document.getElementById('nuevaRefArchivo').value = '';
-          document.getElementById('nuevaRefMotivo').value = '';
-          await cargarReferencias();
-          seleccionarReferencia(codigoBase);
-        } else {
-          alert(data.error || 'Error creando referencia');
-        }
-      } catch (e) {
-        alert('Error de conexión');
-      }
-    }
+    // abrirModalCota/guardarNuevaCota/abrirModalEditarCota/
+    // guardarEdicionCota/eliminarCota/abrirModalNuevaVersion/
+    // subirNuevaVersion/abrirModalNuevaReferencia/crearNuevaReferencia/
+    // agregarFilaCotaModal ya no viven acá: crear/editar/eliminar cotas,
+    // crear referencia, subir nueva versión y reemplazar el plano actual se
+    // hacen ahora desde referencias_metrologia.html, su propio módulo de
+    // administración ("Crear Referencia (Planos)", accesible desde el
+    // Portal).
 
     async function verDetalleInspeccion(id) {
       try {
@@ -978,10 +1011,10 @@
           const i = data.inspeccion;
           document.getElementById('modalInspeccionTitulo').textContent = `Inspección #${i.id} - ${i.molde || referenciaActual}`;
           document.getElementById('modalInspeccionInfo').innerHTML = `
-            <div><strong>Fecha:</strong> ${i.fecha}</div>
-            <div><strong>Responsable:</strong> ${i.responsable}</div>
-            <div><strong>Lote:</strong> ${i.lote || '-'}</div>
-            <div><strong>Inspector:</strong> ${i.creado_por_nombre || 'Usuario'}</div>
+            <div><strong>Fecha:</strong> ${escapeHtml(i.fecha || '')}</div>
+            <div><strong>Responsable:</strong> ${escapeHtml(i.responsable || '')}</div>
+            <div><strong>Lote:</strong> ${escapeHtml(i.lote || '-')}</div>
+            <div><strong>Inspector:</strong> ${escapeHtml(i.creado_por_nombre || 'Usuario')}</div>
           `;
           const tbody = document.getElementById('tablaDetalleInspeccionCotas');
           if (data.medidas.length === 0) {
@@ -991,16 +1024,16 @@
               const badgeClass = m.estado === 'CONFORME' ? 'badge conforme' : 'badge fuera';
               let imgHtml = '<span style="color:#a0aec0;">Sin foto</span>';
               if (m.imagen_evidencia) {
-                const imgUrl = `/api/moldes/ver-evidencia?ruta=${encodeURIComponent(m.imagen_evidencia)}&token=${token}`;
+                const imgUrl = `/api/moldes/ver-evidencia?ruta=${encodeURIComponent(m.imagen_evidencia)}`;
                 imgHtml = `<div style="position:relative; display:inline-block; width:60px; height:60px;"><img src="${imgUrl}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e0;" alt="Evidencia"><div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div></div>`;
               }
               return `
                 <tr>
-                  <td><strong>${m.cota}</strong></td>
+                  <td><strong>${escapeHtml(m.cota || '')}</strong></td>
                   <td>${m.medida_estandar}</td>
                   <td>±${m.tolerancia}</td>
                   <td><strong>${m.medida_real}</strong></td>
-                  <td><span class="${badgeClass}">${m.estado}</span></td>
+                  <td><span class="${badgeClass}">${escapeHtml(m.estado || '')}</span></td>
                   <td>${imgHtml}</td>
                 </tr>
               `;
@@ -1028,9 +1061,9 @@
       tbody.innerHTML = insps.map(i => `
         <tr>
           <td>#${i.id}</td>
-          <td>${i.fecha}</td>
-          <td><strong>${i.responsable}</strong></td>
-          <td>${i.lote || '-'}</td>
+          <td>${escapeHtml(i.fecha || '')}</td>
+          <td><strong>${escapeHtml(i.responsable || '')}</strong></td>
+          <td>${escapeHtml(i.lote || '-')}</td>
           <td><button class="btn sm" onclick="verDetalleInspeccion(${i.id})">🔍 Ver</button></td>
         </tr>
       `).join('');
@@ -1054,30 +1087,6 @@
       renderizarHistorial(filtradas);
     }
 
-    async function eliminarCota(id, nombre) {
-      const motivo = prompt(`Motivo obligatorio para eliminar la cota ${nombre}:`);
-      if (!motivo || !motivo.trim()) {
-        alert('El motivo es obligatorio para eliminar una cota.');
-        return;
-      }
-      try {
-        const res = await fetch(`/api/moldes/cotas/${id}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ motivo: motivo.trim() })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert('¡Cota eliminada con éxito!');
-          seleccionarReferencia(referenciaActual);
-        } else {
-          alert(data.error || 'Error eliminando cota');
-        }
-      } catch (e) {
-        alert('Error de conexión');
-      }
-    }
-
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('dragstart', e => e.preventDefault());
     document.addEventListener('keydown', e => {
@@ -1091,10 +1100,18 @@
     });
 
     async function init() {
-      await checkAuth();
+      token = localStorage.getItem('token');
+      if (!token) { mostrarLogin(); return; }
+      const ok = await checkAuth();
+      if (!ok) return;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
       await cargarReferencias();
     }
 
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
     init();
   </script>
 </body>

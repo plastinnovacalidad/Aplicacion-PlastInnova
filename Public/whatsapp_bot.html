@@ -4,14 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Control de Registros WhatsApp - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
 
-    .header { background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-    .header h1 { font-size: 24px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    /* Header: estructura y color institucional vienen de css/comun.css;
+       aquí solo las variables de tamaño, que son distintas al valor por
+       defecto. */
+    .header { --header-padding: 20px 40px; --header-shadow: 0 4px 15px rgba(0,0,0,0.1); --header-flex-shrink: 1; }
+    .header h1 { font-size: 24px; font-weight: 600; }
     .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
-    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
     .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
     .btn-action:hover { background: rgba(255,255,255,0.35); }
 
@@ -41,30 +46,72 @@
     .btn-sm { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s; }
     .btn-sm.danger { background: #e53e3e; color: white; }
     .btn-sm.danger:hover { opacity: 0.85; }
-    .btn-sm.primary { background: #3182ce; color: white; }
+    .btn-sm.primary { background: var(--brand-primary); color: white; }
     .btn-sm.primary:hover { opacity: 0.85; }
 
     .toolbar { display: flex; gap: 10px; align-items: center; }
     .toolbar select, .toolbar input { padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
 
     .empty-state { text-align: center; padding: 40px; color: #a0aec0; font-style: italic; }
+
+    .form-inline { display: flex; gap: 10px; align-items: center; padding: 16px 25px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; background: #fafcff; }
+    .form-inline input[type="text"] { padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
+    .form-inline label { font-size: 13px; color: #4a5568; display: flex; align-items: center; gap: 5px; }
+    .badge.si { background: #c6f6d5; color: #22543d; }
+    .badge.no { background: #edf2f7; color: #718096; }
+    .toggle-switch { position: relative; display: inline-block; width: 42px; height: 22px; vertical-align: middle; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e0; border-radius: 22px; transition: .2s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .2s; }
+    .toggle-switch input:checked + .toggle-slider { background: #25D366; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .alerta-desc { font-size: 12px; color: #a0aec0; }
+    .umbral-input { width: 55px; padding: 4px 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 12px; text-align: center; }
+
+    .tabs-bar { display: flex; gap: 6px; border-bottom: 2px solid #e2e8f0; margin-bottom: 4px; }
+    .tab-btn { background: none; border: none; padding: 12px 20px; font-size: 14px; font-weight: 600; color: #718096; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab-btn:hover { color: var(--brand-primary); }
+    .tab-btn.active { color: var(--brand-primary); border-bottom-color: var(--brand-primary); }
+    .tab-panel { display: flex; flex-direction: column; gap: 30px; }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <div>
-      <h1>💬 Control de Registros WhatsApp (Bot)</h1>
-      <p>Monitoreo en tiempo real de entradas, salidas y sesiones activas en áreas</p>
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>💬 Control de Registros WhatsApp</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1>💬 Control de Registros WhatsApp (Bot)</h1>
+        <p>Monitoreo en tiempo real de entradas, salidas y sesiones activas en áreas</p>
+      </div>
     </div>
     <div class="header-right">
       <span id="userNameDisplay">Usuario</span>
       <button class="btn-action" onclick="enviarResumenManual()">📊 Enviar Resumen Diario</button>
       <a href="index.html" class="btn-action">← Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
     </div>
   </div>
 
-  <div class="container">
+  <div class="container" id="appMain" style="display:none;">
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="actividad">📋 Actividad</button>
+      <button class="tab-btn" data-tab="numeros" id="tabBtnNumeros" style="display:none;">📇 Números Autorizados</button>
+      <button class="tab-btn" data-tab="alertas" id="tabBtnAlertas" style="display:none;">🔔 Alertas de Calidad</button>
+    </div>
+
+    <div class="tab-panel" id="tabPanelActividad">
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">🟢</div>
@@ -73,7 +120,7 @@
           <p id="statSesionesActivas">0</p>
         </div>
       </div>
-      <div class="stat-card" style="border-left-color: #3182ce;">
+      <div class="stat-card" style="border-left-color: var(--brand-primary);">
         <div class="stat-icon">📋</div>
         <div class="stat-info">
           <h3>Registros Totales (Historial)</h3>
@@ -138,23 +185,137 @@
         </table>
       </div>
     </div>
+    </div>
+
+    <!-- Números Autorizados (solo whatsapp.bot.gestionar) — su propia pestaña -->
+    <div class="section-card" id="seccionNumeros" style="display:none;">
+      <div class="section-header">
+        <h2>📇 Números Autorizados del Bot</h2>
+      </div>
+      <div class="form-inline">
+        <input type="text" id="nuevoNumeroTelefono" placeholder="Identificador WhatsApp (ej: 573001234567@c.us)" style="min-width:260px;">
+        <input type="text" id="nuevoNumeroNombre" placeholder="Nombre a mostrar">
+        <label><input type="checkbox" id="nuevoNumeroAdmin"> Administrador (acceso completo: recibe resúmenes/alertas y puede usar todos los comandos)</label>
+        <button class="btn-sm primary" onclick="agregarNumero()">➕ Agregar</button>
+      </div>
+      <p class="alerta-desc" style="padding: 0 25px 12px;">💡 "Administrador" da acceso a todo de una vez. Para dar acceso solo a algunas funciones (ej: solo marcar entrada/salida, o solo el resumen diario), deja "Administrador" sin marcar y usa "⚙️ Permisos" en cada número.</p>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Identificador WhatsApp</th>
+              <th>Administrador</th>
+              <th>Activo</th>
+              <th>Permisos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaNumeros">
+            <tr><td colspan="6" class="empty-state">Cargando números...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Configuración de Alertas de Calidad (solo whatsapp.bot.gestionar) — su propia pestaña -->
+    <div class="section-card" id="seccionAlertas" style="display:none;">
+      <div class="section-header">
+        <h2>🔔 Alertas en Tiempo Real</h2>
+      </div>
+      <p class="alerta-desc" style="margin:-0.5rem 0 1rem;">Avisos de un evento puntual, apenas pasa (un lote rechazado, un pico de garantías, etc.).</p>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Alerta</th>
+              <th>Activa</th>
+              <th>Umbral / Ventana</th>
+            </tr>
+          </thead>
+          <tbody id="tablaAlertasConfigEventos">
+            <tr><td colspan="3" class="empty-state">Cargando configuración...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-header" style="margin-top:1.5rem;">
+        <h2>📊 Resúmenes Periódicos</h2>
+      </div>
+      <p class="alerta-desc" style="margin:-0.5rem 0 1rem;">Reportes de calidad con hora fija, no ligados a un evento en particular.</p>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Resumen</th>
+              <th>Activo</th>
+              <th>Umbral / Ventana</th>
+            </tr>
+          </thead>
+          <tbody id="tablaAlertasConfigResumenes">
+            <tr><td colspan="3" class="empty-state">Cargando configuración...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
+  <script src="js/comun.js"></script>
   <script>
-    const token = localStorage.getItem('token');
-    if (!token) location.href = 'index.html';
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+    let refrescoInterval = null;
 
+    // Nombre a mostrar + descripción corta de cada tipo de alerta, para no
+    // tener que mostrarle a Julio el código interno (ej. "lote_rechazado_final")
+    // sin contexto. Si en el futuro se agrega un tipo de alerta nuevo (ver
+    // whatsapp_alertas_config en db/init.js), agregarlo aquí también.
+    // "grupo" separa la tabla en dos: 'alerta' (avisos de un evento puntual,
+    // en el momento en que pasa) y 'resumen' (reportes periódicos con hora
+    // fija) — antes salían todos revueltos en una sola lista.
+    const ALERTAS_INFO = {
+      lote_rechazado_final: { grupo: 'alerta', nombre: '❌ Lote rechazado (Auditoría Final)', desc: 'Se manda apenas se guarda el veredicto de un lote Rechazado.' },
+      lote_tratamiento_aplicado: { grupo: 'alerta', nombre: '🔄 Tratamiento aplicado a un lote rechazado', desc: 'Cuando se decide Reclasificar o Reparar un lote que había salido Rechazado (incluye el motivo). "Dejarlo Rechazado" no manda este aviso aparte.' },
+      primera_pieza_rechazada: { grupo: 'alerta', nombre: '⚠️ Primera Pieza rechazada', desc: 'Aviso de que hay que repetir la Primera Pieza del lote.' },
+      muestreo_parar: { grupo: 'alerta', nombre: '🛑 "Parar" en muestreo En Proceso', desc: 'La señal más urgente: se decidió detener la máquina/proceso.' },
+      permiso_sensible: { grupo: 'alerta', nombre: '🔐 Cambio a un permiso sensible', desc: 'Un rol gana un permiso de administración, o a alguien le cambian a un rol así.' },
+      pico_garantias: { grupo: 'alerta', nombre: '📈 Pico de garantías', desc: 'Muchas garantías de un mismo producto en pocos días.', tieneUmbral: true },
+      resumen_diario: { grupo: 'resumen', nombre: '📊 Resumen diario de calidad', desc: 'Todos los días a las 5:00 pm.' },
+      resumen_quincenal: { grupo: 'resumen', nombre: '📊 Resumen quincenal de calidad', desc: 'Los días 1 y 16 de cada mes a las 5:00 pm.' },
+      resumen_mensual: { grupo: 'resumen', nombre: '📊 Resumen mensual de calidad', desc: 'El día 1 de cada mes a las 5:00 pm.' },
+    };
+
+    // mostrarLogin() y doLogin() ahora viven en js/comun.js (eran idénticas
+    // carácter por carácter en garantias.html, metrologia.html y whatsapp_bot.html).
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      if (refrescoInterval) { clearInterval(refrescoInterval); refrescoInterval = null; }
+      mostrarLogin();
+    }
+
+    // Devuelve true si la sesión es válida y ya se puede mostrar el módulo;
+    // false si se mostró el login (sin sesión o sesión inválida/expirada).
     async function checkAuth() {
       try {
         const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
         const data = await res.json();
         if (res.ok && data) {
           document.getElementById('userNameDisplay').textContent = `${data.nombre || data.usuario} (${data.rol || 'Usuario'})`;
+          return true;
         } else {
-          location.href = 'index.html';
+          localStorage.removeItem('token');
+          token = null;
+          mostrarLogin();
+          return false;
         }
       } catch (e) {
-        location.href = 'index.html';
+        mostrarLogin();
+        return false;
       }
     }
 
@@ -172,15 +333,22 @@
         } else {
           tbodySes.innerHTML = sesiones.map(s => `
             <tr>
-              <td><strong>${s.nombre}</strong></td>
-              <td><code>${s.telefono}</code></td>
-              <td>📍 <strong>${s.area_nombre}</strong></td>
-              <td>🕐 ${s.entrada}</td>
+              <td><strong>${escapeHtml(s.nombre || '')}</strong></td>
+              <td><code>${escapeHtml(s.telefono || '')}</code></td>
+              <td>📍 <strong>${escapeHtml(s.area_nombre || '')}</strong></td>
+              <td>🕐 ${escapeHtml(s.entrada || '')}</td>
               <td>
-                <button class="btn-sm danger" onclick="cerrarSesion('${s.telefono}')">🔴 Cerrar Sesión</button>
+                <button class="btn-sm danger" data-telefono-cerrar="${escapeHtml(s.telefono || '')}">🔴 Cerrar Sesión</button>
               </td>
             </tr>
           `).join('');
+          // El nombre que llega de WhatsApp lo controla la persona que
+          // escribe (no un usuario del sistema), así que el teléfono para
+          // "Cerrar Sesión" se toma de un atributo data-* ya escapado, en
+          // vez de insertarlo dentro del código del onclick.
+          tbodySes.querySelectorAll('[data-telefono-cerrar]').forEach(btn => {
+            btn.onclick = () => cerrarSesion(btn.dataset.telefonoCerrar);
+          });
         }
 
         // Cargar historial
@@ -197,15 +365,15 @@
           tbodyReg.innerHTML = registros.map(r => `
             <tr>
               <td>#${r.id}</td>
-              <td><strong>${r.nombre}</strong> <br><small style="color:#718096">${r.telefono}</small></td>
+              <td><strong>${escapeHtml(r.nombre || '')}</strong> <br><small style="color:#718096">${escapeHtml(r.telefono || '')}</small></td>
               <td>
-                <span class="badge ${r.tipo === 'ENTRADA' ? 'entrada' : 'salida'}">${r.tipo}</span>
+                <span class="badge ${r.tipo === 'ENTRADA' ? 'entrada' : 'salida'}">${escapeHtml(r.tipo || '')}</span>
                 ${r.cerrado_por_admin ? '<span class="badge admin" title="Cerrado por administrador">Admin</span>' : ''}
               </td>
-              <td>📍 ${r.area_nombre || '-'}</td>
-              <td>${r.entrada || '-'}</td>
-              <td>${r.salida || '-'}</td>
-              <td><strong>${r.duracion || '-'}</strong></td>
+              <td>📍 ${escapeHtml(r.area_nombre || '-')}</td>
+              <td>${escapeHtml(r.entrada || '-')}</td>
+              <td>${escapeHtml(r.salida || '-')}</td>
+              <td><strong>${escapeHtml(r.duracion || '-')}</strong></td>
               <td><small>${new Date(r.timestamp_entrada || r.timestamp_salida || Date.now()).toLocaleString()}</small></td>
             </tr>
           `).join('');
@@ -235,6 +403,227 @@
       }
     }
 
+    // ======================== NÚMEROS AUTORIZADOS ========================
+    let permisosBotCatalogo = [];
+
+    async function cargarPermisosBotCatalogo() {
+      if (permisosBotCatalogo.length > 0) return;
+      try {
+        const res = await fetch('/api/whatsapp/permisos-bot', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        permisosBotCatalogo = Array.isArray(data.permisos) ? data.permisos : [];
+      } catch (e) {
+        console.error('Error cargando catálogo de permisos del bot:', e);
+      }
+    }
+
+    async function cargarNumeros() {
+      try {
+        await cargarPermisosBotCatalogo();
+        const res = await fetch('/api/whatsapp/numeros', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const numeros = Array.isArray(data.numeros) ? data.numeros : [];
+        const tbody = document.getElementById('tablaNumeros');
+        if (numeros.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No hay números registrados todavía.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = numeros.map(n => {
+          const permisos = Array.isArray(n.permisos) ? n.permisos : [];
+          const casillas = permisosBotCatalogo.map(p => `
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:normal; margin-bottom:4px;">
+              <input type="checkbox" data-permiso-numero="${n.id}" data-permiso-codigo="${p.codigo}" ${permisos.includes(p.codigo) ? 'checked' : ''} ${n.es_admin ? 'disabled' : ''}>
+              ${escapeHtml(p.descripcion)}
+            </label>
+          `).join('');
+          return `
+          <tr>
+            <td><strong>${escapeHtml(n.nombre)}</strong></td>
+            <td><code>${escapeHtml(n.telefono)}</code></td>
+            <td><span class="badge ${n.es_admin ? 'si' : 'no'}">${n.es_admin ? 'Sí' : 'No'}</span></td>
+            <td>
+              <label class="toggle-switch">
+                <input type="checkbox" data-id-activo="${n.id}" ${n.activo ? 'checked' : ''}>
+                <span class="toggle-slider"></span>
+              </label>
+            </td>
+            <td>
+              <button class="btn-sm primary" data-id-toggle-permisos="${n.id}">⚙️ Permisos${n.es_admin ? '' : ` (${permisos.length})`}</button>
+            </td>
+            <td>
+              <button class="btn-sm primary" data-id-admin="${n.id}" data-es-admin="${n.es_admin ? '1' : '0'}">${n.es_admin ? '⬇️ Quitar admin' : '⬆️ Hacer admin'}</button>
+              <button class="btn-sm danger" data-id-eliminar="${n.id}" data-nombre-eliminar="${escapeHtml(n.nombre)}">🗑️</button>
+            </td>
+          </tr>
+          <tr id="filaPermisos${n.id}" style="display:none;">
+            <td colspan="6" style="background:#fafcff;">
+              ${n.es_admin
+                ? '<span class="alerta-desc">Este número es administrador: ya tiene acceso a todo. Quita "Administrador" si quieres darle solo algunas funciones.</span>'
+                : `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:4px;">${casillas}</div>
+                   <button class="btn-sm primary" style="margin-top:8px;" data-id-guardar-permisos="${n.id}">💾 Guardar permisos</button>`
+              }
+            </td>
+          </tr>
+        `; }).join('');
+        tbody.querySelectorAll('[data-id-activo]').forEach(chk => {
+          chk.onchange = () => actualizarNumero(chk.dataset.idActivo, { activo: chk.checked });
+        });
+        tbody.querySelectorAll('[data-id-admin]').forEach(btn => {
+          btn.onclick = () => actualizarNumero(btn.dataset.idAdmin, { es_admin: btn.dataset.esAdmin !== '1' });
+        });
+        tbody.querySelectorAll('[data-id-eliminar]').forEach(btn => {
+          btn.onclick = () => eliminarNumero(btn.dataset.idEliminar, btn.dataset.nombreEliminar);
+        });
+        tbody.querySelectorAll('[data-id-toggle-permisos]').forEach(btn => {
+          btn.onclick = () => {
+            const fila = document.getElementById('filaPermisos' + btn.dataset.idTogglePermisos);
+            fila.style.display = fila.style.display === 'none' ? 'table-row' : 'none';
+          };
+        });
+        tbody.querySelectorAll('[data-id-guardar-permisos]').forEach(btn => {
+          btn.onclick = () => guardarPermisosNumero(btn.dataset.idGuardarPermisos);
+        });
+      } catch (e) {
+        console.error('Error cargando números autorizados:', e);
+        document.getElementById('tablaNumeros').innerHTML = `<tr><td colspan="6" class="empty-state">No se pudo cargar (¿el servidor se reinició después de la última actualización?).</td></tr>`;
+      }
+    }
+
+    async function agregarNumero() {
+      const telefono = document.getElementById('nuevoNumeroTelefono').value.trim();
+      const nombre = document.getElementById('nuevoNumeroNombre').value.trim();
+      const es_admin = document.getElementById('nuevoNumeroAdmin').checked;
+      if (!telefono || !nombre) { alert('Teléfono y nombre son obligatorios.'); return; }
+      try {
+        const res = await fetch('/api/whatsapp/numeros', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ telefono, nombre, es_admin })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('nuevoNumeroTelefono').value = '';
+          document.getElementById('nuevoNumeroNombre').value = '';
+          document.getElementById('nuevoNumeroAdmin').checked = false;
+          await cargarNumeros();
+        } else {
+          alert(data.error || 'Error agregando número');
+        }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function actualizarNumero(id, cambios) {
+      try {
+        const res = await fetch(`/api/whatsapp/numeros/${id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(cambios)
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Error actualizando número'); }
+        await cargarNumeros();
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function eliminarNumero(id, nombre) {
+      if (!confirm(`¿Eliminar a "${nombre}" de los números autorizados del bot?`)) return;
+      try {
+        const res = await fetch(`/api/whatsapp/numeros/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (res.ok) await cargarNumeros();
+        else alert(data.error || 'Error eliminando número');
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function guardarPermisosNumero(id) {
+      const casillas = document.querySelectorAll(`[data-permiso-numero="${id}"]`);
+      const permisos = [...casillas].filter(c => c.checked).map(c => c.dataset.permisoCodigo);
+      try {
+        const res = await fetch(`/api/whatsapp/numeros/${id}/permisos`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ permisos })
+        });
+        const data = await res.json();
+        if (res.ok) await cargarNumeros();
+        else alert(data.error || 'Error guardando permisos');
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    // ======================== CONFIGURACIÓN DE ALERTAS ========================
+    // Arma las filas de una tabla (recibe solo las alertas de su grupo, ya
+    // filtradas) y le engancha los mismos eventos de guardado — se llama
+    // una vez por cada una de las dos tablas (eventos y resúmenes).
+    function _filaAlertaConfig(a) {
+      const info = ALERTAS_INFO[a.tipo] || { nombre: a.tipo, desc: '' };
+      const umbralHtml = info.tieneUmbral
+        ? `<input type="number" min="1" class="umbral-input" data-umbral="${a.tipo}" value="${a.umbral ?? 10}"> garantías en <input type="number" min="1" class="umbral-input" data-ventana="${a.tipo}" value="${a.ventana_dias ?? 7}"> días`
+        : '—';
+      return `
+        <tr>
+          <td><strong>${escapeHtml(info.nombre)}</strong><br><span class="alerta-desc">${escapeHtml(info.desc)}</span></td>
+          <td>
+            <label class="toggle-switch">
+              <input type="checkbox" data-tipo-activo="${a.tipo}" ${a.activo ? 'checked' : ''}>
+              <span class="toggle-slider"></span>
+            </label>
+          </td>
+          <td>${umbralHtml}</td>
+        </tr>
+      `;
+    }
+    function _pintarTablaAlertas(tbody, alertas) {
+      tbody.innerHTML = alertas.length > 0
+        ? alertas.map(_filaAlertaConfig).join('')
+        : '<tr><td colspan="3" class="empty-state">Nada en este grupo.</td></tr>';
+      tbody.querySelectorAll('[data-tipo-activo]').forEach(chk => {
+        chk.onchange = () => actualizarAlertaConfig(chk.dataset.tipoActivo, { activo: chk.checked });
+      });
+      tbody.querySelectorAll('[data-umbral], [data-ventana]').forEach(inp => {
+        inp.onchange = () => {
+          const tipo = inp.dataset.umbral || inp.dataset.ventana;
+          const fila = inp.closest('tr');
+          const umbral = parseInt(fila.querySelector('[data-umbral]').value, 10) || 10;
+          const ventana_dias = parseInt(fila.querySelector('[data-ventana]').value, 10) || 7;
+          actualizarAlertaConfig(tipo, { umbral, ventana_dias });
+        };
+      });
+    }
+
+    async function cargarAlertasConfig() {
+      try {
+        const res = await fetch('/api/whatsapp/alertas-config', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const alertas = Array.isArray(data.alertas) ? data.alertas : [];
+        // "resumen" a un lado, todo lo demás (incluido cualquier tipo nuevo
+        // que no esté en ALERTAS_INFO todavía) se trata como alerta en
+        // tiempo real por defecto, para que nunca desaparezca de la
+        // pantalla mientras alguien lo agrega al diccionario de arriba.
+        const eventos = alertas.filter(a => (ALERTAS_INFO[a.tipo]?.grupo || 'alerta') !== 'resumen');
+        const resumenes = alertas.filter(a => ALERTAS_INFO[a.tipo]?.grupo === 'resumen');
+        _pintarTablaAlertas(document.getElementById('tablaAlertasConfigEventos'), eventos);
+        _pintarTablaAlertas(document.getElementById('tablaAlertasConfigResumenes'), resumenes);
+      } catch (e) {
+        console.error('Error cargando configuración de alertas:', e);
+        const msg = '<tr><td colspan="3" class="empty-state">No se pudo cargar (¿el servidor se reinició después de la última actualización?).</td></tr>';
+        document.getElementById('tablaAlertasConfigEventos').innerHTML = msg;
+        document.getElementById('tablaAlertasConfigResumenes').innerHTML = msg;
+      }
+    }
+
+    async function actualizarAlertaConfig(tipo, cambios) {
+      try {
+        const res = await fetch(`/api/whatsapp/alertas-config/${tipo}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(cambios)
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || 'Error actualizando alerta');
+        }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
     async function enviarResumenManual() {
       if (!confirm('¿Enviar resumen diario actual al administrador por WhatsApp?')) return;
       try {
@@ -253,9 +642,36 @@
       }
     }
 
-    checkAuth();
-    cargarDatos();
-    setInterval(cargarDatos, 10000); // Auto-refresh every 10s
+    function mostrarTab(tab) {
+      document.getElementById('tabPanelActividad').style.display = tab === 'actividad' ? 'flex' : 'none';
+      document.getElementById('seccionNumeros').style.display = tab === 'numeros' ? 'flex' : 'none';
+      document.getElementById('seccionAlertas').style.display = tab === 'alertas' ? 'flex' : 'none';
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    }
+
+    async function init() {
+      token = localStorage.getItem('token');
+      if (!token) { mostrarLogin(); return; }
+      const ok = await checkAuth();
+      if (!ok) return;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+      await cargarPermisosDelUsuario();
+      if (tienePermiso('whatsapp.bot.gestionar')) {
+        document.getElementById('tabBtnNumeros').style.display = 'inline-block';
+        document.getElementById('tabBtnAlertas').style.display = 'inline-block';
+        await cargarNumeros();
+        await cargarAlertasConfig();
+      }
+      document.querySelectorAll('.tab-btn').forEach(b => { b.onclick = () => mostrarTab(b.dataset.tab); });
+      await cargarDatos();
+      refrescoInterval = setInterval(cargarDatos, 10000); // Auto-refresh every 10s
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    init();
   </script>
 </body>
 </html>

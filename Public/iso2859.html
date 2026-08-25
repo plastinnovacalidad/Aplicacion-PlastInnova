@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muestreos ISO 2859-1 - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Header: estructura y color institucional vienen de css/comun.css. */
+    .header h1 { font-size: 22px; font-weight: 600; }
+    .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+
+    /* ---- Identidad propia del módulo: un color aparte (verde azulado /
+       "teal") que no usa ningún otro módulo del portal, para que se
+       reconozca de un vistazo en la tarjeta del portal y aquí adentro. Los
+       colores institucionales (var(--brand-primary)) se siguen usando para
+       botones/foco genéricos; este teal es solo para la sub-navegación
+       Recepción/Producción, igual que Metrología/Garantías tienen su
+       propio color de identidad. ---- */
+    :root {
+      --iso-teal: #2c7a7b;
+      --iso-teal-dark: #285e61;
+      --iso-recepcion: #dd6b20;
+    }
+
+    .content-area { flex: 1; overflow-y: auto; padding: 25px 40px; display: flex; flex-direction: column; gap: 20px; max-width: 1300px; margin: 0 auto; width: 100%; }
+
+    /* Selector de módulo (Recepción / Producción) */
+    .selector-modulo { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 800px; margin: 4rem auto; padding: 0 1rem; width: 100%; }
+    .card-modulo { background: white; border-radius: 16px; padding: 3rem 2rem; text-align: center; cursor: pointer; border: 3px solid #e2e8f0; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .card-modulo:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+    .card-modulo.recepcion:hover { border-color: var(--iso-recepcion); }
+    .card-modulo.produccion:hover { border-color: var(--iso-teal); }
+    .card-modulo .icono { font-size: 3.5rem; margin-bottom: 1rem; }
+    .card-modulo h2 { font-size: 1.4rem; margin-bottom: 0.5rem; color: #2d3748; }
+    .card-modulo p { color: #718096; font-size: 0.9rem; }
+
+    /* Sub-navegación dentro del módulo (Dashboard/Nuevo/Historial/Reportes) */
+    .iso-subnav { display: none; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 12px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .iso-subnav.visible { display: flex; }
+    .iso-subnav-titulo { font-weight: 700; font-size: 15px; color: #2d3748; display: flex; align-items: center; gap: 8px; }
+    .iso-subnav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .iso-subnav-links button { background: #edf2f7; border: none; color: #2d3748; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+    .iso-subnav-links button:hover { background: #e2e8f0; }
+    .iso-subnav-links button.activo { background: var(--brand-primary); color: white; }
+    .iso-subnav-links button.cambiar-modulo { background: none; color: #a0aec0; }
+    .iso-subnav-links button.cambiar-modulo:hover { background: #f7fafc; color: #718096; }
+
+    #iso2859Content { display: flex; flex-direction: column; gap: 20px; }
+
+    .card { background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    .card h2, .card h3 { margin-bottom: 1rem; color: #2d3748; }
+
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .metric { text-align: center; }
+    .metric h3 { font-size: 0.85rem; text-transform: uppercase; color: #718096; margin-bottom: 0.5rem; letter-spacing: 0.5px; }
+    .big-number { font-size: 2.3rem; font-weight: 700; color: var(--brand-primary); }
+    .metric.alert .big-number { color: #c53030; }
+    .metric.warning .big-number { color: #d69e2e; }
+    .metric.info .big-number { color: var(--brand-primary); }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem; color: #4a5568; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.12); }
+    .form-group input[readonly] { background: #edf2f7; color: #4a5568; }
+
+    .btn-primary { background: var(--brand-primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-danger { background: #c53030; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-warning { background: #d69e2e; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-success { background: #38a169; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    button:hover { opacity: 0.92; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; }
+    th { background: #edf2f7; font-weight: 600; color: #4a5568; }
+
+    .badge { padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+    .badge-pendiente { background: #bee3f8; color: #2b6cb0; }
+    .badge-aceptado { background: #c6f6d5; color: #276749; }
+    .badge-rechazado { background: #fed7d7; color: #c53030; }
+    .badge-aceptadoconobs { background: #feebc8; color: #c05621; }
+    .badge-seguir { background: #c6f6d5; color: #276749; }
+    .badge-alerta { background: #fed7d7; color: #c53030; }
+    .badge-parar { background: #feb2b2; color: #742a2a; }
+    .badge-aprobado { background: #c6f6d5; color: #276749; }
+    .badge-critico { background: #fed7d7; color: #c53030; }
+    .badge-mayor { background: #feebc8; color: #c05621; }
+    .badge-menor { background: #bee3f8; color: #2b6cb0; }
+    /* Ni verde (aprobado) ni rojo (rechazado): "Cerrado sin auditoría" no es
+       un veredicto de calidad, solo dice que se dejó de trabajar el lote sin
+       llegar a la Auditoría Final. Un gris neutro evita que se confunda de
+       un vistazo con un Aceptado o un Rechazado reales. */
+    .badge-cerradosinauditoria { background: #e2e8f0; color: #4a5568; }
+    /* Liberar/Rechazar/Reclasificar: mismo esquema de color que Aceptado/
+       Rechazado (verde/rojo), y Reclasificar en ámbar porque no es ni un
+       "todo bien" ni un "se desecha" — es un punto medio a propósito. */
+    .badge-liberar { background: #c6f6d5; color: #276749; }
+    .badge-rechazar { background: #fed7d7; color: #c53030; }
+    .badge-reclasificar { background: #feebc8; color: #c05621; }
+    .badge-reclasificado { background: #feebc8; color: #c05621; }
+    .badge-reparar { background: #e9d8fd; color: #553c9a; }
+    .badge-reparacion { background: #e9d8fd; color: #553c9a; }
+
+    .alert { padding: 0.8rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .alert-info { background: #ebf8ff; border-left: 4px solid var(--brand-primary); color: #2c5282; }
+    .alert-danger { background: #fff5f5; border-left: 4px solid #c53030; color: #c53030; }
+    .alert-success { background: #f0fff4; border-left: 4px solid #38a169; color: #276749; }
+    .alert-warning { background: #fffaf0; border-left: 4px solid #d69e2e; color: #c05621; }
+
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .card-item { border: 2px solid #e2e8f0; border-radius: 10px; padding: 1rem; background: white; cursor: pointer; transition: border-color 0.2s; }
+    .card-item:hover { border-color: var(--iso-teal); }
+    .card-item h4 { margin-bottom: 0.3rem; }
+    .card-item p { color: #718096; font-size: 0.85rem; margin-bottom: 0.3rem; }
+
+    .indicador-lote { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .indicador-ok { background: #38a169; }
+    .indicador-alerta { background: #d69e2e; }
+    .indicador-revision { background: #c53030; }
+
+    .veredicto-box { text-align: center; padding: 1.6rem; border-radius: 12px; margin: 1rem 0; font-size: 1.3rem; font-weight: 700; }
+    .veredicto-box.aceptado { background: #f0fff4; color: #38a169; border: 2px solid #38a169; }
+    .veredicto-box.rechazado { background: #fff5f5; color: #c53030; border: 2px solid #c53030; }
+
+    /* Tarjetas pequeñas de "Resultados del Muestreo" en la Auditoría Final:
+       neutras en gris mientras el conteo es 0, y se pintan del color de su
+       severidad en cuanto aparece un hallazgo de ese tipo (ver
+       actualizarResumenFinal en muestreo.js). */
+    .resultado-tile {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.15rem; padding: 0.6rem 0.5rem; border-radius: 8px;
+      background: #f7fafc; border: 1.5px solid #e2e8f0; transition: background 0.15s, border-color 0.15s;
+    }
+    .resultado-tile .resultado-num { font-size: 1.4rem; font-weight: 700; color: #a0aec0; line-height: 1; }
+    .resultado-tile .resultado-label { font-size: 0.75rem; color: #718096; }
+
+    .autocomplete-list { border: 1px solid #e2e8f0; border-radius: 6px; max-height: 220px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 20; box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+    .autocomplete-item { padding: 0.6rem; cursor: pointer; border-bottom: 1px solid #edf2f7; font-size: 0.85rem; }
+    .autocomplete-item:hover { background: #f7fafc; }
+    .autocomplete-item small { color: #718096; }
+
+    .checklist-pieza { border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; }
+    .checklist-pieza h5 { margin-bottom: 0.5rem; color: var(--brand-primary); }
+
+    .timeline-item { border-left: 3px solid #e2e8f0; padding-left: 1rem; margin-bottom: 1rem; }
+    .timeline-item.alerta { border-left-color: #d69e2e; }
+    .timeline-item.rechazado { border-left-color: #c53030; }
+    .timeline-item.ok { border-left-color: #38a169; }
+
+    @media (max-width: 768px) {
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+      .selector-modulo { grid-template-columns: 1fr; margin-top: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>🧪 Muestreos ISO 2859-1</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1>🧪 Muestreos ISO 2859-1</h1>
+        <p>Inspección por muestreo de Recepción y Producción</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal">← Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div id="appMain" style="display:none; flex-direction:column; gap:20px; flex:1;">
+
+    <div class="content-area" id="selectorModuloArea">
+      <div style="text-align:center; margin-top:1rem;">
+        <h2 style="font-size:1.6rem; color:#2d3748;">Seleccione el módulo</h2>
+        <p style="color:#718096; margin-top:6px;">Cada módulo lleva su propio flujo de inspección por muestreo.</p>
+      </div>
+      <div class="selector-modulo">
+        <div class="card-modulo recepcion" id="btnModuloRecepcion" onclick="Iso2859App.seleccionarModulo('Recepcion')">
+          <div class="icono">📦</div>
+          <h2>RECEPCIÓN</h2>
+          <p>Materia prima entrante<br>Auditorías finales de proveedores</p>
+        </div>
+        <div class="card-modulo produccion" id="btnModuloProduccion" onclick="Iso2859App.seleccionarModulo('Produccion')">
+          <div class="icono">⚙️</div>
+          <h2>PRODUCCIÓN</h2>
+          <p>Primera pieza, En proceso<br>Auditoría final opcional</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-area" id="moduloArea" style="display:none;">
+      <div class="iso-subnav visible" id="isoSubnav">
+        <div class="iso-subnav-titulo" id="isoSubnavTitulo">📦 Recepción</div>
+        <div class="iso-subnav-links" id="isoSubnavLinks"></div>
+      </div>
+      <div id="iso2859Content"></div>
+    </div>
+
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script src="js/iso2859/app.js"></script>
+  <script src="js/iso2859/dashboard.js"></script>
+  <script src="js/iso2859/lote.js"></script>
+  <script src="js/iso2859/revision.js"></script>
+  <script src="js/iso2859/muestreo.js"></script>
+  <script src="js/iso2859/historial.js"></script>
+  <script src="js/iso2859/reportes.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+    let usuarioActual = null; // { nombre, rol }
+
+    async function cargarMisPermisos() {
+      const ok = await cargarPermisosDelUsuario();
+      return ok;
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      mostrarLogin();
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!(res.ok && data)) {
+          localStorage.removeItem('token');
+          token = null;
+          mostrarLogin();
+          return false;
+        }
+        usuarioActual = { nombre: data.nombre || data.usuario, rol: data.rol };
+        document.getElementById('userNameDisplay').textContent = `${usuarioActual.nombre} (${usuarioActual.rol || 'Usuario'})`;
+
+        await cargarMisPermisos();
+
+        const tieneAlgunPermiso = ['iso2859.ver','iso2859.crear_lote','iso2859.muestrear','iso2859.cambiar_plan','iso2859.reportes','iso2859.gestion']
+          .some(p => tienePermiso(p));
+        if (!tieneAlgunPermiso) {
+          alert('No tienes permiso para acceder al módulo de Muestreos ISO 2859.');
+          location.href = 'index.html';
+          return false;
+        }
+
+        const btnVolver = document.getElementById('btnVolverPortal');
+        if (btnVolver) btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+
+        return true;
+      } catch (e) {
+        mostrarLogin();
+        return false;
+      }
+    }
+
+    async function init() {
+      token = localStorage.getItem('token');
+      if (!token) { mostrarLogin(); return; }
+      const ok = await checkAuth();
+      if (!ok) return;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+      Iso2859App.iniciar();
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    init();
+  </script>
+</body>
+</html>

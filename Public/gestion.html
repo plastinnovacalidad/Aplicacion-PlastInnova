@@ -4,40 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Roles y Usuarios - Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
 
-    .header { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); flex-shrink: 0; }
-    .header-left h1 { font-size: 22px; font-weight: 600; }
-    .header-left p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
-    .header-right { display: flex; align-items: center; gap: 15px; font-size: 14px; }
-    .btn-header { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-header:hover { background: rgba(255,255,255,0.35); }
-    .btn-logout { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-    .btn-logout:hover { background: rgba(255,255,255,0.35); }
+    /* Header y pantalla de login: estructura y color institucional vienen
+       de css/comun.css (--header-bg por defecto, igual en las 7 páginas). */
 
-    .main-container { display: flex; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
-    .left-nav { width: 240px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
-    .nav-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; font-weight: 700; font-size: 14px; text-align: center; }
-    .nav-item { padding: 14px 18px; cursor: pointer; font-size: 14px; color: #555; border-left: 4px solid transparent; transition: all 0.15s; display: flex; align-items: center; gap: 10px; }
-    .nav-item:hover { background: #f0f3ff; color: #667eea; border-left-color: #d0d8ff; }
-    .nav-item.active { background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); color: #667eea; border-left-color: #667eea; font-weight: 600; }
-    .nav-item.hidden { display: none; }
-
-    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; }
-    .content-title { font-size: 20px; font-weight: 700; color: #444; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #eee; }
+    /* .main-container y .content-area NO se comparten (ver nota en comun.css).
+       Fase C: el menú lateral se reemplazó por pestañas arriba, así que
+       ahora main-container apila en columna (pestañas, luego contenido)
+       en vez de las dos columnas de antes. */
+    .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
+    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
 
     .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; }
     .admin-table td { padding: 10px 12px; border-bottom: 1px solid #eee; color: #444; }
     .admin-table tr:hover td { background: #f9f9f9; }
     .btn-small { padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s; }
-    .btn-edit { background: #667eea; color: white; }
+    .btn-edit { background: var(--brand-primary); color: white; }
     .btn-edit:hover { opacity: 0.85; }
     .btn-delete { background: #ff4757; color: white; margin-left: 6px; }
     .btn-delete:hover { opacity: 0.85; }
-    .btn-create { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; align-self: flex-start; margin-bottom: 15px; }
+    .btn-create { background: var(--brand-primary-gradient); color: white; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; align-self: flex-start; margin-bottom: 15px; }
     .btn-create:hover { opacity: 0.9; }
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
@@ -47,19 +40,12 @@
     .modal-field { margin-bottom: 14px; }
     .modal-field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
     .modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; }
-    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
     .btn-cancel { background: #f0f0f0; color: #555; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
     .btn-cancel:hover { background: #e0e0e0; }
-    .btn-confirm { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .btn-confirm { background: var(--brand-primary-gradient); color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
 
-    .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); display: none; align-items: center; justify-content: center; z-index: 2000; }
-    .login-box { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 360px; }
-    .login-box h2 { text-align: center; margin-bottom: 25px; color: #444; font-size: 22px; }
-    .login-box input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-    .login-box button { width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
-    .login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
-    .rec-empty { color: #999; font-style: italic; font-size: 14px; padding: 10px 0; }
 
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -69,6 +55,7 @@
 <body>
   <div class="login-overlay" id="loginOverlay" style="display: none;">
     <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
       <h2>🔐 Gestión de Roles y Usuarios</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
@@ -78,9 +65,12 @@
   </div>
 
   <div class="header" id="appHeader" style="display:none;">
-    <div class="header-left">
-      <h1>⚙️ Gestión de Roles y Usuarios</h1>
-      <p>Administración de accesos y seguridad</p>
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div class="header-left">
+        <h1>⚙️ Gestión de Roles y Usuarios</h1>
+        <p>Administración de accesos y seguridad</p>
+      </div>
     </div>
     <div class="header-right">
       <span>Sesión activa: <strong id="userName">--</strong></span>
@@ -90,14 +80,11 @@
   </div>
 
   <div class="main-container" id="appMain" style="display:none;">
-    <div class="left-nav">
-      <div class="nav-header">📂 Menú</div>
-      <div class="nav-item active" id="navRoles" onclick="switchSection('roles')">
-        <span>👥</span> Roles
-      </div>
-      <div class="nav-item" id="navUsuarios" onclick="switchSection('usuarios')">
-        <span>🧑‍💼</span> Usuarios
-      </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="navRoles" onclick="switchSection('roles')">👥 Roles</button>
+      <button class="tab-btn" id="navUsuarios" onclick="switchSection('usuarios')">🧑‍💼 Usuarios</button>
+      <button class="tab-btn" id="navCatalogos" onclick="switchSection('catalogos')">📋 Catálogos</button>
+      <button class="tab-btn" id="navAuditoria" onclick="switchSection('auditoria')">📜 Registro de Cambios</button>
     </div>
 
     <div class="content-area" id="contentArea">
@@ -109,6 +96,74 @@
       <div id="secUsuarios" style="display:none;">
         <div class="content-title">🧑‍💼 Administración de Usuarios</div>
         <div id="usuariosContainer"><div class="rec-empty">Cargando usuarios...</div></div>
+      </div>
+
+      <div id="secCatalogos" style="display:none;">
+        <div class="content-title">📋 Administración de Catálogos</div>
+        <p style="color:#718096; font-size:13px; margin-top:-8px; margin-bottom:15px;">
+          Edita aquí los catálogos de referencia que antes solo se podían corregir abriendo la base de datos directamente.
+          Los códigos "Inactivo" no desaparecen (para no romper el historial que ya los usa), solo dejan de ofrecerse como opción nueva.
+        </p>
+        <div class="tabs" style="margin-bottom:15px;">
+          <button class="tab-btn active" id="navCatDefectos" onclick="switchCatalogo('defectos')">🧪 Defectos ISO 2859-1</button>
+          <button class="tab-btn" id="navCatProblemas" onclick="switchCatalogo('problemas')">📋 Causales de Garantías</button>
+          <button class="tab-btn" id="navCatAreas" onclick="switchCatalogo('areas')">📍 Áreas de Inspección</button>
+          <button class="tab-btn" id="navCatPlanes" onclick="switchCatalogo('planes')">📐 Planes de Muestreo</button>
+        </div>
+        <div id="catalogoContainer"><div class="rec-empty">Cargando...</div></div>
+      </div>
+
+      <div id="secAuditoria" style="display:none;">
+        <div class="content-title">📜 Registro de Cambios</div>
+        <p style="color:#718096; font-size:13px; margin-top:-8px; margin-bottom:15px;">
+          Una sola bitácora para todos los módulos: quién creó, editó o eliminó qué y cuándo (catálogos, roles, usuarios,
+          garantías, referencias y planos). Úsala para filtrar por módulo, usuario o fecha en vez de tener que revisar
+          tabla por tabla.
+        </p>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:15px; background:#f8fafc; padding:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:#555; margin-bottom:4px;">Módulo</label>
+            <select id="audFiltroModulo" onchange="cambioModuloAuditoria()" style="padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px; min-width:160px;">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:#555; margin-bottom:4px;">Tabla / Entidad</label>
+            <select id="audFiltroEntidad" style="padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px; min-width:160px;">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:#555; margin-bottom:4px;">Acción</label>
+            <select id="audFiltroAccion" style="padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px;">
+              <option value="">Todas</option>
+              <option value="Creación">Creación</option>
+              <option value="Edición">Edición</option>
+              <option value="Eliminación">Eliminación</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:#555; margin-bottom:4px;">Usuario</label>
+            <input type="text" id="audFiltroUsuario" placeholder="Nombre..." style="padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px; width:130px;">
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:#555; margin-bottom:4px;">Desde</label>
+            <input type="date" id="audFiltroDesde" style="padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px;">
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; color:#555; margin-bottom:4px;">Hasta</label>
+            <input type="date" id="audFiltroHasta" style="padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px;">
+          </div>
+          <div style="flex:1; min-width:150px;">
+            <label style="display:block; font-size:11px; font-weight:600; color:#555; margin-bottom:4px;">Buscar en el detalle</label>
+            <input type="text" id="audFiltroTexto" placeholder="Ej: A1, G12, admin..." style="padding:7px 10px; border:1px solid #ddd; border-radius:6px; font-size:12px; width:100%;">
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-create" style="margin-bottom:0;" onclick="cargarAuditoria()">Filtrar</button>
+            <button class="btn-cancel" onclick="limpiarFiltrosAuditoria()">Limpiar</button>
+          </div>
+        </div>
+        <div id="auditoriaContainer"><div class="rec-empty">Cargando...</div></div>
       </div>
     </div>
   </div>
@@ -124,6 +179,8 @@
     </div>
   </div>
 
+  <script src="js/comun.js"></script>
+  <script src="js/auth-comun.js"></script>
   <script>
     let token = localStorage.getItem('token');
     let usuarioActual = null;
@@ -132,38 +189,10 @@
     let permisosDisponibles = [];
     let usuariosCache = [];
     let seccionActual = 'roles';
-    const adminCodes = ['roles.gestionar', 'usuarios.gestionar', 'configuracion.logo', 'gestion.ver', 'portal.volver'];
-
-    async function doLogin() {
-      const user = document.getElementById('loginUser').value.trim();
-      const pass = document.getElementById('loginPass').value.trim();
-      const err = document.getElementById('loginError');
-      err.style.display = 'none';
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario: user, contrasena: pass })
-        });
-        const data = await res.json();
-        if (data.success) {
-          token = data.token;
-          localStorage.setItem('token', token);
-          usuarioActual = { nombre: data.usuario, rol: data.rol };
-          initApp();
-        } else {
-          err.textContent = data.error || 'Error al iniciar sesión';
-          err.style.display = 'block';
-        }
-      } catch (e) {
-        err.textContent = 'No se pudo conectar al servidor';
-        err.style.display = 'block';
-      }
-    }
-
-    async function doLogout() {
-      await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
-      localStorage.removeItem('token'); token = null; location.reload();
-    }
+    let catalogoActual = 'defectos';
+    let catalogoCache = [];
+    let filtrosAuditoria = [];
+    const adminCodes = ['roles.gestionar', 'usuarios.gestionar', 'configuracion.logo', 'gestion.ver', 'portal.volver', 'catalogos.gestionar', 'auditoria.ver'];
 
     async function initApp() {
       try {
@@ -172,11 +201,11 @@
         usuarioActual = me;
       } catch (e) {}
       await cargarMisPermisos();
-      if (usuarioActual.rol !== 'admin' && !tienePermiso('roles.gestionar') && !tienePermiso('usuarios.gestionar')) {
+      if (usuarioActual.rol !== 'admin' && !tienePermiso('roles.gestionar') && !tienePermiso('usuarios.gestionar') && !tienePermiso('catalogos.gestionar') && !tienePermiso('auditoria.ver')) {
         localStorage.removeItem('token');
         const err = document.getElementById('loginError');
         if (err) {
-          err.textContent = 'Acceso denegado: tu usuario no tiene permisos de gestión de roles/usuarios.';
+          err.textContent = 'Acceso denegado: tu usuario no tiene permisos de gestión de roles/usuarios/catálogos/auditoría.';
           err.style.display = 'block';
         }
         document.getElementById('loginOverlay').style.display = 'flex';
@@ -191,71 +220,57 @@
       else document.getElementById('navRoles').classList.add('hidden');
       if (tienePermiso('usuarios.gestionar')) document.getElementById('navUsuarios').classList.remove('hidden');
       else document.getElementById('navUsuarios').classList.add('hidden');
+      if (tienePermiso('catalogos.gestionar')) document.getElementById('navCatalogos').classList.remove('hidden');
+      else document.getElementById('navCatalogos').classList.add('hidden');
+      if (tienePermiso('auditoria.ver')) document.getElementById('navAuditoria').classList.remove('hidden');
+      else document.getElementById('navAuditoria').classList.add('hidden');
 
       const btnVolver = document.getElementById('btnVolverPortal');
       if (btnVolver) {
         btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
       }
 
-      switchSection(tienePermiso('roles.gestionar') ? 'roles' : 'usuarios');
+      const primeraSeccion = tienePermiso('roles.gestionar') ? 'roles' : (tienePermiso('usuarios.gestionar') ? 'usuarios' : (tienePermiso('catalogos.gestionar') ? 'catalogos' : 'auditoria'));
+      switchSection(primeraSeccion);
     }
 
-    async function initAdminDirecto() {
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario: 'admin', contrasena: 'admin123' })
-        });
-        const data = await res.json();
-        if (data.success) {
-          token = data.token;
-          localStorage.setItem('token', token);
-          usuarioActual = { nombre: data.usuario, rol: data.rol };
-          const userNameEl = document.getElementById('userName');
-          if (userNameEl) userNameEl.textContent = data.usuario || 'Administrador';
-          await cargarMisPermisos();
-          document.getElementById('loginOverlay').style.display = 'none';
-          document.getElementById('appHeader').style.display = 'flex';
-          document.getElementById('appMain').style.display = 'flex';
-          document.getElementById('navRoles').classList.remove('hidden');
-          document.getElementById('navUsuarios').classList.remove('hidden');
-          const btnVolver = document.getElementById('btnVolverPortal');
-          if (btnVolver) btnVolver.style.display = 'inline-flex';
-          switchSection('roles');
-        } else {
-          document.body.innerHTML = `<div style="padding:40px; color:red; font-family:sans-serif;">Error de acceso administrativo directo: ${data.error || 'Credenciales inválidas'}</div>`;
-        }
-      } catch (e) {
-        document.body.innerHTML = `<div style="padding:40px; color:red; font-family:sans-serif;">Error conectando al servidor: ${e.message}</div>`;
+    function checkSession() {
+      if (token) {
+        initApp();
+      } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
       }
     }
 
-    initAdminDirecto();
+    checkSession();
 
+    // La lógica (fetch de /api/roles usando usuarioActual.rol) ahora vive en
+    // js/comun.js como cargarPermisosConUsuarioActual() (era idéntica en
+    // gestion.html, smd.html y referencias.html). rolesCache solo se
+    // actualiza si la consulta tuvo éxito, igual que antes.
     async function cargarMisPermisos() {
-      try {
-        const res = await fetch('/api/roles', { headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        rolesCache = data.roles || [];
-        const miRol = rolesCache.find(r => r.nombre === usuarioActual.rol);
-        permisosUsuario = miRol ? miRol.permisos.map(p => p.codigo) : [];
-      } catch (e) { permisosUsuario = []; }
-    }
-
-    function tienePermiso(codigo) {
-      return permisosUsuario.includes(codigo);
+      const roles = await cargarPermisosConUsuarioActual();
+      if (roles) rolesCache = roles;
     }
 
     function switchSection(sec) {
       seccionActual = sec;
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      // Nota: los sub-tabs de dentro de "Catálogos" (navCatDefectos, etc.)
+      // también son .tab-btn, así que esto los desmarcaría también — no hay
+      // problema porque switchCatalogo() los vuelve a marcar bien justo
+      // después, cuando entra a esa sección.
+      document.querySelectorAll('#appMain > .tabs > .tab-btn').forEach(n => n.classList.remove('active'));
       document.getElementById('secRoles').style.display = 'none';
       document.getElementById('secUsuarios').style.display = 'none';
-      const navMap = { roles: 'navRoles', usuarios: 'navUsuarios' };
+      document.getElementById('secCatalogos').style.display = 'none';
+      document.getElementById('secAuditoria').style.display = 'none';
+      const navMap = { roles: 'navRoles', usuarios: 'navUsuarios', catalogos: 'navCatalogos', auditoria: 'navAuditoria' };
       if (navMap[sec]) document.getElementById(navMap[sec]).classList.add('active');
       document.getElementById('sec' + sec.charAt(0).toUpperCase() + sec.slice(1)).style.display = 'block';
       if (sec === 'roles') cargarRolesAdmin();
       if (sec === 'usuarios') cargarUsuariosAdmin();
+      if (sec === 'catalogos') switchCatalogo(catalogoActual);
+      if (sec === 'auditoria') cargarFiltrosAuditoria();
     }
 
     async function cargarRolesAdmin() {
@@ -272,10 +287,12 @@
         let html = '<button class="btn-create" onclick="abrirModalRol()">+ Crear nuevo rol</button>';
         html += '<table class="admin-table"><thead><tr><th>Rol</th><th>Descripción</th><th>Permisos</th><th>Acciones</th></tr></thead><tbody>';
         rolesCache.forEach(rol => {
-          const smd = rol.permisos ? rol.permisos.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !adminCodes.includes(p.codigo)).length : 0;
+          const smd = rol.permisos ? rol.permisos.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !p.codigo.startsWith('iso2859.') && !p.codigo.startsWith('calidad.') && !adminCodes.includes(p.codigo)).length : 0;
           const garantias = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('garantias.')).length : 0;
           const whatsapp = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('whatsapp.bot.')).length : 0;
           const metrologia = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('metrologia.')).length : 0;
+          const iso2859 = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('iso2859.')).length : 0;
+          const calidad = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('calidad.')).length : 0;
           const admin = rol.permisos ? rol.permisos.filter(p => adminCodes.includes(p.codigo)).length : 0;
           const esSistema = rol.es_sistema === 1 ? ' <span style="color:#999;font-size:11px;">(sistema)</span>' : '';
           html += `<tr>
@@ -287,6 +304,8 @@
                 ${garantias > 0 ? `<span style="background:#fffaf0; color:#dd6b20; padding:3px 8px; border-radius:12px; font-weight:600;">📋 Garantías (${garantias})</span>` : ''}
                 ${whatsapp > 0 ? `<span style="background:#f0fff4; color:#38a169; padding:3px 8px; border-radius:12px; font-weight:600;">💬 WhatsApp (${whatsapp})</span>` : ''}
                 ${metrologia > 0 ? `<span style="background:#ebf8ff; color:#3182ce; padding:3px 8px; border-radius:12px; font-weight:600;">📐 Metrología (${metrologia})</span>` : ''}
+                ${iso2859 > 0 ? `<span style="background:#e6fffa; color:#2c7a7b; padding:3px 8px; border-radius:12px; font-weight:600;">🧪 Muestreos ISO (${iso2859})</span>` : ''}
+                ${calidad > 0 ? `<span style="background:#fffaf0; color:#b7791f; padding:3px 8px; border-radius:12px; font-weight:600;">🏆 Calidad (${calidad})</span>` : ''}
                 ${admin > 0 ? `<span style="background:#fff5f5; color:#7b341e; padding:3px 8px; border-radius:12px; font-weight:600;">⚙️ Admin (${admin})</span>` : ''}
               </div>
             </td>
@@ -311,10 +330,10 @@
         const checked = permisosSeleccionados.has(p.id) ? 'checked' : '';
         const card = document.createElement('label');
         card.style.cssText = 'display: flex; align-items: flex-start; gap: 10px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
-        card.onmouseenter = () => { card.style.borderColor = '#3182ce'; card.style.boxShadow = '0 4px 12px rgba(49,130,206,0.1)'; };
+        card.onmouseenter = () => { card.style.borderColor = 'var(--brand-primary)'; card.style.boxShadow = '0 4px 12px rgba(27,79,196,0.1)'; };
         card.onmouseleave = () => { card.style.borderColor = '#e2e8f0'; card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; };
         card.innerHTML = `
-          <input type="checkbox" value="${p.id}" ${checked} style="margin-top: 2px; width: 16px; height: 16px; accent-color: #3182ce; cursor: pointer;">
+          <input type="checkbox" value="${p.id}" ${checked} style="margin-top: 2px; width: 16px; height: 16px; accent-color: var(--brand-primary); cursor: pointer;">
           <div style="display: flex; flex-direction: column; gap: 3px;">
             <span style="font-weight: 600; color: #2d3748; font-size: 13px;">${escapeHtml(p.codigo)}</span>
             <span style="font-size: 11px; color: #718096; line-height: 1.4;">${escapeHtml(p.descripcion)}</span>
@@ -322,6 +341,28 @@
         `;
         box.appendChild(card);
       });
+    }
+
+    // Conecta la casilla "Seleccionar todo" de un módulo con las casillas
+    // individuales de esa misma caja: marcarla marca todas, desmarcarla las
+    // desmarca todas, y si el usuario las va marcando una por una, la
+    // casilla "Seleccionar todo" se actualiza sola cuando ya están todas.
+    function wireSelectAll(selAllId, boxId) {
+      const master = document.getElementById(selAllId);
+      const box = document.getElementById(boxId);
+      const casillas = () => Array.from(box.querySelectorAll('input[type="checkbox"]'));
+
+      const sincronizarMaster = () => {
+        const todas = casillas();
+        master.checked = todas.length > 0 && todas.every(c => c.checked);
+      };
+
+      master.addEventListener('change', () => {
+        casillas().forEach(c => { c.checked = master.checked; });
+      });
+      casillas().forEach(c => c.addEventListener('change', sincronizarMaster));
+
+      sincronizarMaster();
     }
 
     async function abrirModalRol(rolId) {
@@ -335,33 +376,93 @@
       document.getElementById('modalBody').innerHTML = body;
       const grid = document.getElementById('permisosGrid');
       const permisosSeleccionados = rol ? new Set(rol.permisos.map(p => p.id)) : new Set();
-      
-      const smdPerms = permisosDisponibles.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !adminCodes.includes(p.codigo));
-      const garantiasPerms = permisosDisponibles.filter(p => p.codigo.startsWith('garantias.'));
-      const whatsappPerms = permisosDisponibles.filter(p => p.codigo.startsWith('whatsapp.bot.'));
-      const metrologiaPerms = permisosDisponibles.filter(p => p.codigo.startsWith('metrologia.'));
-      const adminPerms = permisosDisponibles.filter(p => adminCodes.includes(p.codigo));
+
+      // Dentro de cada módulo, se ponen primero el permiso para verlo/entrar
+      // (sin eso no se puede usar nada más) y el permiso para cargar
+      // información nueva (subir, crear), que suelen ser los más usados; el
+      // resto de permisos del módulo queda después, en el mismo orden de
+      // siempre.
+      function priorizarPermisos(perms, codigosPrioritarios) {
+        const primeros = codigosPrioritarios
+          .map(codigo => perms.find(p => p.codigo === codigo))
+          .filter(Boolean);
+        const yaIncluidos = new Set(primeros.map(p => p.codigo));
+        const resto = perms.filter(p => !yaIncluidos.has(p.codigo));
+        return [...primeros, ...resto];
+      }
+
+      const smdPerms = priorizarPermisos(
+        permisosDisponibles.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !p.codigo.startsWith('iso2859.') && !p.codigo.startsWith('calidad.') && !adminCodes.includes(p.codigo)),
+        ['referencias.ver', 'versiones.crear']
+      );
+      const garantiasPerms = priorizarPermisos(
+        permisosDisponibles.filter(p => p.codigo.startsWith('garantias.')),
+        ['garantias.ver', 'garantias.crear']
+      );
+      const whatsappPerms = priorizarPermisos(
+        permisosDisponibles.filter(p => p.codigo.startsWith('whatsapp.bot.')),
+        ['whatsapp.bot.ver', 'whatsapp.bot.gestionar']
+      );
+      const metrologiaPerms = priorizarPermisos(
+        permisosDisponibles.filter(p => p.codigo.startsWith('metrologia.')),
+        ['metrologia.ver', 'metrologia.versiones']
+      );
+      const iso2859Perms = priorizarPermisos(
+        permisosDisponibles.filter(p => p.codigo.startsWith('iso2859.')),
+        ['iso2859.ver', 'iso2859.muestrear']
+      );
+      const calidadPerms = priorizarPermisos(
+        permisosDisponibles.filter(p => p.codigo.startsWith('calidad.')),
+        ['calidad.ver']
+      );
+      const adminPerms = priorizarPermisos(
+        permisosDisponibles.filter(p => adminCodes.includes(p.codigo)),
+        ['gestion.ver', 'usuarios.gestionar']
+      );
+
+      // Encabezado reutilizable de cada caja de módulo, con su casilla
+      // "Seleccionar todo" para marcar o desmarcar de una sola vez todos los
+      // permisos de ese módulo (en vez de tener que hacerlo uno por uno).
+      function boxHeader(titulo, color, selAllId) {
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap;">
+            <div style="font-weight: 700; color: ${color}; font-size: 14px; display: flex; align-items: center; gap: 6px;">${titulo}</div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4a5568; cursor:pointer; user-select:none;">
+              <input type="checkbox" id="${selAllId}" style="width:14px; height:14px; accent-color:var(--brand-primary); cursor:pointer;">
+              Seleccionar todo
+            </label>
+          </div>
+        `;
+      }
 
       grid.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 15px;">
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            <div style="font-weight: 700; color: #2b6cb0; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">⚡ Circuitos SMD</div>
+            ${boxHeader('⚡ Circuitos SMD', '#2b6cb0', 'selAllSmd')}
             <div id="boxSmd" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            <div style="font-weight: 700; color: #dd6b20; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">📋 Garantías</div>
+            ${boxHeader('📋 Garantías', '#dd6b20', 'selAllGarantias')}
             <div id="boxGarantias" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            <div style="font-weight: 700; color: #38a169; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">💬 WhatsApp Bot</div>
+            ${boxHeader('💬 WhatsApp Bot', '#38a169', 'selAllWhatsapp')}
             <div id="boxWhatsapp" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            <div style="font-weight: 700; color: #3182ce; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">📐 Metrología y Planos de Molde</div>
+            ${boxHeader('📐 Metrología y Planos de Molde', '#3182ce', 'selAllMetrologia')}
             <div id="boxMetrologia" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            <div style="font-weight: 700; color: #7b341e; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">⚙️ Administración y Sistema</div>
+            ${boxHeader('🧪 Muestreos ISO 2859-1', '#2c7a7b', 'selAllIso2859')}
+            <div id="boxIso2859" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            ${boxHeader('🏆 Calidad General', '#b7791f', 'selAllCalidad')}
+            <div id="boxCalidad" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            ${boxHeader('⚙️ Administración y Sistema', '#7b341e', 'selAllAdmin')}
             <div id="boxAdmin" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
         </div>
@@ -371,7 +472,17 @@
       renderPermisosBox('boxGarantias', garantiasPerms, permisosSeleccionados);
       renderPermisosBox('boxWhatsapp', whatsappPerms, permisosSeleccionados);
       renderPermisosBox('boxMetrologia', metrologiaPerms, permisosSeleccionados);
+      renderPermisosBox('boxIso2859', iso2859Perms, permisosSeleccionados);
+      renderPermisosBox('boxCalidad', calidadPerms, permisosSeleccionados);
       renderPermisosBox('boxAdmin', adminPerms, permisosSeleccionados);
+
+      wireSelectAll('selAllSmd', 'boxSmd');
+      wireSelectAll('selAllGarantias', 'boxGarantias');
+      wireSelectAll('selAllWhatsapp', 'boxWhatsapp');
+      wireSelectAll('selAllMetrologia', 'boxMetrologia');
+      wireSelectAll('selAllIso2859', 'boxIso2859');
+      wireSelectAll('selAllCalidad', 'boxCalidad');
+      wireSelectAll('selAllAdmin', 'boxAdmin');
 
        document.getElementById('modalConfirm').onclick = () => guardarRol(rolId);
        document.getElementById('modalOverlay').classList.add('active');
@@ -482,17 +593,428 @@
       } catch (e) { alert('Error de conexión'); }
     }
 
+    // ======================== CATÁLOGOS ========================
+    // Pestaña "📋 Catálogos": 4 sub-catálogos (defectos ISO, causales de
+    // garantías, áreas de inspección, planes de muestreo) que antes solo se
+    // podían corregir abriendo la base de datos con un programa aparte.
+    // Reutiliza el mismo modal (#modalOverlay) que Roles/Usuarios, y
+    // catalogoCache guarda la lista del sub-catálogo actualmente visible
+    // (se recarga cada vez que se cambia de sub-pestaña), igual que
+    // rolesCache/usuariosCache arriba.
+    const CATALOGO_ENDPOINTS = {
+      defectos:  { listar: '/api/iso2859/catalogos/defectos/todos', crear: '/api/iso2859/catalogos/defectos', item: id => '/api/iso2859/catalogos/defectos/' + id },
+      problemas: { listar: '/api/garantias/problemas',              crear: '/api/garantias/problemas',       item: id => '/api/garantias/problemas/' + id },
+      areas:     { listar: '/api/iso2859/catalogos/areas/todas',     crear: '/api/iso2859/catalogos/areas',   item: id => '/api/iso2859/catalogos/areas/' + id },
+      planes:    { listar: '/api/iso2859/catalogos/planes/admin/todos', crear: '/api/iso2859/catalogos/planes', item: producto => '/api/iso2859/catalogos/planes/' + encodeURIComponent(producto) }
+    };
+
+    function switchCatalogo(tipo) {
+      catalogoActual = tipo;
+      document.querySelectorAll('#secCatalogos > .tabs .tab-btn').forEach(n => n.classList.remove('active'));
+      const navMap = { defectos: 'navCatDefectos', problemas: 'navCatProblemas', areas: 'navCatAreas', planes: 'navCatPlanes' };
+      document.getElementById(navMap[tipo]).classList.add('active');
+      if (tipo === 'defectos') cargarCatDefectos();
+      else if (tipo === 'problemas') cargarCatProblemas();
+      else if (tipo === 'areas') cargarCatAreas();
+      else if (tipo === 'planes') cargarCatPlanes();
+    }
+
+    function badgeSeveridad(sev) {
+      const colores = { 'Crítico': ['#fff5f5', '#c53030'], 'Mayor': ['#fffaf0', '#dd6b20'], 'Menor': ['#ebf8ff', '#2b6cb0'] };
+      const [bg, fg] = colores[sev] || ['#f0f0f0', '#666'];
+      return `<span style="background:${bg}; color:${fg}; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(sev || '--')}</span>`;
+    }
+
+    function badgeEstado(estado) {
+      const activo = estado !== 'Inactivo';
+      return `<span style="background:${activo ? '#f0fff4' : '#fff5f5'}; color:${activo ? '#38a169' : '#a0aec0'}; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">${activo ? 'Activo' : 'Inactivo'}</span>`;
+    }
+
+    async function cargarCatDefectos() {
+      const cont = document.getElementById('catalogoContainer');
+      cont.innerHTML = '<div class="rec-empty">Cargando...</div>';
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.defectos.listar, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        catalogoCache = Array.isArray(data) ? data : [];
+        let html = '<button class="btn-create" onclick="abrirModalDefecto()">+ Agregar defecto</button>';
+        html += '<table class="admin-table"><thead><tr><th>Código</th><th>Área</th><th>Descripción</th><th>Severidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
+        catalogoCache.forEach(d => {
+          html += `<tr>
+            <td><strong>${escapeHtml(d.codigo)}</strong></td>
+            <td>${escapeHtml(d.area || '')}</td>
+            <td>${escapeHtml(d.descripcion || '')}</td>
+            <td>${badgeSeveridad(d.severidad)}</td>
+            <td>${badgeEstado(d.estado)}</td>
+            <td>
+              <button class="btn-small btn-edit" onclick="abrirModalDefecto(${d.id})">Editar</button>
+              <button class="btn-small btn-delete" onclick="eliminarDefecto(${d.id}, '${escapeHtml(d.codigo)}')">Eliminar</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+      } catch (e) {
+        cont.innerHTML = '<div class="rec-empty" style="color:red;">Error cargando defectos: ' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    async function abrirModalDefecto(id) {
+      const d = id ? catalogoCache.find(x => x.id === id) : null;
+      document.getElementById('modalTitle').textContent = d ? 'Editar Defecto' : 'Agregar Defecto';
+      const body = `
+        <div class="modal-field"><label>Código</label><input type="text" id="defCodigo" value="${d ? escapeHtml(d.codigo) : ''}" placeholder="Ej: A1"></div>
+        <div class="modal-field"><label>Área</label><input type="text" id="defArea" value="${d ? escapeHtml(d.area || '') : ''}" placeholder="Ej: Apariencia"></div>
+        <div class="modal-field"><label>Descripción</label><input type="text" id="defDescripcion" value="${d ? escapeHtml(d.descripcion || '') : ''}" placeholder="Ej: Rayado"></div>
+        <div class="modal-field"><label>Severidad</label>
+          <select id="defSeveridad">
+            <option value="Crítico" ${d && d.severidad === 'Crítico' ? 'selected' : ''}>Crítico</option>
+            <option value="Mayor" ${d && d.severidad === 'Mayor' ? 'selected' : ''}>Mayor</option>
+            <option value="Menor" ${!d || d.severidad === 'Menor' ? 'selected' : ''}>Menor</option>
+          </select>
+        </div>
+        ${d ? `<div class="modal-field"><label>Estado</label>
+          <select id="defEstado">
+            <option value="Activo" ${d.estado !== 'Inactivo' ? 'selected' : ''}>Activo</option>
+            <option value="Inactivo" ${d.estado === 'Inactivo' ? 'selected' : ''}>Inactivo</option>
+          </select>
+        </div>` : ''}
+      `;
+      document.getElementById('modalBody').innerHTML = body;
+      document.getElementById('modalConfirm').onclick = () => guardarDefecto(id);
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    async function guardarDefecto(id) {
+      const codigo = document.getElementById('defCodigo').value.trim();
+      const area = document.getElementById('defArea').value.trim();
+      const descripcion = document.getElementById('defDescripcion').value.trim();
+      const severidad = document.getElementById('defSeveridad').value;
+      if (!codigo || !area || !descripcion) return alert('Código, área y descripción son obligatorios');
+      const payload = { codigo, area, descripcion, severidad };
+      const estadoSel = document.getElementById('defEstado');
+      if (estadoSel) payload.estado = estadoSel.value;
+      const url = id ? CATALOGO_ENDPOINTS.defectos.item(id) : CATALOGO_ENDPOINTS.defectos.crear;
+      const method = id ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { closeModal(); await cargarCatDefectos(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarDefecto(id, codigo) {
+      if (!confirm(`¿Seguro que quieres eliminar el defecto "${codigo}"? Si ya se usó en muestreos anteriores, es más seguro marcarlo "Inactivo" editándolo en vez de eliminarlo.`)) return;
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.defectos.item(id), { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatDefectos();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function cargarCatProblemas() {
+      const cont = document.getElementById('catalogoContainer');
+      cont.innerHTML = '<div class="rec-empty">Cargando...</div>';
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.problemas.listar, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        catalogoCache = Array.isArray(data) ? data : [];
+        let html = '<button class="btn-create" onclick="abrirModalProblema()">+ Agregar causal</button>';
+        html += '<table class="admin-table"><thead><tr><th>Código</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
+        catalogoCache.forEach(p => {
+          html += `<tr>
+            <td><strong>${escapeHtml(p.codigo)}</strong></td>
+            <td>${escapeHtml(p.descripcion || '')}</td>
+            <td>${badgeEstado(p.estado)}</td>
+            <td>
+              <button class="btn-small btn-edit" onclick="abrirModalProblema(${p.id})">Editar</button>
+              <button class="btn-small btn-delete" onclick="eliminarProblema(${p.id}, '${escapeHtml(p.codigo)}')">Eliminar</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+      } catch (e) {
+        cont.innerHTML = '<div class="rec-empty" style="color:red;">Error cargando causales: ' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    async function abrirModalProblema(id) {
+      const p = id ? catalogoCache.find(x => x.id === id) : null;
+      document.getElementById('modalTitle').textContent = p ? 'Editar Causal' : 'Agregar Causal';
+      const body = `
+        <div class="modal-field"><label>Código</label><input type="text" id="probCodigo" value="${p ? escapeHtml(p.codigo) : ''}" placeholder="Ej: G25"></div>
+        <div class="modal-field"><label>Descripción</label><input type="text" id="probDescripcion" value="${p ? escapeHtml(p.descripcion || '') : ''}" placeholder="Ej: NO ENCIENDE"></div>
+        ${p ? `<div class="modal-field"><label>Estado</label>
+          <select id="probEstado">
+            <option value="Activo" ${p.estado !== 'Inactivo' ? 'selected' : ''}>Activo</option>
+            <option value="Inactivo" ${p.estado === 'Inactivo' ? 'selected' : ''}>Inactivo</option>
+          </select>
+        </div>` : ''}
+      `;
+      document.getElementById('modalBody').innerHTML = body;
+      document.getElementById('modalConfirm').onclick = () => guardarProblema(id);
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    async function guardarProblema(id) {
+      const codigo = document.getElementById('probCodigo').value.trim();
+      const descripcion = document.getElementById('probDescripcion').value.trim();
+      if (!codigo || !descripcion) return alert('Código y descripción son obligatorios');
+      const payload = { codigo, descripcion };
+      const estadoSel = document.getElementById('probEstado');
+      if (estadoSel) payload.estado = estadoSel.value;
+      const url = id ? CATALOGO_ENDPOINTS.problemas.item(id) : CATALOGO_ENDPOINTS.problemas.crear;
+      const method = id ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { closeModal(); await cargarCatProblemas(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarProblema(id, codigo) {
+      if (!confirm(`¿Seguro que quieres eliminar la causal "${codigo}"? Si ya se usó en garantías anteriores, es más seguro marcarla "Inactivo" editándola en vez de eliminarla.`)) return;
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.problemas.item(id), { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatProblemas();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function cargarCatAreas() {
+      const cont = document.getElementById('catalogoContainer');
+      cont.innerHTML = '<div class="rec-empty">Cargando...</div>';
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.areas.listar, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        catalogoCache = Array.isArray(data) ? data : [];
+        let html = '<button class="btn-create" onclick="abrirModalArea()">+ Agregar área</button>';
+        html += '<table class="admin-table"><thead><tr><th>Nombre</th><th>Módulo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
+        catalogoCache.forEach(a => {
+          html += `<tr>
+            <td><strong>${escapeHtml(a.nombre)}</strong></td>
+            <td>${escapeHtml(a.modulo)}</td>
+            <td>${badgeEstado(a.estado)}</td>
+            <td>
+              <button class="btn-small btn-edit" onclick="abrirModalArea(${a.id})">Editar</button>
+              <button class="btn-small btn-delete" onclick="eliminarArea(${a.id}, '${escapeHtml(a.nombre)}')">Eliminar</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+      } catch (e) {
+        cont.innerHTML = '<div class="rec-empty" style="color:red;">Error cargando áreas: ' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    async function abrirModalArea(id) {
+      const a = id ? catalogoCache.find(x => x.id === id) : null;
+      document.getElementById('modalTitle').textContent = a ? 'Editar Área' : 'Agregar Área';
+      const body = `
+        <div class="modal-field"><label>Nombre</label><input type="text" id="areaNombre" value="${a ? escapeHtml(a.nombre) : ''}" placeholder="Ej: Soldadura"></div>
+        <div class="modal-field"><label>Módulo</label>
+          <select id="areaModulo">
+            <option value="Recepcion" ${a && a.modulo === 'Recepcion' ? 'selected' : ''}>Recepción</option>
+            <option value="Produccion" ${a && a.modulo === 'Produccion' ? 'selected' : ''}>Producción</option>
+            <option value="Ambos" ${!a || a.modulo === 'Ambos' ? 'selected' : ''}>Ambos</option>
+          </select>
+        </div>
+        ${a ? `<div class="modal-field"><label>Estado</label>
+          <select id="areaEstado">
+            <option value="Activo" ${a.estado !== 'Inactivo' ? 'selected' : ''}>Activo</option>
+            <option value="Inactivo" ${a.estado === 'Inactivo' ? 'selected' : ''}>Inactivo</option>
+          </select>
+        </div>` : ''}
+      `;
+      document.getElementById('modalBody').innerHTML = body;
+      document.getElementById('modalConfirm').onclick = () => guardarArea(id);
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    async function guardarArea(id) {
+      const nombre = document.getElementById('areaNombre').value.trim();
+      const modulo = document.getElementById('areaModulo').value;
+      if (!nombre) return alert('El nombre es obligatorio');
+      const payload = { nombre, modulo };
+      const estadoSel = document.getElementById('areaEstado');
+      if (estadoSel) payload.estado = estadoSel.value;
+      const url = id ? CATALOGO_ENDPOINTS.areas.item(id) : CATALOGO_ENDPOINTS.areas.crear;
+      const method = id ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { closeModal(); await cargarCatAreas(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarArea(id, nombre) {
+      if (!confirm(`¿Seguro que quieres eliminar el área "${nombre}"? Si ya se usó en muestreos anteriores, es más seguro marcarla "Inactivo" editándola en vez de eliminarla.`)) return;
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.areas.item(id), { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatAreas();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function cargarCatPlanes() {
+      const cont = document.getElementById('catalogoContainer');
+      cont.innerHTML = '<div class="rec-empty">Cargando...</div>';
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.planes.listar, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        catalogoCache = Array.isArray(data) ? data : [];
+        let html = '<button class="btn-create" onclick="abrirModalPlan()">+ Agregar plan</button>';
+        html += '<table class="admin-table"><thead><tr><th>Producto</th><th>Nivel de Inspección</th><th>NCA Críticos</th><th>NCA Mayores</th><th>NCA Menores</th><th>Acciones</th></tr></thead><tbody>';
+        catalogoCache.forEach(p => {
+          html += `<tr>
+            <td><strong>${escapeHtml(p.producto)}</strong></td>
+            <td>${escapeHtml(p.nivel_inspeccion)}</td>
+            <td>${escapeHtml(String(p.nca_criticos))}</td>
+            <td>${escapeHtml(String(p.nca_mayores))}</td>
+            <td>${escapeHtml(String(p.nca_menores))}</td>
+            <td>
+              <button class="btn-small btn-edit" onclick="abrirModalPlan('${escapeHtml(p.producto).replace(/'/g, "\\'")}')">Editar</button>
+              <button class="btn-small btn-delete" onclick="eliminarPlan('${escapeHtml(p.producto).replace(/'/g, "\\'")}')">Eliminar</button>
+            </td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+      } catch (e) {
+        cont.innerHTML = '<div class="rec-empty" style="color:red;">Error cargando planes: ' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    async function abrirModalPlan(producto) {
+      const p = producto ? catalogoCache.find(x => x.producto === producto) : null;
+      document.getElementById('modalTitle').textContent = p ? 'Editar Plan de Muestreo' : 'Agregar Plan de Muestreo';
+      const body = `
+        <div class="modal-field"><label>Producto</label><input type="text" id="planProducto" value="${p ? escapeHtml(p.producto) : ''}" placeholder="Ej: TARJETA-XYZ" ${p ? 'readonly style="background:#f5f5f5;"' : ''}></div>
+        <div class="modal-field"><label>Nivel de Inspección</label><input type="text" id="planNivel" value="${p ? escapeHtml(p.nivel_inspeccion) : ''}" placeholder="Ej: II, S-3"></div>
+        <div class="modal-field"><label>NCA Críticos (%)</label><input type="number" step="0.01" id="planCriticos" value="${p ? p.nca_criticos : '0'}"></div>
+        <div class="modal-field"><label>NCA Mayores (%)</label><input type="number" step="0.01" id="planMayores" value="${p ? p.nca_mayores : '0'}"></div>
+        <div class="modal-field"><label>NCA Menores (%)</label><input type="number" step="0.01" id="planMenores" value="${p ? p.nca_menores : '0'}"></div>
+      `;
+      document.getElementById('modalBody').innerHTML = body;
+      document.getElementById('modalConfirm').onclick = () => guardarPlan(producto);
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    async function guardarPlan(productoOriginal) {
+      const producto = document.getElementById('planProducto').value.trim();
+      const nivel_inspeccion = document.getElementById('planNivel').value.trim();
+      const nca_criticos = document.getElementById('planCriticos').value;
+      const nca_mayores = document.getElementById('planMayores').value;
+      const nca_menores = document.getElementById('planMenores').value;
+      if (!producto || !nivel_inspeccion) return alert('Producto y nivel de inspección son obligatorios');
+      const payload = { producto, nivel_inspeccion, nca_criticos, nca_mayores, nca_menores };
+      const url = productoOriginal ? CATALOGO_ENDPOINTS.planes.item(productoOriginal) : CATALOGO_ENDPOINTS.planes.crear;
+      const method = productoOriginal ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { closeModal(); await cargarCatPlanes(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarPlan(producto) {
+      if (!confirm(`¿Seguro que quieres eliminar el plan de muestreo de "${producto}"?`)) return;
+      try {
+        const res = await fetch(CATALOGO_ENDPOINTS.planes.item(producto), { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatPlanes();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    // ======================== REGISTRO DE CAMBIOS (AUDITORÍA) ========================
+    // Pestaña de solo lectura: una sola bitácora para todos los módulos (ver
+    // data/auditoria.js y la migración #8 en db/init.js). filtrosAuditoria
+    // trae del servidor solo los pares módulo/entidad que YA tienen algún
+    // registro, para que los desplegables no muestren módulos vacíos.
+    async function cargarFiltrosAuditoria() {
+      try {
+        const res = await fetch('/api/auditoria/filtros', { headers: { 'Authorization': 'Bearer ' + token } });
+        filtrosAuditoria = await res.json();
+        const selModulo = document.getElementById('audFiltroModulo');
+        const modulos = [...new Set(filtrosAuditoria.map(f => f.modulo))];
+        selModulo.innerHTML = '<option value="">Todos</option>' + modulos.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+        cambioModuloAuditoria();
+      } catch (e) {}
+      cargarAuditoria();
+    }
+
+    function cambioModuloAuditoria() {
+      const modulo = document.getElementById('audFiltroModulo').value;
+      const selEntidad = document.getElementById('audFiltroEntidad');
+      const entidades = [...new Set(filtrosAuditoria.filter(f => !modulo || f.modulo === modulo).map(f => f.entidad))];
+      selEntidad.innerHTML = '<option value="">Todas</option>' + entidades.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join('');
+    }
+
+    function limpiarFiltrosAuditoria() {
+      document.getElementById('audFiltroModulo').value = '';
+      cambioModuloAuditoria();
+      document.getElementById('audFiltroAccion').value = '';
+      document.getElementById('audFiltroUsuario').value = '';
+      document.getElementById('audFiltroDesde').value = '';
+      document.getElementById('audFiltroHasta').value = '';
+      document.getElementById('audFiltroTexto').value = '';
+      cargarAuditoria();
+    }
+
+    async function cargarAuditoria() {
+      const cont = document.getElementById('auditoriaContainer');
+      cont.innerHTML = '<div class="rec-empty">Cargando...</div>';
+      const params = new URLSearchParams();
+      const modulo = document.getElementById('audFiltroModulo').value;
+      const entidad = document.getElementById('audFiltroEntidad').value;
+      const accion = document.getElementById('audFiltroAccion').value;
+      const usuario = document.getElementById('audFiltroUsuario').value.trim();
+      const desde = document.getElementById('audFiltroDesde').value;
+      const hasta = document.getElementById('audFiltroHasta').value;
+      const q = document.getElementById('audFiltroTexto').value.trim();
+      if (modulo) params.set('modulo', modulo);
+      if (entidad) params.set('entidad', entidad);
+      if (accion) params.set('accion', accion);
+      if (usuario) params.set('usuario', usuario);
+      if (desde) params.set('desde', desde);
+      if (hasta) params.set('hasta', hasta);
+      if (q) params.set('q', q);
+      try {
+        const res = await fetch('/api/auditoria/cambios?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + token } });
+        const cambios = await res.json();
+        if (!Array.isArray(cambios) || cambios.length === 0) {
+          cont.innerHTML = '<div class="rec-empty">No hay registros que coincidan con estos filtros.</div>';
+          return;
+        }
+        const coloresAccion = { 'Creación': ['#f0fff4', '#38a169'], 'Edición': ['#ebf8ff', '#2b6cb0'], 'Eliminación': ['#fff5f5', '#c53030'] };
+        let html = `<p style="color:#a0aec0; font-size:11px; margin-bottom:8px;">Mostrando los ${cambios.length} cambio(s) más reciente(s) que coinciden con el filtro (máximo 500).</p>`;
+        html += '<table class="admin-table"><thead><tr><th>Fecha</th><th>Módulo</th><th>Entidad</th><th>Acción</th><th>Detalle</th><th>Usuario</th></tr></thead><tbody>';
+        cambios.forEach(c => {
+          const [bg, fg] = coloresAccion[c.accion] || ['#f0f0f0', '#666'];
+          html += `<tr>
+            <td><small>${new Date(c.fecha).toLocaleString('es-CO')}</small></td>
+            <td>${escapeHtml(c.modulo)}</td>
+            <td><code style="font-size:11px;">${escapeHtml(c.entidad)}</code>${c.entidad_id ? ` <small style="color:#a0aec0;">#${escapeHtml(c.entidad_id)}</small>` : ''}</td>
+            <td><span style="background:${bg}; color:${fg}; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(c.accion)}</span></td>
+            <td style="max-width:340px; white-space:pre-wrap;">${escapeHtml(c.detalle || '')}</td>
+            <td>${escapeHtml(c.usuario_nombre || 'Sistema')}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+      } catch (e) {
+        cont.innerHTML = '<div class="rec-empty" style="color:red;">Error cargando el registro de cambios: ' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
     function closeModal(e) {
       if (!e || e.target.id === 'modalOverlay' || e.target.classList.contains('btn-cancel')) {
         document.getElementById('modalOverlay').classList.remove('active');
       }
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
     document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
     document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
   </script>

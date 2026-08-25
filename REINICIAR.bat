@@ -1,9 +1,0 @@
-@echo off
-title Reiniciando App Circuitos SMD
-echo [1/3] Cerrando procesos de Node.js existentes...
-taskkill /f /im node.exe >nul 2>&1
-echo [2/3] Esperando 2 segundos...
-timeout /t 2 /nobreak >nul
-echo [3/3] Iniciando aplicacion nuevamente...
-call INICIAR.bat
-pause

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valores y Cableado - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <link rel="stylesheet" href="css/valores_cableado.css">
+  <style>
+    /* Solo lo que es distinto al valor por defecto de css/comun.css — el
+       resto (login overlay, header institucional, botones) viene de ahí,
+       igual que en los demás módulos. */
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; flex-direction: column; }
+    #appHeader { flex-shrink: 0; }
+    #appMain { flex: 1; min-height: 0; }
+  </style>
+</head>
+<body>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>⚡ Valores y Cableado</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1>⚡ Valores y Cableado</h1>
+        <p>Valores eléctricos medidos y configuración de cableado</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal">← Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div id="appMain" style="display:none;">
+    <div class="vc-app">
+      <aside class="vc-sidebar">
+        <div class="vc-sidebar-header">
+          <span>📑 Referencias</span>
+          <span class="vc-ref-count" id="vc-ref-count">0</span>
+        </div>
+        <div class="vc-search-box">
+          <input type="text" id="vc-search-ref" placeholder="Buscar referencia..." autocomplete="off">
+        </div>
+        <div class="vc-ref-list" id="vc-ref-list"><!-- Se llena por JS --></div>
+      </aside>
+
+      <main class="vc-main" id="vc-main-panel">
+        <div class="vc-empty-state">
+          <div class="vc-empty-icon">⚡</div>
+          <h2>Selecciona una referencia</h2>
+          <p>Elige una referencia del panel izquierdo para ver su ficha de valores y cableado</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="vc-img-modal" id="vc-img-modal">
+    <span class="vc-img-modal-close">&times;</span>
+    <img id="vc-img-modal-img" src="" alt="">
+  </div>
+
+  <!-- Editar valores/cableado y crear referencias ya no se hace desde acá —
+       se hace desde el módulo "Crear Referencia" del portal (pestaña
+       "⚡ Valores y Cableado" al editar), para que solo haya un lugar donde
+       se modifican estos datos. -->
+
+  <!-- Input de archivo oculto reusado para subir la foto de cualquier forma
+       de cableado (ver ValoresCableadoApp.subirFotoCableado). -->
+  <input type="file" id="vc-hidden-file-input" accept="image/*" style="display:none;">
+
+  <script src="js/comun.js"></script>
+  <script src="js/valores_cableado/app.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+    let usuarioActual = null;
+
+    async function cargarMisPermisos() {
+      return await cargarPermisosDelUsuario();
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      location.reload();
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!(res.ok && data)) {
+          localStorage.removeItem('token');
+          token = null;
+          document.getElementById('loginOverlay').style.display = 'flex';
+          return false;
+        }
+        usuarioActual = { nombre: data.nombre || data.usuario, rol: data.rol };
+        document.getElementById('userNameDisplay').textContent = `${usuarioActual.nombre} (${usuarioActual.rol || 'Usuario'})`;
+
+        await cargarMisPermisos();
+
+        if (!tienePermiso('valores_cableado.ver')) {
+          alert('No tienes permiso para acceder al módulo de Valores y Cableado.');
+          location.href = 'index.html';
+          return false;
+        }
+
+        const btnVolver = document.getElementById('btnVolverPortal');
+        if (btnVolver) btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+
+        return true;
+      } catch (e) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        return false;
+      }
+    }
+
+    async function init() {
+      token = localStorage.getItem('token');
+      if (!token) { document.getElementById('loginOverlay').style.display = 'flex'; return; }
+      const ok = await checkAuth();
+      if (!ok) return;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'block';
+      ValoresCableadoApp.iniciar();
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      err.style.display = 'none';
+      if (!u || !p) { err.textContent = 'Ingrese usuario y contraseña'; err.style.display = 'block'; return; }
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: u, contrasena: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          await init();
+        } else {
+          err.textContent = data.error || 'Credenciales inválidas';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'Error de conexión';
+        err.style.display = 'block';
+      }
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    init();
+  </script>
+</body>
+</html>

@@ -3,3 +3,4 @@ uploads/
 .wwebjs_auth/
 .wwebjs_cache/
 *.log
+.env
