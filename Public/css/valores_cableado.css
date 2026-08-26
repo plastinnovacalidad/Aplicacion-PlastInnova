@@ -141,7 +141,10 @@
 }
 .vc-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
 .vc-ref-item.active { background: var(--vc-accent-gradient); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }
-.vc-ref-item .vc-ref-versions { font-size: 11px; opacity: 0.7; flex-shrink: 0; margin-left: 8px; }
+/* Punto rojo cuando a la referencia le faltan valores — mismo patrón que
+   ".prueba-dot" en Circuitos SMD (Public/smd.html), reemplaza al "N v."
+   en vez de ir junto a él (ver construirSidebar en app.js). */
+.vc-ref-item .vc-ref-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; flex-shrink: 0; margin-left: 8px; }
 
 /* ========== MAIN PANEL ========== */
 .vc-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0; }
@@ -167,10 +170,17 @@
     position: relative;
 }
 
+/* Julio pidió quitar el título/subtítulo que repetía la referencia acá
+   arriba (ej. "0111 — Am — V4" / "SUP/0111/Am/Mul") — es redundante con la
+   referencia ya seleccionada y resaltada en el panel de la izquierda, y
+   ganaba espacio en pantalla quitarlo. Este encabezado ahora solo aparece
+   cuando hay más de una versión (para mostrar los chips V1/V2/... que sí
+   son funcionales, no solo informativos) — por eso no lleva padding
+   propio cuando está vacío, se omite del todo desde el JS. */
 .vc-ficha-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--vc-border); background: var(--vc-bg-light); flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-.vc-ficha-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.vc-ficha-header h2 { font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; color: var(--vc-text); }
-.vc-ficha-header .vc-sub { color: var(--vc-text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+/* Sin título arriba, los chips de versión ya no necesitan el margen que
+   antes los separaba del texto — serían el único contenido del header. */
+.vc-ficha-header .vc-version-chips { margin-top: 0; }
 
 .vc-ficha-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.5rem 2rem; display: flex; flex-direction: column; gap: 1rem; scrollbar-width: thin; scrollbar-color: #ccc transparent; }
 .vc-ficha-scroll::-webkit-scrollbar { width: 6px; }
@@ -302,3 +312,53 @@
    acá se quitó — hoy la edición se hace desde referencias.html (Crear
    Referencia), no en esta pantalla. Se eliminaron las reglas .vc-edit-modal*
    / .vc-edit-form* / .vc-edit-actions que ya no las usa ningún HTML/JS. */
+
+/* ========== OBSERVACIONES / RECOMENDACIONES ==========
+   Julio pidió agregar acá lo mismo que ya existe en Circuitos SMD
+   (Public/smd.html: .tabs-panel/.obs-*/.rec-*). Se reusan las MISMAS
+   tablas y endpoints del backend (/api/observaciones/:codigo_base y
+   /api/recomendaciones/:referencia) porque Valores y Cableado usa el
+   mismo catálogo de referencias que Circuitos SMD (misma codigo_base) —
+   así que una observación o recomendación escrita desde cualquiera de
+   las dos pantallas se ve en la otra, sin duplicar nada. Las clases van
+   con el mismo prefijo "vc-" que el resto de este archivo, con el mismo
+   estilo visual (tarjeta blanca, header con degradado) que
+   ".vc-specs-card" de arriba, en vez de copiar el panel oscuro que tenía
+   Circuitos SMD antes del rediseño. */
+.vc-obsrec-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex-shrink: 0; }
+.vc-obsrec-tabs { display: flex; border-bottom: 1px solid var(--vc-border); background: var(--vc-bg-light); }
+.vc-obsrec-tab { flex: 1; background: none; border: none; padding: 0.7rem 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--vc-text-muted); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.vc-obsrec-tab:hover { background: var(--vc-bg); color: var(--vc-text); }
+.vc-obsrec-tab.active { background: var(--vc-accent-gradient); color: #fff; }
+.vc-obsrec-content { display: none; padding: 1rem; }
+.vc-obsrec-content.active { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.vc-obs-textarea { width: 100%; min-height: 90px; border: 1px solid var(--vc-border); border-radius: 0.5rem; padding: 0.6rem 0.75rem; font-family: inherit; font-size: 0.85rem; color: var(--vc-text); resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.vc-obs-textarea:focus { border-color: var(--vc-accent); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+.vc-obs-textarea:read-only { background: var(--vc-bg); color: var(--vc-text-muted); }
+.vc-obs-meta { font-size: 0.7rem; color: var(--vc-text-muted); text-align: right; }
+.vc-obs-actions { display: flex; justify-content: flex-end; }
+
+.vc-rec-lista { max-height: 260px; overflow-y: auto; }
+.vc-rec-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.vc-rec-empty { color: var(--vc-text-muted); font-style: italic; font-size: 0.8rem; padding: 0.5rem 0; }
+.vc-rec-bubble { background: #f0f4ff; border-left: 4px solid var(--vc-accent); border-radius: 0 0.6rem 0.6rem 0.6rem; padding: 0.7rem 0.85rem; font-size: 0.82rem; line-height: 1.5; color: var(--vc-text); word-break: break-word; position: relative; }
+.vc-rec-bubble-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; gap: 0.5rem; }
+.vc-rec-bubble-author { font-size: 0.7rem; font-weight: 700; color: var(--vc-accent); }
+.vc-rec-bubble-date { font-size: 0.65rem; color: var(--vc-text-muted); flex-shrink: 0; }
+.vc-rec-bubble-text { white-space: pre-wrap; }
+.vc-rec-bubble-delete { position: absolute; top: 0.5rem; right: 0.5rem; background: var(--vc-danger); color: #fff; border: none; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+.vc-rec-bubble:hover .vc-rec-bubble-delete { opacity: 1; }
+.vc-rec-bubble-delete:hover { background: #dc2626; }
+
+.vc-rec-form { display: flex; flex-direction: column; gap: 0.6rem; border-top: 1px solid var(--vc-border); padding-top: 0.7rem; margin-top: 0.2rem; }
+.vc-rec-textarea { width: 100%; min-height: 55px; max-height: 90px; border: 1px solid var(--vc-border); border-radius: 0.5rem; padding: 0.55rem 0.7rem; font-family: inherit; font-size: 0.82rem; color: var(--vc-text); resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.vc-rec-textarea:focus { border-color: var(--vc-accent); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+.vc-rec-actions { display: flex; justify-content: flex-end; }
+
+.vc-btn-enviar { background: var(--vc-accent-gradient); color: #fff; border: none; padding: 0.5rem 1.3rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: opacity 0.2s, transform 0.1s; }
+.vc-btn-enviar:hover { opacity: 0.9; }
+.vc-btn-enviar:active { transform: scale(0.97); }
+.vc-btn-enviar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.vc-rec-readonly { display: flex; align-items: center; gap: 0.6rem; color: var(--vc-text-muted); font-size: 0.78rem; padding: 0.7rem 0.9rem; background: var(--vc-bg); border-radius: 0.6rem; border: 1px dashed var(--vc-border); }

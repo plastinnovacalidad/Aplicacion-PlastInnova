@@ -49,13 +49,20 @@
    valor por defecto de aquí abajo ES el color de todos, así que ya casi
    ninguna página necesita declarar su propio --header-bg (ver el comentario
    de "body" en cada HTML — la mayoría ya no lo hace). */
+/* Julio pidió achicar el encabezado — antes ocupaba ~74px de alto en
+   todas las pantallas (padding 15px arriba/abajo + logo/título de tamaño
+   normal), un espacio fijo que se repite en las 7 páginas y competía con
+   el contenido real de abajo. Bajar el padding y el tamaño del logo/texto
+   (ver .header-brand/.header-left más abajo) lo deja en ~52px, sin perder
+   legibilidad. Como esto vive en comun.css, el cambio aplica parejo a
+   todas las pantallas de una sola vez. */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: white;
   background: var(--header-bg, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%));
-  padding: var(--header-padding, 15px 30px);
+  padding: var(--header-padding, 10px 30px);
   box-shadow: var(--header-shadow, 0 2px 10px rgba(0,0,0,0.15));
   flex-shrink: var(--header-flex-shrink, 0);
 }
@@ -74,8 +81,8 @@
 
 /* ---- Usadas solo en gestion.html, referencias.html y smd.html (título del
    header y botón "Volver al Portal" — idénticas en las 3) ---- */
-.header-left h1 { font-size: 22px; font-weight: 600; }
-.header-left p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+.header-left h1 { font-size: 18px; font-weight: 600; }
+.header-left p { font-size: 12px; opacity: 0.9; margin-top: 1px; }
 
 .btn-header {
   background: rgba(255,255,255,0.2);
@@ -97,15 +104,24 @@
    y en la pantalla de login (arriba del formulario), en las 7 páginas.
    El PNG ya tiene el fondo transparente, por eso se ve bien tanto sobre el
    header de color como sobre la tarjeta blanca de login. ---- */
-.header-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.header-logo { height: 30px; flex-shrink: 0; display: block; }
+.header-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.header-logo { height: 26px; flex-shrink: 0; display: block; }
 .login-logo { display: block; height: 40px; margin: 0 auto 18px; }
 /* Salvavidas: en pantallas angostas con un título largo y varios botones a
    la derecha (por ejemplo whatsapp_bot.html), el título ya no tiene tanto
    espacio como antes de agregar el logo. En vez de partirse en dos líneas
    y cambiar la altura del header, se recorta con puntos suspensivos. */
 .header-brand > div { min-width: 0; }
-.header-brand h1, .header-brand p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Antes esta regla combinada solo traía el recorte con puntos suspensivos
+   (el tamaño de letra lo ponía ".header-left h1/p" aparte) — pero varias
+   páginas (valores_cableado.html, referencias_metrologia.html, etc.) usan
+   el <h1>/<p> dentro de ".header-brand" SIN la clase ".header-left", así
+   que se quedaban con el tamaño gigante por defecto del navegador. Ahora
+   cada una trae su propio tamaño (igual al de ".header-left") para que el
+   encabezado se vea igual de chico en todas las pantallas, no solo en las
+   3 que ya tenían ".header-left". */
+.header-brand h1 { font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-brand p { font-size: 12px; opacity: 0.9; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- Título de sección dentro de .content-area (gestion.html y
    referencias.html) ---- */
