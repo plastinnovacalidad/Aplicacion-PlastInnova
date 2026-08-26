@@ -176,12 +176,13 @@
 .vc-ficha-scroll::-webkit-scrollbar { width: 6px; }
 .vc-ficha-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
-/* Alerta flotante "FALTAN VALORES" — mismo estilo (rojo, esquina inferior
-   derecha, animación de pulso) que "⚠️ NECESITA PRUEBA" en Circuitos SMD
-   (Public/smd.html, .prueba-badge), para que ambas alertas se sientan
-   parte de la misma aplicación. */
+/* Alerta flotante "FALTAN VALORES" — mismo estilo (rojo, animación de
+   pulso) que "⚠️ NECESITA PRUEBA" en Circuitos SMD (Public/smd.html,
+   .prueba-badge), para que ambas alertas se sientan parte de la misma
+   aplicación. Julio pidió que esta, a diferencia de la de SMD, vaya en la
+   esquina SUPERIOR derecha en vez de la inferior. */
 .vc-alerta-badge {
-    position: absolute; bottom: 20px; right: 20px;
+    position: absolute; top: 20px; right: 20px;
     background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
     color: white; padding: 12px 20px; border-radius: 10px;
     font-size: 14px; font-weight: 700;
@@ -196,7 +197,7 @@
     100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
 }
 @media (max-width: 900px) {
-    .vc-alerta-badge { bottom: 10px; right: 10px; padding: 10px 14px; font-size: 13px; }
+    .vc-alerta-badge { top: 10px; right: 10px; padding: 10px 14px; font-size: 13px; }
 }
 
 /* ========== FOTOS ========== */
@@ -255,6 +256,12 @@
     text-shadow: 0 0 2px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.65), 0 0 18px rgba(255,255,255,0.4);
 }
 .vc-display-line .vc-unit { font-size: 0.75rem; color: #999; margin-left: 0.25rem; font-family: 'Courier New', Courier, monospace; }
+
+/* "N/A" para las 4 líneas de Medias (Bajas) cuando la versión tiene
+   marcado que no aplica (ver referencias.html, no_aplica_medias) — texto
+   plano en vez del look de display de 7 segmentos, para que se note de
+   una vez que es "no corresponde" y no un valor real apagado. */
+.vc-display-line .vc-val.vc-na { font-family: var(--vc-font-ui); font-size: 0.8rem; font-style: italic; font-weight: 600; color: #777; text-shadow: none; }
 
 /* ========== ESPECIFICACIONES DE CABLEADO ========== */
 .vc-specs-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex-shrink: 0; }

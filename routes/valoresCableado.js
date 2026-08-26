@@ -35,8 +35,9 @@ const ETIQUETAS_CAMPOS_FICHA = {
   forma_cableado: 'Forma de cableado',
   cortar_puntas: 'Cortar puntas',
   empujar_cables: 'Empujar cables',
+  no_aplica_medias: 'No aplica Medias (Bajas)',
 };
-const CAMPOS_BOOLEANOS_FICHA = new Set(['cortar_puntas', 'empujar_cables']);
+const CAMPOS_BOOLEANOS_FICHA = new Set(['cortar_puntas', 'empujar_cables', 'no_aplica_medias']);
 
 // Compara la ficha que ya estaba guardada contra la que se acaba de mandar
 // a guardar, y arma la lista de campos que realmente cambiaron — para que

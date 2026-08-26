@@ -91,12 +91,24 @@
     .valores-field small { font-weight: 400; color: #999; }
     .valores-field input[type="text"], .valores-field select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; background: #fff; }
     .valores-field input[type="text"]:focus, .valores-field select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    /* Campos de "Medias (Bajas)" deshabilitados al marcar "No maneja Medias
+       (Bajas)" — sin esto se veían igual que un campo vacío normal, dando
+       a entender que sí se podían llenar. */
+    .valores-field input[type="text"]:disabled { background: #f3f4f6; color: #aaa; cursor: not-allowed; }
 
     .valores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 16px; }
     .valores-cols { display: flex; gap: 16px; flex-wrap: wrap; }
     .valores-col { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 150px; }
 
     .valores-check-row { display: flex; gap: 20px; margin-bottom: 12px; }
+
+    /* Casilla "No maneja Medias (Bajas)" — va antes de los 4 fieldsets,
+       porque afecta campos de dos de ellos (Revisión y Prueba Mínimo). */
+    .valores-no-aplica-medias {
+      display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;
+      color: #555; cursor: pointer; margin-bottom: 14px; padding: 10px 14px;
+      background: #fff8e1; border: 1px solid #f5d98b; border-radius: 8px;
+    }
 
     /* Foto de la forma de cableado: miniatura + botón para subir/cambiar,
        directamente en Crear/Editar Referencia (antes solo se podía desde
@@ -597,8 +609,34 @@
     // columna (medias y altas por separado) — así potencia siempre queda
     // justo debajo de su amperaje, en vez de acomodarse donde alcance en
     // un grid genérico.
+    // Algunas referencias no manejan valores de "Medias (Bajas)" por
+    // diseño (solo Altas) — Julio pidió una forma de marcar eso a mano
+    // por versión, para que la alerta de "FALTAN VALORES" no los cuente
+    // como faltantes cuando en realidad no aplican. Estos 4 campos son
+    // los únicos que dependen de "Medias (Bajas)"; el voltaje se comparte
+    // con Altas, así que no se ve afectado.
+    const CAMPOS_MEDIAS_BAJAS = ['amperaje_medias', 'potencia_medias', 'amperaje_min_medias', 'potencia_min_medias'];
+
+    // Al marcar/desmarcar la casilla, deshabilita (y limpia) o vuelve a
+    // habilitar esos 4 campos — así no queda un valor viejo guardado por
+    // error en un campo que se acaba de marcar como "no aplica".
+    function onToggleNoAplicaMedias(prefix) {
+      const chk = document.getElementById(`${prefix}_no_aplica_medias`);
+      const marcado = !!(chk && chk.checked);
+      CAMPOS_MEDIAS_BAJAS.forEach(n => {
+        const el = document.getElementById(`${prefix}_${n}`);
+        if (!el) return;
+        el.disabled = marcado;
+        if (marcado) el.value = '';
+      });
+    }
+
     function renderCamposValores(prefix) {
       return `
+        <label class="valores-no-aplica-medias">
+          <input type="checkbox" id="${prefix}_no_aplica_medias" onchange="onToggleNoAplicaMedias('${prefix}')">
+          Esta versión no maneja valores de "Medias (Bajas)" (solo Altas)
+        </label>
         <fieldset class="valores-fieldset">
           <legend>🔧 Revisión (14V)</legend>
           <div class="valores-cols">
@@ -659,8 +697,10 @@
       });
       const cp = document.getElementById(`${prefix}_cortar_puntas`);
       const ec = document.getElementById(`${prefix}_empujar_cables`);
+      const nam = document.getElementById(`${prefix}_no_aplica_medias`);
       payload.cortar_puntas = cp && cp.checked ? 1 : 0;
       payload.empujar_cables = ec && ec.checked ? 1 : 0;
+      payload.no_aplica_medias = nam && nam.checked ? 1 : 0;
       payload.forma_cableado = obtenerFormaCableadoActual(prefix);
       return payload;
     }
@@ -672,8 +712,11 @@
       });
       const cp = document.getElementById(`${prefix}_cortar_puntas`);
       const ec = document.getElementById(`${prefix}_empujar_cables`);
+      const nam = document.getElementById(`${prefix}_no_aplica_medias`);
       if (cp) cp.checked = (data.cortar_puntas === 1 || data.cortar_puntas === true || data.cortar_puntas === '1');
       if (ec) ec.checked = (data.empujar_cables === 1 || data.empujar_cables === true || data.empujar_cables === '1');
+      if (nam) nam.checked = (data.no_aplica_medias === 1 || data.no_aplica_medias === true || data.no_aplica_medias === '1');
+      onToggleNoAplicaMedias(prefix);
 
       // Forma de cableado: si el valor guardado no está en la lista de
       // formas conocidas (poco común), se agrega como opción para no

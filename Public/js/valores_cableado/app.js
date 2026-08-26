@@ -164,11 +164,20 @@ const ValoresCableadoApp = (() => {
     // sus campos — así se nota de una vez que la referencia está incompleta,
     // sin tener que revisar campo por campo. Cuenta TODOS los campos de la
     // ficha (eléctricos y de cableado), no solo los eléctricos.
+    //
+    // Los 4 campos de "Medias (Bajas)" son la excepción: algunas referencias
+    // no los manejan por diseño (solo Altas). Cuando la versión tiene
+    // marcado "no_aplica_medias" (ver Editar Referencia), esos 4 campos se
+    // sacan de la cuenta de faltantes y se muestran como "N/A" más abajo en
+    // vez de contar como un campo sin llenar.
+    const noAplicaMedias = (p.no_aplica_medias === 1 || p.no_aplica_medias === true || p.no_aplica_medias === '1');
+    const CAMPOS_MEDIAS_BAJAS = ['amperaje_medias', 'potencia_medias', 'amperaje_min_medias', 'potencia_min_medias'];
     const CAMPOS_A_VALIDAR = [
-      'voltaje_revision', 'amperaje_medias', 'potencia_medias', 'amperaje_altas', 'potencia_altas',
-      'voltaje_min', 'amperaje_min_medias', 'potencia_min_medias', 'amperaje_min_altas', 'potencia_min_altas',
+      'voltaje_revision', 'amperaje_altas', 'potencia_altas',
+      'voltaje_min', 'amperaje_min_altas', 'potencia_min_altas',
       'voltaje_max', 'amperaje_max', 'potencia_max',
       'cortar_puntas', 'posicion_punto', 'empujar_cables', 'forma_cableado', 'referencia_cable',
+      ...(noAplicaMedias ? [] : CAMPOS_MEDIAS_BAJAS),
     ];
     const camposFaltantes = CAMPOS_A_VALIDAR.filter(c => p[c] === null || p[c] === undefined || p[c] === '').length;
 
@@ -205,6 +214,14 @@ const ValoresCableadoApp = (() => {
       if (v === 1 || v === true || v === '1' || v === 'true') return `<span class="vc-val-yes">SÍ ✓</span>`;
       return `<span class="vc-val-no">NO <span class="vc-x-red">✗</span></span>`;
     };
+    // Para las 4 líneas de "Medias (Bajas)" en los displays de abajo: si la
+    // versión tiene marcado que no aplica, se muestra "N/A" en vez del
+    // valor (que en ese caso siempre va a estar vacío) — así no se ve como
+    // un dato que falta, sino como un campo que a propósito no corresponde
+    // a esta referencia.
+    const valMedias = (v, unidad) => noAplicaMedias
+      ? `<span class="vc-val vc-na">N/A</span>`
+      : `<span class="vc-val">${fmtNum(v)}</span><span class="vc-unit">${unidad}</span>`;
 
     main.innerHTML = `
       <div class="vc-ficha">
@@ -256,8 +273,8 @@ const ValoresCableadoApp = (() => {
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Medias (Bajas) ═══</div>
                 <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_revision)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_medias)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_medias)}</span><span class="vc-unit">W</span></span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Current</span><span>${valMedias(p.amperaje_medias, 'A')}</span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Power</span><span>${valMedias(p.potencia_medias, 'W')}</span></div>
               </div>
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Altas ═══</div>
@@ -272,8 +289,8 @@ const ValoresCableadoApp = (() => {
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Medias (Bajas) ═══</div>
                 <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_min)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_min_medias)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_min_medias)}</span><span class="vc-unit">W</span></span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Current</span><span>${valMedias(p.amperaje_min_medias, 'A')}</span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Power</span><span>${valMedias(p.potencia_min_medias, 'W')}</span></div>
               </div>
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Altas ═══</div>
