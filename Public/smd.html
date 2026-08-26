@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revisión Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; user-select: none; -webkit-user-select: none; }
+    .protected-overlay { position: absolute; inset: 0; z-index: 50; background: transparent; cursor: default; }
+
+    /* Header, header-left, btn-header y btn-logout vienen de css/comun.css —
+       el color/tamaño de esta página coincide exactamente con los valores
+       por defecto de ahí, así que no hace falta ninguna variable aquí.
+       .main-container SÍ se queda local (ver nota en comun.css: garantias.html
+       usa el mismo nombre de clase con un significado distinto). */
+    .main-container { display: flex; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
+
+    /* Fase B: la lista de referencias ahora va primero en el HTML (columna
+       izquierda), igual que en Planos/Metrología; el visor de fotos queda
+       de segundo (columna derecha). Se renombraron de "left-panel"/
+       "right-panel" a estos nombres para que el nombre ya no diga lo
+       contrario de dónde está cada uno en la pantalla. */
+    .visor-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow: hidden; min-width: 0; max-height: calc(100vh - 100px); }
+    .lista-panel { width: 320px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; max-height: calc(100vh - 100px); }
+
+    .photos-section { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 20px; flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; position: relative; }
+    .photos-title { font-size: 28px; font-weight: 700; text-align: center; letter-spacing: 1px; color: #444; margin-bottom: 15px; flex-shrink: 0; }
+
+    /* Chips de versión, arriba de la foto — mismo lenguaje visual que ya
+       usa Valores y Cableado (.vc-version-chip) para que se sienta como la
+       misma función en las dos pantallas. */
+    .smd-version-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; flex-shrink: 0; }
+    .smd-version-chip {
+      padding: 6px 16px; border-radius: 16px; border: 1px solid #ddd;
+      background: #f8f9fa; color: #666; font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .smd-version-chip:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+    .smd-version-chip.active { background: var(--brand-primary-gradient); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.3); }
+    .smd-version-chip.obsoleta:not(.active) { border-style: dashed; color: #999; }
+    .smd-version-chip.obsoleta:not(.active)::after { content: ' (obsoleta)'; font-size: 10px; }
+    .photos-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; }
+    .photo-card { position: relative; border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid #e0e0e0; background: #f8f8f8; transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; max-width: 90%; max-height: 90%; }
+    .photo-card:hover { border-color: var(--brand-primary); transform: scale(1.01); box-shadow: 0 8px 25px rgba(27,79,196,0.3); }
+    .photo-card img { max-width: 520px; max-height: 380px; width: auto; height: auto; object-fit: contain; display: block; }
+    .photo-card .photo-name { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; font-size: 12px; padding: 25px 10px 10px; opacity: 0; transition: opacity 0.2s; text-align: center; }
+    .photo-card:hover .photo-name { opacity: 1; }
+
+    /* Badge flotante NECESITA PRUEBA */
+    .prueba-badge {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      animation: pulseBadge 2s infinite;
+    }
+    .prueba-badge.visible { display: flex; }
+    @keyframes pulseBadge {
+      0% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+      50% { transform: scale(1.03); box-shadow: 0 6px 25px rgba(255, 71, 87, 0.6); }
+      100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+    }
+    .prueba-badge button {
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .prueba-badge button:hover { background: rgba(255,255,255,0.4); }
+
+    /* Panel de pestañas (Observaciones / Recomendaciones) */
+    .tabs-panel { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; min-height: 200px; max-height: 340px; flex-shrink: 0; }
+    .tabs-header { display: flex; border-bottom: 1px solid #eee; background: #fafbfc; flex-shrink: 0; }
+    /* El color/estado activo de .tab-btn viene de css/comun.css (Fase A);
+       aquí solo se ajusta el tamaño para que ocupe todo el ancho de esta
+       barra angosta, en vez del espaciado con gap que usan las demás. */
+    .tabs-header .tab-btn { flex: 1; padding: 12px; border-radius: 0; }
+    .tabs-content { flex: 1; overflow-y: auto; padding: 15px; display: none; }
+    .tabs-content.active { display: flex; flex-direction: column; gap: 10px; }
+
+    .rec-list { display: flex; flex-direction: column; gap: 10px; }
+    .rec-bubble { background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); border-left: 4px solid var(--brand-primary); border-radius: 0 10px 10px 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; color: #444; word-break: break-word; position: relative; }
+    .rec-bubble-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .rec-bubble-author { font-size: 12px; font-weight: 700; color: var(--brand-primary); }
+    .rec-bubble-date { font-size: 11px; color: #aaa; }
+    .rec-bubble-text { white-space: pre-wrap; }
+    .rec-bubble-delete { position: absolute; top: 8px; right: 8px; background: #ff4757; color: white; border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+    .rec-bubble:hover .rec-bubble-delete { opacity: 1; }
+    .rec-bubble-delete:hover { background: #e04040; }
+
+    .rec-form { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border-top: 1px solid #eee; padding-top: 12px; }
+    .rec-textarea { width: 100%; min-height: 55px; max-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .rec-textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .rec-actions { display: flex; justify-content: flex-end; }
+    .btn-enviar { background: var(--brand-primary-gradient); color: white; border: none; padding: 9px 24px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity 0.2s, transform 0.1s; }
+    .btn-enviar:hover { opacity: 0.9; }
+    .btn-enviar:active { transform: scale(0.97); }
+    .btn-enviar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .rec-readonly { display: flex; align-items: center; gap: 10px; color: #888; font-size: 13px; padding: 12px 16px; background: #f8f9fa; border-radius: 10px; border: 1px dashed #ddd; flex-shrink: 0; }
+
+    /* Observaciones en pestaña */
+    .obs-textarea { width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .obs-textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .obs-textarea:read-only { background: #f8f9fa; color: #666; }
+    .obs-meta { font-size: 11px; color: #aaa; text-align: right; margin-top: 4px; }
+    .obs-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+    .ref-header { background: var(--brand-primary-gradient); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ref-count { background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+    .ref-search { padding: 12px 15px; border-bottom: 1px solid #eee; }
+    .ref-search input { width: 100%; padding: 10px 12px 10px 35px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center; }
+    .ref-search input:focus { border-color: var(--brand-primary); }
+    .ref-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .ref-item { padding: 12px 15px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #444; border: 1px solid transparent; transition: all 0.15s; word-break: break-all; display: flex; justify-content: space-between; align-items: center; }
+    .ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
+    .ref-item.active { background: var(--brand-primary-gradient); color: white; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }
+    .ref-item .prueba-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; display: none; flex-shrink: 0; }
+    .ref-item .prueba-dot.visible { display: inline-block; }
+
+    .lightbox-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
+    .lightbox-overlay.active { display: flex; }
+    .lightbox-toolbar { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 1002; background: rgba(30,30,30,0.8); padding: 8px 16px; border-radius: 30px; backdrop-filter: blur(4px); }
+    .lightbox-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .lightbox-btn:hover { background: rgba(255,255,255,0.3); }
+    .lightbox-close { position: absolute; top: 15px; right: 20px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; z-index: 1002; transition: all 0.2s; }
+    .lightbox-close:hover { background: rgba(255,80,80,0.6); }
+    .lightbox-img-container { width: 90vw; height: 85vh; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; }
+    .lightbox-img-container:active { cursor: grabbing; }
+    .lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.1s ease-out; transform-origin: center center; user-select: none; }
+    .lightbox-info { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 13px; background: rgba(0,0,0,0.5); padding: 6px 16px; border-radius: 20px; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+
+    @media (max-width: 1024px) {
+      .main-container { flex-direction: column; height: auto; min-height: calc(100vh - 70px); }
+      .visor-panel { width: 100%; min-width: auto; }
+      .lista-panel { width: 100%; height: 300px; min-height: 250px; }
+      .photos-section { min-height: 300px; }
+      .photo-card img { max-width: 100%; max-height: 280px; }
+      .tabs-panel { max-height: none; }
+      .ref-item { padding: 14px; font-size: 15px; }
+      .btn-enviar, .btn-header { padding: 14px 28px; font-size: 16px; }
+      .rec-textarea, .obs-textarea { min-height: 100px; font-size: 16px; }
+      .header { flex-wrap: wrap; padding: 10px 15px; }
+      .header-left h1 { font-size: 18px; }
+      .prueba-badge { bottom: 10px; right: 10px; padding: 10px 14px; font-size: 13px; }
+    }
+
+    .lightbox-obs-panel {
+      position: absolute;
+      right: 20px;
+      top: 70px;
+      width: 260px;
+      max-height: 75vh;
+      background: rgba(20, 20, 35, 0.88);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 16px 18px;
+      color: white;
+      font-size: 13px;
+      overflow-y: auto;
+      z-index: 1001;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .lightbox-obs-panel h4 {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #a0a0ff;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: 8px;
+    }
+    .lightbox-obs-panel p {
+      margin: 0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: #ddd;
+      font-size: 13px;
+    }
+    .lightbox-obs-panel .obs-empty {
+      color: #888;
+      font-style: italic;
+    }
+    .lightbox-obs-panel.hidden { display: none; }
+    .lightbox-btn.active { background: rgba(27,79,196,0.5); border-color: rgba(27,79,196,0.7); }
+    @media (max-width: 1024px) {
+      .lightbox-obs-panel {
+        position: relative;
+        right: auto;
+        top: auto;
+        width: 90%;
+        max-height: 200px;
+        margin: 15px auto 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>🔐 Revisión Circuitos SMD</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div class="header-left">
+        <h1>📋 Revisión Circuitos SMD</h1>
+        <p>Sistema de inspección de imágenes</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span>Sesión activa: <strong id="userName">--</strong></span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal">&larr; Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-container" id="appMain" style="display:none;">
+    <!-- Fase B: lista de referencias primero (columna izquierda), igual que
+         en Planos/Metrología -->
+    <div class="lista-panel">
+      <div class="ref-header">
+        <span>📑 Referencias</span>
+        <span class="ref-count" id="refCount">0</span>
+      </div>
+      <div class="ref-search">
+        <input type="text" id="refSearch" placeholder="Buscar referencia..." oninput="filtrarReferencias()">
+      </div>
+      <div class="ref-list" id="refList"></div>
+    </div>
+
+    <div class="visor-panel">
+      <div class="photos-section">
+        <div class="photos-title" id="photoTitle">📷 Selecciona una referencia</div>
+        <div class="smd-version-chips" id="versionChips" style="display:none;"></div>
+        <div class="photos-wrapper" id="photosWrapper">
+          <div style="color:#999;font-size:14px;">Selecciona una referencia para ver su foto</div>
+        </div>
+
+        <!-- Badge flotante NECESITA PRUEBA -->
+        <div class="prueba-badge" id="pruebaBadge">
+          <span>⚠️ NECESITA PRUEBA</span>
+          <button onclick="marcarPruebaHecha()" id="btnPruebaHecha">Marcar como probada</button>
+        </div>
+      </div>
+
+      <!-- Panel de Pestañas: Observaciones / Recomendaciones -->
+      <div class="tabs-panel" id="tabsPanel" style="display:none;">
+        <div class="tabs-header">
+          <button class="tab-btn active" onclick="switchTab('observaciones')" id="tabObs">📋 Observaciones</button>
+          <button class="tab-btn" onclick="switchTab('recomendaciones')" id="tabRec">📝 Recomendaciones</button>
+        </div>
+
+        <!-- Contenido Observaciones -->
+        <div class="tabs-content active" id="contentObs">
+          <div id="obsContainer" style="display:flex;flex-direction:column;gap:8px;height:100%;">
+            <textarea class="obs-textarea" id="obsTextarea" placeholder="No hay observaciones para esta referencia..."></textarea>
+            <div class="obs-meta" id="obsMeta"></div>
+            <div class="obs-actions" id="obsActions"></div>
+          </div>
+        </div>
+
+        <!-- Contenido Recomendaciones -->
+        <div class="tabs-content" id="contentRec">
+          <div id="recListaContainer" style="flex:1;overflow-y:auto;"></div>
+          <div id="recFormContainer" style="flex-shrink:0;"></div>
+        </div>
+
+        <!-- La pestaña de Auditoría de Cambios que estuvo acá brevemente se
+             quitó: Julio pidió que el historial de cambios de Circuitos SMD
+             y Valores y Cableado se vea centralizado en "Crear Referencia"
+             (Public/referencias.html, que ya sirve a ambos módulos), no acá
+             en la pantalla de trabajo del día a día. Ver la pestaña
+             "📜 Auditoría de Cambios" en referencias.html → Editar
+             Referencia. -->
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightboxBtn()">&times;</button>
+    <div class="lightbox-toolbar">
+      <button class="lightbox-btn" onclick="zoomOut(event)" title="Alejar">−</button>
+      <button class="lightbox-btn" onclick="zoomReset(event)" title="Restablecer">⟲</button>
+      <button class="lightbox-btn" onclick="zoomIn(event)" title="Acercar">+</button>
+      <button class="lightbox-btn" onclick="toggleObsPanel(event)" title="Mostrar/Ocultar observaciones" id="btnToggleObs">📋</button>
+    </div>
+    <div class="lightbox-img-container" id="imgContainer" style="position: relative;">
+      <img class="lightbox-img" id="lightboxImg" src="" alt="">
+      <div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>
+    </div>
+    <div class="lightbox-obs-panel" id="lightboxObsPanel">
+      <h4>📋 Observaciones</h4>
+      <p id="lightboxObsText">Cargando...</p>
+    </div>
+    <div class="lightbox-info" id="lightboxInfo">Scroll para zoom · Arrastra para mover</div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script src="js/auth-comun.js"></script>
+  <script>
+    // ==================== ESTADO ====================
+    let token = localStorage.getItem('token');
+    let usuarioActual = null;
+    let permisosUsuario = [];
+    let referencias = [];
+    let referenciaActiva = null;
+    let datosActuales = null;
+    let versionesRef = [];
+    let versionSeleccionadaId = null;
+    let zoomLevel = 1, isDragging = false, startX, startY, translateX = 0, translateY = 0;
+    let rolesCache = [];
+    let tabActiva = 'observaciones';
+    // Códigos cuya versión ACTIVA necesita prueba — se usa para pintar el
+    // punto rojo en TODA la lista de referencias, no solo en la que está
+    // seleccionada en pantalla (antes /api/referencias no traía este dato,
+    // así que el punto nunca se pintaba para nada que no fuera la
+    // referencia activa en ese momento). mostrarBadgePrueba() lo mantiene
+    // sincronizado cada vez que cambia el estado de la referencia vista.
+    let referenciasConPruebaPendiente = new Set();
+
+    // ==================== INICIO ====================
+    async function initApp() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+
+      try {
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        document.getElementById('userName').textContent = me.usuario || 'Usuario';
+        usuarioActual = me;
+      } catch (e) {}
+
+      await cargarMisPermisos();
+
+      const btnVolver = document.getElementById('btnVolverPortal');
+      if (btnVolver) {
+        btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+      }
+
+      renderTabObservaciones();
+      renderTabRecomendaciones();
+      cargarReferencias();
+    }
+
+    if (token) {
+      fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(async r => {
+          if (r.ok) { usuarioActual = await r.json(); initApp(); }
+          else { localStorage.removeItem('token'); token = null; document.getElementById('loginOverlay').style.display = 'flex'; }
+        })
+        .catch(() => { localStorage.removeItem('token'); token = null; document.getElementById('loginOverlay').style.display = 'flex'; });
+    } else {
+      document.getElementById('loginOverlay').style.display = 'flex';
+    }
+
+    // ==================== PERMISOS ====================
+    // La lógica (fetch de /api/roles usando usuarioActual.rol) ahora vive en
+    // js/comun.js como cargarPermisosConUsuarioActual() (era idéntica en
+    // gestion.html, smd.html y referencias.html). rolesCache solo se
+    // actualiza si la consulta tuvo éxito, igual que antes.
+    async function cargarMisPermisos() {
+      const roles = await cargarPermisosConUsuarioActual();
+      if (roles) rolesCache = roles;
+    }
+
+    // ==================== TABS ====================
+    function switchTab(tab) {
+      tabActiva = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab' + (tab === 'observaciones' ? 'Obs' : 'Rec')).classList.add('active');
+      document.getElementById('content' + (tab === 'observaciones' ? 'Obs' : 'Rec')).classList.add('active');
+      if (tab === 'observaciones' && referenciaActiva) cargarObservaciones();
+      if (tab === 'recomendaciones' && referenciaActiva) cargarRecomendaciones();
+    }
+
+    // ==================== REFERENCIAS ====================
+    async function cargarReferencias() {
+      try {
+        const res = await fetch('/api/referencias', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        referencias = data.referencias || [];
+        referenciasConPruebaPendiente = new Set(data.necesitaPrueba || []);
+        renderReferencias(referencias);
+        filtrarReferencias();
+      } catch (e) { console.error('Error cargando referencias:', e); }
+    }
+
+    function renderReferencias(lista) {
+      const container = document.getElementById('refList');
+      document.getElementById('refCount').textContent = lista.length;
+      container.innerHTML = '';
+      lista.forEach(ref => {
+        const div = document.createElement('div');
+        div.className = 'ref-item' + (ref === referenciaActiva ? ' active' : '');
+        const necesitaPrueba = referenciasConPruebaPendiente.has(ref);
+        div.innerHTML = `<span>${escapeHtml(ref)}</span><span class="prueba-dot${necesitaPrueba ? ' visible' : ''}" id="dot-${escapeHtml(ref)}" title="Necesita prueba"></span>`;
+        div.onclick = () => seleccionarReferencia(ref);
+        container.appendChild(div);
+      });
+    }
+
+    function filtrarReferencias() {
+      const q = document.getElementById('refSearch').value.toLowerCase();
+      renderReferencias(referencias.filter(r => r.toLowerCase().includes(q)));
+    }
+
+    async function seleccionarReferencia(ref) {
+      referenciaActiva = ref;
+      filtrarReferencias();
+      document.getElementById('photoTitle').textContent = '📷 ' + referenciaActiva;
+
+      // Mostrar panel de pestañas
+      const tabsPanel = document.getElementById('tabsPanel');
+      const puedeVerObs = tienePermiso('observaciones.ver');
+      const puedeVerRec = tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear');
+      if (puedeVerObs || puedeVerRec) {
+        tabsPanel.style.display = 'flex';
+        document.getElementById('tabObs').style.display = puedeVerObs ? 'block' : 'none';
+        document.getElementById('tabRec').style.display = puedeVerRec ? 'block' : 'none';
+        // Por defecto mostrar Observaciones primero
+        if (puedeVerObs) switchTab('observaciones');
+        else if (puedeVerRec) switchTab('recomendaciones');
+      } else {
+        tabsPanel.style.display = 'none';
+      }
+
+      // Cargar el historial de versiones de esta referencia y elegir cuál
+      // mostrar por defecto (la versión activa más reciente, igual que
+      // Valores y Cableado — ver elegirVersionSmdPorDefecto). Antes esta
+      // pantalla no tenía ningún concepto de "versión": solo mostraba
+      // siempre la foto activa sin poder ver el historial ni saber qué
+      // versión se está viendo.
+      versionesRef = [];
+      versionSeleccionadaId = null;
+      try {
+        const res = await fetch('/api/versiones/' + encodeURIComponent(ref), { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) {
+          const data = await res.json();
+          versionesRef = data.versiones || [];
+        }
+      } catch (e) { console.error('Error cargando versiones:', e); }
+
+      // Si mientras esperábamos esta respuesta el usuario ya hizo clic en
+      // OTRA referencia, referenciaActiva ya cambió (se asigna de forma
+      // síncrona al inicio de esta función, antes del primer await) — en
+      // ese caso esta ejecución quedó obsoleta y no debe seguir pintando
+      // nada, o la respuesta más lenta de "ref" podría llegar después y
+      // sobrescribir en pantalla lo que ya se cargó para la referencia
+      // realmente seleccionada.
+      if (referenciaActiva !== ref) return;
+
+      if (versionesRef.length > 0) {
+        versionSeleccionadaId = elegirVersionSmdPorDefecto(versionesRef).id;
+      }
+      renderVersionChips();
+      await cargarFotoVersionSeleccionada();
+
+      await cargarObservaciones();
+      await cargarRecomendaciones();
+    }
+
+    // ==================== VERSIONES ====================
+    // Mismo criterio que elegirVersionPorDefecto() en Valores y Cableado
+    // (js/valores_cableado/app.js): preferir versiones 'activa', entre esas
+    // preferir las que sí tienen foto guardada, y de ahí la de número más
+    // alto. Se repite acá (en vez de compartir el archivo) porque esta
+    // pantalla trabaja con las filas "crudas" de la tabla versiones
+    // (imagen_ruta, estado, version, id), mientras que la de Valores y
+    // Cableado trabaja con los "productos" que arma su propio endpoint.
+    function elegirVersionSmdPorDefecto(versiones) {
+      const numeroDe = (v) => {
+        const m = /(\d+)/.exec(v || '');
+        return m ? parseInt(m[1], 10) : -Infinity;
+      };
+      const masAlta = (lista) => lista.reduce((mejor, v) => numeroDe(v.version) > numeroDe(mejor.version) ? v : mejor, lista[0]);
+
+      const activas = versiones.filter(v => (v.estado || '').toLowerCase() === 'activa');
+      const base = activas.length > 0 ? activas : versiones;
+      const conFoto = base.filter(v => !!v.imagen_ruta);
+      return masAlta(conFoto.length > 0 ? conFoto : base);
+    }
+
+    function renderVersionChips() {
+      const container = document.getElementById('versionChips');
+      if (!container) return;
+      if (versionesRef.length <= 1) { container.style.display = 'none'; container.innerHTML = ''; return; }
+      container.style.display = 'flex';
+      container.innerHTML = '';
+      // listarVersionesPorReferencia() ya viene ordenada ORDER BY id DESC
+      // (la más nueva primero); se muestra en ese mismo orden en los chips.
+      versionesRef.forEach(v => {
+        const chip = document.createElement('button');
+        const esActiva = (v.estado || '').toLowerCase() === 'activa';
+        chip.type = 'button';
+        chip.className = 'smd-version-chip' + (v.id === versionSeleccionadaId ? ' active' : '') + (esActiva ? '' : ' obsoleta');
+        chip.textContent = v.version;
+        chip.title = esActiva ? 'Versión activa' : 'Versión obsoleta';
+        chip.onclick = () => seleccionarVersion(v.id);
+        container.appendChild(chip);
+      });
+    }
+
+    function seleccionarVersion(versionId) {
+      if (versionId === versionSeleccionadaId) return;
+      versionSeleccionadaId = versionId;
+      renderVersionChips();
+      cargarFotoVersionSeleccionada();
+    }
+
+    function renderFotos(fotos) {
+      const wrapper = document.getElementById('photosWrapper');
+      wrapper.innerHTML = '';
+      if (fotos && fotos.length > 0) {
+        fotos.forEach(foto => {
+          const card = document.createElement('div');
+          card.className = 'photo-card';
+          card.onclick = () => openLightbox(foto.data, foto.nombre);
+          card.innerHTML = `<img src="${foto.data}" alt="${escapeHtml(foto.nombre || '')}"><div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div><div class="photo-name">${escapeHtml(foto.nombre || '')}</div>`;
+          wrapper.appendChild(card);
+        });
+      } else {
+        wrapper.innerHTML = '<div style="color:#999;font-size:14px;">No hay foto para esta referencia</div>';
+      }
+    }
+
+    // Carga la foto de la versión actualmente seleccionada en los chips (o,
+    // si por algún motivo no hay ninguna versión en la lista, cae al
+    // comportamiento antiguo de pedir la foto activa por código).
+    async function cargarFotoVersionSeleccionada() {
+      // Se captura qué referencia/versión estábamos por cargar ANTES del
+      // await: si para cuando la respuesta llega el usuario ya seleccionó
+      // otra referencia u otra versión (chips), esas variables globales ya
+      // habrán cambiado y esta respuesta quedó obsoleta — sin este chequeo,
+      // una respuesta lenta de la versión vieja podía llegar después que la
+      // de la versión nueva y "pisar" la foto correcta con la incorrecta.
+      const refEnCurso = referenciaActiva;
+      const versionEnCurso = versionSeleccionadaId;
+
+      if (!versionSeleccionadaId) {
+        try {
+          const res = await fetch('/api/fotos/' + encodeURIComponent(referenciaActiva), { headers: { 'Authorization': 'Bearer ' + token } });
+          if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+          // Antes no se revisaba res.ok acá (a diferencia de la rama de
+          // /api/fotos-version/ más abajo, que sí lo hace) — si el servidor
+          // respondía con un error (403, 500, etc.) esto intentaba leer
+          // data.fotos de un cuerpo de error, mostrando "No hay foto para
+          // esta referencia" en vez de reflejar que algo falló.
+          if (res.ok) {
+            const data = await res.json();
+            if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+            renderFotos(data.fotos);
+          } else {
+            renderFotos([]);
+          }
+        } catch (e) {
+          console.error('Error cargando fotos:', e);
+          if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+          renderFotos([]);
+        }
+        if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+        datosActuales = null;
+        mostrarBadgePrueba();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/fotos-version/' + versionSeleccionadaId, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+          renderFotos(data.fotos);
+        } else {
+          renderFotos([]);
+        }
+      } catch (e) {
+        console.error('Error cargando fotos:', e);
+        if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+        renderFotos([]);
+      }
+
+      if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
+      const versionInfo = versionesRef.find(v => v.id === versionSeleccionadaId);
+      datosActuales = versionInfo ? {
+        version_id: versionInfo.id,
+        version_actual: versionInfo.version,
+        estado: versionInfo.estado,
+        necesita_prueba: versionInfo.necesita_prueba,
+      } : null;
+      mostrarBadgePrueba();
+    }
+
+    // ==================== BADGE NECESITA PRUEBA ====================
+    function mostrarBadgePrueba() {
+      const badge = document.getElementById('pruebaBadge');
+      const btn = document.getElementById('btnPruebaHecha');
+      if (!datosActuales || !datosActuales.version_id) {
+        badge.classList.remove('visible');
+      } else if (datosActuales.necesita_prueba === 1 || datosActuales.necesita_prueba === '1') {
+        badge.classList.add('visible');
+        btn.style.display = tienePermiso('referencias.editar') ? 'inline-block' : 'none';
+      } else {
+        badge.classList.remove('visible');
+      }
+      // El punto rojo en la lista de referencias siempre se refiere a la
+      // versión ACTIVA (la que de verdad está en producción), sin importar
+      // qué versión del historial se esté viendo en este momento en los
+      // chips — así no da la impresión de que una referencia ya probada
+      // "todavía necesita prueba" solo porque se está mirando una versión
+      // vieja que sí la necesitaba.
+      const dot = document.getElementById('dot-' + referenciaActiva);
+      if (dot) {
+        const versionActivaInfo = versionesRef.find(v => (v.estado || '').toLowerCase() === 'activa');
+        const necesitaActiva = versionActivaInfo && (versionActivaInfo.necesita_prueba === 1 || versionActivaInfo.necesita_prueba === '1');
+        dot.classList.toggle('visible', !!necesitaActiva);
+        // Mantiene el Set sincronizado para que el estado sobreviva un
+        // re-render de la lista (por ejemplo al filtrar con el buscador),
+        // que reconstruye los puntos desde referenciasConPruebaPendiente.
+        if (necesitaActiva) referenciasConPruebaPendiente.add(referenciaActiva);
+        else referenciasConPruebaPendiente.delete(referenciaActiva);
+      }
+    }
+
+    async function marcarPruebaHecha() {
+      if (!datosActuales || !datosActuales.version_id) return;
+      try {
+        const res = await fetch('/api/versiones/' + datosActuales.version_id + '/prueba', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ necesita_prueba: false })
+        });
+        if (res.ok) {
+          datosActuales.necesita_prueba = 0;
+          const vInfo = versionesRef.find(v => v.id === datosActuales.version_id);
+          if (vInfo) vInfo.necesita_prueba = 0;
+          mostrarBadgePrueba();
+          await cargarReferencias();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Error: ' + (err.error || 'No se pudo actualizar'));
+        }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    // ==================== OBSERVACIONES (Tab) ====================
+    function renderTabObservaciones() {
+      const textarea = document.getElementById('obsTextarea');
+      const actions = document.getElementById('obsActions');
+      if (!textarea || !actions) return;
+
+      if (!tienePermiso('observaciones.ver')) {
+        document.getElementById('obsContainer').innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver observaciones.</span></div>';
+        return;
+      }
+
+      textarea.placeholder = 'No hay observaciones para esta referencia...';
+      if (!tienePermiso('observaciones.editar')) {
+        textarea.readOnly = true;
+        textarea.placeholder = 'No tienes permiso para editar observaciones';
+        actions.innerHTML = '';
+      } else {
+        textarea.readOnly = false;
+        actions.innerHTML = `<button class="btn-enviar" id="btnGuardarObs" onclick="guardarObservacion()">💾 Guardar observación</button>`;
+      }
+    }
+
+    async function cargarObservaciones() {
+      if (!referenciaActiva || !tienePermiso('observaciones.ver')) return;
+      const refEnCurso = referenciaActiva;
+      const textarea = document.getElementById('obsTextarea');
+      const meta = document.getElementById('obsMeta');
+      if (!textarea) return;
+      try {
+        const res = await fetch('/api/observaciones/' + encodeURIComponent(referenciaActiva), {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        // Si el usuario ya cambió de referencia mientras esperábamos esta
+        // respuesta, no la pintamos — pertenece a la referencia anterior y
+        // podría llegar después que la de la referencia actual.
+        if (referenciaActiva !== refEnCurso) return;
+        if (res.status === 403) { textarea.value = ''; meta.textContent = ''; return; }
+        const data = await res.json();
+        if (referenciaActiva !== refEnCurso) return;
+        if (data.observacion) {
+          textarea.value = data.observacion.observacion || '';
+          const fecha = data.observacion.actualizado_en
+            ? new Date(data.observacion.actualizado_en).toLocaleString('es-ES')
+            : '';
+          const autor = data.observacion.actualizado_por_nombre || '';
+          meta.textContent = fecha ? `Última actualización: ${fecha}${autor ? ' por ' + autor : ''}` : '';
+        } else {
+          textarea.value = '';
+          meta.textContent = '';
+        }
+      } catch (e) {
+        if (referenciaActiva !== refEnCurso) return;
+        textarea.value = '';
+        meta.textContent = '';
+      }
+    }
+
+    async function guardarObservacion() {
+      if (!referenciaActiva) return alert('Selecciona una referencia primero');
+      const textarea = document.getElementById('obsTextarea');
+      const btn = document.getElementById('btnGuardarObs');
+      const texto = textarea.value;
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        const res = await fetch('/api/observaciones/' + encodeURIComponent(referenciaActiva), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ observacion: texto })
+        });
+        if (res.ok) {
+          await cargarObservaciones();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert('Error: ' + (err.error || 'No se pudo guardar'));
+        }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+      finally { btn.disabled = false; btn.textContent = '💾 Guardar observación'; }
+    }
+
+    // ==================== RECOMENDACIONES (Tab) ====================
+    function renderTabRecomendaciones() {
+      const listaContainer = document.getElementById('recListaContainer');
+      const formContainer = document.getElementById('recFormContainer');
+      if (!listaContainer || !formContainer) return;
+
+      if (tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear')) {
+        listaContainer.innerHTML = '<div class="rec-empty">Selecciona una referencia para ver las recomendaciones.</div>';
+      } else {
+        listaContainer.innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver recomendaciones.</span></div>';
+      }
+
+      if (tienePermiso('recomendaciones.crear')) {
+        formContainer.innerHTML = `
+          <div class="rec-form">
+            <textarea class="rec-textarea" id="recInput" placeholder="Escribe una recomendación..."></textarea>
+            <div class="rec-actions"><button class="btn-enviar" id="btnEnviar" onclick="enviarRecomendacion()">Enviar recomendación</button></div>
+          </div>`;
+      } else {
+        formContainer.innerHTML = '';
+      }
+    }
+
+    async function cargarRecomendaciones() {
+      if (!referenciaActiva) return;
+      const refEnCurso = referenciaActiva;
+      const listaContainer = document.getElementById('recListaContainer');
+      if (!listaContainer) return;
+
+      const puedeVer = tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear');
+      if (!puedeVer) {
+        listaContainer.innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver recomendaciones.</span></div>';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/recomendaciones/' + encodeURIComponent(referenciaActiva), { headers: { 'Authorization': 'Bearer ' + token } });
+        // Misma protección que cargarObservaciones(): si el usuario ya
+        // cambió de referencia mientras esperábamos, esta respuesta ya no
+        // corresponde a lo que está en pantalla.
+        if (referenciaActiva !== refEnCurso) return;
+        if (res.status === 403) { listaContainer.innerHTML = '<div class="rec-empty">No tienes permiso para ver recomendaciones.</div>'; return; }
+        const data = await res.json();
+        if (referenciaActiva !== refEnCurso) return;
+        const lista = data.recomendaciones || [];
+        if (lista.length === 0) { listaContainer.innerHTML = '<div class="rec-empty">No hay recomendaciones para esta referencia.</div>'; return; }
+        let html = '<div class="rec-list">';
+        lista.forEach(rec => {
+          const fecha = new Date(rec.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const deleteBtn = tienePermiso('recomendaciones.eliminar') ? `<button class="rec-bubble-delete" onclick="borrarRecomendacion(${rec.id}, event)" title="Eliminar">×</button>` : '';
+          html += `<div class="rec-bubble">${deleteBtn}<div class="rec-bubble-header"><span class="rec-bubble-author">${escapeHtml(rec.autor)}</span><span class="rec-bubble-date">${fecha}</span></div><div class="rec-bubble-text">${escapeHtml(rec.recomendacion)}</div></div>`;
+        });
+        html += '</div>';
+        listaContainer.innerHTML = html;
+      } catch (e) {
+        if (referenciaActiva !== refEnCurso) return;
+        listaContainer.innerHTML = '<div class="rec-empty">Error al cargar recomendaciones.</div>';
+      }
+    }
+
+    async function enviarRecomendacion() {
+      if (!referenciaActiva) { alert('Selecciona una referencia primero'); return; }
+      const input = document.getElementById('recInput');
+      const btn = document.getElementById('btnEnviar');
+      const texto = input.value.trim();
+      if (!texto) { alert('Escribe una recomendación'); return; }
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        const res = await fetch('/api/recomendacion', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ referencia: referenciaActiva, recomendacion: texto })
+        });
+        if (res.ok) { input.value = ''; await cargarRecomendaciones(); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'Error al guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+      finally { btn.disabled = false; btn.textContent = 'Enviar recomendación'; }
+    }
+
+    async function borrarRecomendacion(id, event) {
+      event.stopPropagation();
+      if (!confirm('¿Seguro que quieres eliminar esta recomendación?')) return;
+      try {
+        const res = await fetch('/api/recomendacion/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarRecomendaciones();
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    // ==================== LIGHTBOX ====================
+    function openLightbox(src, nombre) {
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightboxInfo').textContent = nombre + ' · Scroll para zoom · Arrastra para mover';
+      zoomLevel = 1; translateX = 0; translateY = 0; updateTransform();
+      document.getElementById('lightbox').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      // Asegurar panel visible por defecto
+      document.getElementById('lightboxObsPanel').classList.remove('hidden');
+      document.getElementById('btnToggleObs').classList.add('active');
+      // Cargar observaciones en el panel flotante
+      cargarObservacionesLightbox();
+    }
+
+    async function cargarObservacionesLightbox() {
+      const panel = document.getElementById('lightboxObsText');
+      if (!referenciaActiva) { panel.textContent = 'Sin observaciones'; return; }
+      if (!tienePermiso('observaciones.ver')) { panel.textContent = 'Sin permiso para ver observaciones'; return; }
+      try {
+        const res = await fetch('/api/observaciones/' + encodeURIComponent(referenciaActiva), {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) { panel.textContent = 'No se pudieron cargar las observaciones'; return; }
+        const data = await res.json();
+        if (data.observacion && data.observacion.observacion && data.observacion.observacion.trim()) {
+          panel.textContent = data.observacion.observacion;
+        } else {
+          panel.innerHTML = '<span class="obs-empty">Sin observaciones para esta referencia.</span>';
+        }
+      } catch (e) {
+        panel.textContent = 'Error al cargar observaciones';
+      }
+    }
+    function closeLightbox(e) { if (e.target.id === 'lightbox' || e.target.id === 'imgContainer') { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = ''; } }
+    function closeLightboxBtn() { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = ''; }
+    function zoomIn(e) { e.stopPropagation(); zoomLevel = Math.min(zoomLevel + 0.3, 5); updateTransform(); }
+    function toggleObsPanel(e) {
+      e.stopPropagation();
+      const panel = document.getElementById('lightboxObsPanel');
+      const btn = document.getElementById('btnToggleObs');
+      panel.classList.toggle('hidden');
+      btn.classList.toggle('active');
+    }
+    function zoomOut(e) { e.stopPropagation(); zoomLevel = Math.max(zoomLevel - 0.3, 0.3); if (zoomLevel <= 1) { translateX = 0; translateY = 0; } updateTransform(); }
+    function zoomReset(e) { e.stopPropagation(); zoomLevel = 1; translateX = 0; translateY = 0; updateTransform(); }
+    function updateTransform() { document.getElementById('lightboxImg').style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + zoomLevel + ')'; }
+
+    document.getElementById('imgContainer').addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) zoomLevel = Math.min(zoomLevel + 0.15, 5);
+      else zoomLevel = Math.max(zoomLevel - 0.15, 0.3);
+      if (zoomLevel <= 1) { translateX = 0; translateY = 0; }
+      updateTransform();
+    });
+    const lbContainer = document.getElementById('imgContainer');
+    lbContainer.addEventListener('mousedown', (e) => { if (zoomLevel <= 1) return; isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; lbContainer.style.cursor = 'grabbing'; });
+    window.addEventListener('mousemove', (e) => { if (!isDragging) return; translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform(); });
+    window.addEventListener('mouseup', () => { isDragging = false; lbContainer.style.cursor = 'grab'; });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (
+        (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || e.key === 'i' || e.key === 'j')) ||
+        e.key === 'F12'
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    // ==================== UTILS ====================
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>

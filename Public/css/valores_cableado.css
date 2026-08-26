@@ -1,0 +1,297 @@
+/* ========================================================================
+   Valores y Cableado — mismo look institucional claro que el resto del
+   portal (igual que Circuitos SMD): fondo claro, tarjetas blancas con
+   sombra suave, encabezados en azul de marca. Julio pidió quitar el panel
+   oscuro tipo instrumento que tenía antes. Todo va con el prefijo "vc-"
+   para no chocar con las clases genéricas de css/comun.css (que sigue
+   controlando el header y el login).
+   ======================================================================== */
+
+/* Fuente "DSEG7" (Keshikan, licencia SIL OFL — libre de usar/distribuir):
+   dibuja cada número como si fueran segmentos reales de un display digital,
+   en vez de solo texto monoespaciado. Se usa SOLO en los valores medidos de
+   Revisión/Prueba Mínimo/Prueba Máximo (los números en las cajas negras) —
+   no en las unidades (V/A/W) ni en las etiquetas, porque en este tipo de
+   fuente la V y la W terminan viéndose casi iguales (ambas como una "U"), lo
+   que confundiría voltios con vatios. El archivo va empacado localmente en
+   Public/fonts/ para que funcione sin depender de internet en la planta. */
+@font-face {
+    font-family: 'DSEG7';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/dseg7-classic-700-normal.woff2') format('woff2');
+}
+:root {
+    --vc-bg: #eef2f7;
+    --vc-bg-light: #ffffff;
+    --vc-bg-card: #ffffff;
+    --vc-border: #e0e0e0;
+    --vc-text: #333333;
+    --vc-text-muted: #888888;
+    --vc-accent: var(--brand-primary, #1B4FC4);
+    --vc-accent-dark: var(--brand-primary-dark, #1642AA);
+    --vc-accent-gradient: var(--brand-primary-gradient, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%));
+    --vc-danger: #ef4444;
+    --vc-success: #16a34a;
+    --vc-warning: #f59e0b;
+    --vc-font-ui: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.vc-app {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    font-family: var(--vc-font-ui);
+    background: var(--vc-bg);
+    color: var(--vc-text);
+    padding: 15px;
+    gap: 15px;
+    box-sizing: border-box;
+}
+
+/* ========== SIDEBAR ========== */
+/* Misma tarjeta blanca flotante con esquinas redondeadas y sombra que usa
+   Circuitos SMD para su ".lista-panel" — antes esto quedaba pegado a los
+   bordes de la pantalla (sin radio ni sombra), por eso se veía como una
+   ventana aparte en vez de una tarjeta igual a la de SMD. */
+.vc-sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    color: #333;
+}
+
+.vc-sidebar-header {
+    background: var(--vc-accent-gradient);
+    color: #fff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.vc-ref-count {
+    background: rgba(255,255,255,0.25);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.vc-search-box {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.vc-search-box input {
+    width: 100%;
+    padding: 10px 12px 10px 35px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center;
+    color: #333;
+    font-family: inherit;
+}
+
+.vc-search-box input:focus { border-color: var(--vc-accent); }
+
+.vc-ref-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+}
+
+.vc-ref-list::-webkit-scrollbar { width: 6px; }
+.vc-ref-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+/* Lista plana: cada ítem es una referencia+color completa (igual que en
+   Circuitos SMD, donde el color ya va incluido en el propio código), sin
+   el árbol referencia→color que tenía antes. */
+.vc-ref-item {
+    padding: 12px 15px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #444;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    word-break: break-all;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+.vc-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
+.vc-ref-item.active { background: var(--vc-accent-gradient); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }
+.vc-ref-item .vc-ref-versions { font-size: 11px; opacity: 0.7; flex-shrink: 0; margin-left: 8px; }
+
+/* ========== MAIN PANEL ========== */
+.vc-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0; }
+
+/* Misma tarjeta blanca flotante que ".vc-sidebar" (y que ".photos-section"
+   en Circuitos SMD) — antes el panel principal quedaba pegado a los bordes
+   y sin sombra, por lo que no hacía juego con la barra lateral. */
+.vc-empty-state {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--vc-text-muted); text-align: center; padding: 2rem;
+    background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.vc-empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.4; }
+.vc-empty-state h2 { color: var(--vc-text); margin-bottom: 0.5rem; }
+
+/* ========== FICHA ========== */
+.vc-ficha {
+    display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;
+    background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    /* Ancla la alerta flotante de valores faltantes (position:absolute) a
+       este panel — mismo patrón que ".photos-section" en Circuitos SMD
+       con su "⚠️ NECESITA PRUEBA". */
+    position: relative;
+}
+
+.vc-ficha-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--vc-border); background: var(--vc-bg-light); flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.vc-ficha-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.vc-ficha-header h2 { font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; color: var(--vc-text); }
+.vc-ficha-header .vc-sub { color: var(--vc-text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+
+.vc-ficha-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.5rem 2rem; display: flex; flex-direction: column; gap: 1rem; scrollbar-width: thin; scrollbar-color: #ccc transparent; }
+.vc-ficha-scroll::-webkit-scrollbar { width: 6px; }
+.vc-ficha-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+/* Alerta flotante "FALTAN VALORES" — mismo estilo (rojo, esquina inferior
+   derecha, animación de pulso) que "⚠️ NECESITA PRUEBA" en Circuitos SMD
+   (Public/smd.html, .prueba-badge), para que ambas alertas se sientan
+   parte de la misma aplicación. */
+.vc-alerta-badge {
+    position: absolute; bottom: 20px; right: 20px;
+    background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+    color: white; padding: 12px 20px; border-radius: 10px;
+    font-size: 14px; font-weight: 700;
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+    z-index: 100; display: none; align-items: center; gap: 10px;
+    animation: vcPulseBadge 2s infinite;
+}
+.vc-alerta-badge.visible { display: flex; }
+@keyframes vcPulseBadge {
+    0% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+    50% { transform: scale(1.03); box-shadow: 0 6px 25px rgba(255, 71, 87, 0.6); }
+    100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+}
+@media (max-width: 900px) {
+    .vc-alerta-badge { bottom: 10px; right: 10px; padding: 10px 14px; font-size: 13px; }
+}
+
+/* ========== FOTOS ========== */
+.vc-fotos-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex-shrink: 0; }
+.vc-foto-box {
+    background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 0.75rem;
+    overflow: hidden; aspect-ratio: 16/10; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: border-color 0.2s, box-shadow 0.2s;
+}
+.vc-foto-box:hover { border-color: var(--vc-accent); box-shadow: 0 4px 14px rgba(27,79,196,0.15); }
+.vc-foto-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.vc-foto-content img { width: 100%; height: 100%; object-fit: cover; }
+.vc-foto-box .vc-foto-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: #fff; padding: 0.5rem; text-align: center; font-size: 0.8rem; font-weight: 600; pointer-events: none; }
+.vc-foto-box .vc-foto-placeholder { color: var(--vc-text-muted); font-size: 0.875rem; }
+
+/* Botones flotantes sobre la foto: editar en SMD (circuito) y subir/cambiar
+   (cableado) — solo se ven con el permiso correspondiente. */
+.vc-foto-edit-link, .vc-foto-upload-btn {
+    position: absolute; top: 0.5rem; right: 0.5rem; z-index: 2;
+    background: rgba(255,255,255,0.92); color: var(--vc-accent); border: 1px solid var(--vc-border);
+    border-radius: 999px; padding: 0.3rem 0.7rem; font-size: 0.75rem; font-weight: 600;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15); transition: background 0.15s;
+    font-family: inherit;
+}
+.vc-foto-edit-link:hover, .vc-foto-upload-btn:hover { background: #fff; }
+
+/* ========== DISPLAYS (Revisión / Prueba Mínimo / Prueba Máximo) ========== */
+.vc-displays-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; flex-shrink: 0; }
+@media (max-width: 1024px) {
+    .vc-displays-row { grid-template-columns: 1fr; }
+    .vc-fotos-row { grid-template-columns: 1fr; }
+}
+
+.vc-display-box { background: #0a0a0a; border-radius: 0.75rem; border: 1px solid var(--vc-border); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+.vc-display-title {
+    text-align: center; padding: 0.6rem; font-size: 0.85rem; color: #fff;
+    letter-spacing: 0.04em; text-transform: uppercase; font-weight: 700;
+}
+.vc-display-box.green .vc-display-title { background: #16a34a; }
+.vc-display-box.blue .vc-display-title { background: #2563eb; }
+.vc-display-box.orange .vc-display-title { background: #ea580c; }
+
+/* Cuerpo tipo pantalla de 7 segmentos: fondo negro, "luz" blanca en los 3
+   indicadores (antes cada uno tenía su propio color) — solo el título de
+   arriba conserva el color distintivo verde/azul/naranja. */
+.vc-display-section { padding: 0.75rem 1rem; background: #0a0a0a; }
+.vc-display-section + .vc-display-section { border-top: 1px solid #262626; }
+.vc-display-section-label { font-size: 0.7rem; color: #777; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; text-align: center; font-weight: 600; font-family: 'Courier New', Courier, monospace; }
+
+.vc-display-line { display: flex; justify-content: space-between; align-items: baseline; padding: 0.2rem 0; }
+.vc-display-line .vc-lbl { font-size: 0.82rem; color: #aaa; font-family: 'Courier New', Courier, monospace; }
+.vc-display-line .vc-val {
+    font-size: 1.3rem; font-weight: 700; color: #fff;
+    font-family: 'DSEG7', 'Courier New', Courier, monospace; letter-spacing: 0.04em;
+    text-shadow: 0 0 2px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.65), 0 0 18px rgba(255,255,255,0.4);
+}
+.vc-display-line .vc-unit { font-size: 0.75rem; color: #999; margin-left: 0.25rem; font-family: 'Courier New', Courier, monospace; }
+
+/* ========== ESPECIFICACIONES DE CABLEADO ========== */
+.vc-specs-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex-shrink: 0; }
+.vc-specs-header { background: var(--vc-accent-gradient); color: #fff; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.vc-specs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--vc-border); }
+.vc-specs-grid .vc-cell { background: var(--vc-bg-card); padding: 0.75rem; text-align: center; }
+.vc-specs-grid .vc-cell label { display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--vc-text-muted); margin-bottom: 0.35rem; letter-spacing: 0.03em; }
+.vc-specs-grid .vc-cell .vc-val { font-size: 1rem; font-weight: 600; color: var(--vc-text); }
+
+.vc-val-no { color: #dc2626; background: #fef2f2; padding: 0.15rem 0.6rem; border-radius: 0.25rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; }
+.vc-val-no .vc-x-red { color: #dc2626; font-weight: 900; font-size: 1.1em; }
+.vc-val-yes { color: #16a34a; background: #f0fdf4; padding: 0.15rem 0.6rem; border-radius: 0.25rem; font-weight: 700; }
+
+@media (max-width: 768px) {
+    .vc-specs-grid { grid-template-columns: repeat(2, 1fr); }
+    .vc-sidebar { width: 240px; min-width: 240px; }
+}
+
+/* ========== MODAL IMAGEN (visor de foto ampliada — fondo oscuro a
+   propósito, igual que el lightbox de Circuitos SMD) ========== */
+.vc-img-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 2100; align-items: center; justify-content: center; padding: 2rem; }
+.vc-img-modal.active { display: flex; }
+.vc-img-modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 0.5rem; }
+.vc-img-modal-close { position: absolute; top: 1rem; right: 1.5rem; font-size: 2.5rem; color: #fff; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+.vc-img-modal-close:hover { opacity: 1; }
+
+/* ========== CHIPS DE VERSIÓN ========== */
+.vc-version-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+.vc-version-chip {
+    padding: 0.35rem 0.85rem; border-radius: 1rem; border: 1px solid var(--vc-border);
+    background: #f8f9fa; color: #666; font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+    font-family: inherit;
+}
+.vc-version-chip:hover { border-color: var(--vc-accent); color: var(--vc-accent); }
+.vc-version-chip.active { background: var(--vc-accent-gradient); color: #fff; border-color: transparent; }
+
+/* El modal de edición en la propia página (valores, cableado) que vivía
+   acá se quitó — hoy la edición se hace desde referencias.html (Crear
+   Referencia), no en esta pantalla. Se eliminaron las reglas .vc-edit-modal*
+   / .vc-edit-form* / .vc-edit-actions que ya no las usa ningún HTML/JS. */

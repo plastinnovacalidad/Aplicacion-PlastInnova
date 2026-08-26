@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Dinámico de Garantías - Control y Calidad</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- escapeHtml (evita que texto de garantías se inserte como código en la página) -->
+    <script src="js/comun.js"></script>
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header { background-color: #fff; border-bottom: 1px solid #eee; font-weight: 600; border-radius: 10px 10px 0 0 !important; }
+        .kpi-card { border-left: 4px solid #0d6efd; }
+        .kpi-success { border-left-color: #198754; }
+        .kpi-danger { border-left-color: #dc3545; }
+        .kpi-warning { border-left-color: #ffc107; }
+        .table-container { max-height: 450px; overflow-y: auto; }
+        thead th { position: sticky; top: 0; background: #343a40; color: white; z-index: 1; font-size: 0.85rem; }
+        tbody td { font-size: 0.85rem; }
+        .chart-container { cursor: pointer; }
+        /* Slicer Sidebar Style */
+        .slicer-list { height: 850px; max-height: 850px; overflow-y: auto; }
+        .slicer-item { cursor: pointer; padding: 6px 10px; margin-bottom: 3px; border-radius: 4px; background: #f8f9fa; border: 1px solid #dee2e6; font-size: 0.82rem; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
+        .slicer-item:hover { background: #e9ecef; }
+        .slicer-item.active { background: #e7f1ff; color: #0d6efd; border-color: #b6d4fe; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="text-dark fw-bold mb-1"><i class="fa-solid fa-shield-halved text-primary me-2"></i>Control de Garantías y Calidad (Base de Datos en Vivo)</h2>
+                    <p class="text-muted mb-0">Tablero dinámico sincronizado con SQLite</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-secondary" onclick="resetFilters()"><i class="fa-solid fa-rotate-right me-1"></i> Reiniciar Filtros</button>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- KPI Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card kpi-card p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase fs-7 mb-1">Total Solicitudes</h6>
+                            <h3 id="kpiTotal" class="fw-bold mb-0">0</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary fs-4">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card kpi-card kpi-success p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase fs-7 mb-1">Aprobadas</h6>
+                            <h3 id="kpiAprobadas" class="fw-bold text-success mb-0">0</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success fs-4">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card kpi-card kpi-danger p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase fs-7 mb-1">Rechazadas</h6>
+                            <h3 id="kpiRechazadas" class="fw-bold text-danger mb-0">0</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger fs-4">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card kpi-card kpi-warning p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted text-uppercase fs-7 mb-1">% Aprobación</h6>
+                            <h3 id="kpiTasa" class="fw-bold text-warning mb-0">0%</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning fs-4">
+                            <i class="fa-solid fa-percent"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-chart-line me-1 text-primary"></i> Solicitudes por Mes</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <select id="filterAnio" class="form-select form-select-sm" onchange="filterData()" style="width: auto;">
+                                <option value="">Todos los Años</option>
+                            </select>
+                            <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                        </div>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 320px;">
+                        <canvas id="chartMes"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-chart-pie me-1 text-success"></i> Tipo de Solicitud</span>
+                        <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 320px;">
+                        <canvas id="chartSolicitud"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 & Slicer -->
+        <div class="row mb-4">
+            <div class="col-md-5">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-chart-bar me-1 text-success"></i> Top 10 Referencias</span>
+                        <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 350px;">
+                        <canvas id="chartReferencias"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-triangle-exclamation me-1 text-warning"></i> Principales Problemas</span>
+                        <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 350px;">
+                        <canvas id="chartProblemas"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-filter me-1 text-primary"></i> Circuito (TipoCir)</span>
+                        <div>
+                            <button class="btn btn-xs btn-outline-primary py-0 px-1 font-monospace" style="font-size: 0.75rem;" onclick="selectAllTipoCir(true)">Todos</button>
+                            <button class="btn btn-xs btn-outline-secondary py-0 px-1 font-monospace" style="font-size: 0.75rem;" onclick="selectAllTipoCir(false)">Ninguno</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-2">
+                        <input type="text" id="slicerSearch" class="form-control form-control-sm mb-2" placeholder="Buscar circuito..." oninput="filterSlicerList()">
+                        <div id="slicerContainer" class="slicer-list" style="max-height: 290px;">
+                            <!-- Slicer items populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sincronización Dinámica con SQLite -->
+    <script>
+        let rawData = [];
+
+        let chartMesInstance = null;
+        let chartEstadoInstance = null;
+        let chartReferenciasInstance = null;
+        let chartProblemasInstance = null;
+        let chartSolicitudInstance = null;
+        
+        let selectedTipoCirs = new Set();
+        let allTipoCirs = [];
+        let selectedMes = null;
+        let selectedProblema = null;
+        let selectedTipoSolicitud = null;
+
+        // Todos los "Tipo de Circuito" que se han visto alguna vez, para
+        // saber cuáles son realmente nuevos en cada refresco automático
+        // (ver init(), que corre cada 15s) — así solo esos entran
+        // seleccionados por defecto, y no se pisa lo que el usuario ya
+        // había desmarcado a mano en el filtro.
+        let tiposCirConocidos = new Set();
+
+        function extractYear(fechaStr) {
+            if (!fechaStr) return '2026';
+            fechaStr = String(fechaStr).trim();
+            const sep = fechaStr.includes('/') ? '/' : (fechaStr.includes('-') ? '-' : '');
+            if (sep) {
+                const parts = fechaStr.split(sep);
+                const yearPart = parts.find(p => p.length === 4 && !isNaN(p));
+                if (yearPart) return yearPart;
+                if (parts[0] && parts[0].length === 4) return parts[0];
+                if (parts[parts.length - 1] && parts[parts.length - 1].length === 4) return parts[parts.length - 1];
+                const lastPart = parts[parts.length - 1];
+                if (lastPart && lastPart.length === 2 && !isNaN(lastPart)) {
+                    return '20' + lastPart;
+                }
+            }
+            if (fechaStr.length >= 4 && !isNaN(fechaStr.substring(0, 4))) {
+                return fechaStr.substring(0, 4);
+            }
+            return '2026';
+        }
+
+        function extractMonth(fechaStr) {
+            if (!fechaStr) return '01';
+            fechaStr = String(fechaStr).trim();
+            const sep = fechaStr.includes('/') ? '/' : (fechaStr.includes('-') ? '-' : '');
+            if (sep) {
+                const parts = fechaStr.split(sep);
+                if (parts.length >= 3) {
+                    if (parts[0].length === 4) return parts[1].padStart(2, '0');
+                    return parts[1].padStart(2, '0');
+                } else if (parts.length === 2) {
+                    if (parts[0].length === 4) return parts[1].padStart(2, '0');
+                    return parts[0].padStart(2, '0');
+                }
+            }
+            return '01';
+        }
+
+        async function init() {
+            try {
+                const token = localStorage.getItem('token') || (window.parent && window.parent.localStorage ? window.parent.localStorage.getItem('token') : null);
+                const res = await fetch('/api/garantias', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const dbGarantias = await res.json();
+                
+                if (!Array.isArray(dbGarantias)) {
+                    console.error('Error cargando datos de garantías:', dbGarantias);
+                    rawData = [];
+                } else {
+                    rawData = dbGarantias.map(g => {
+                        const fechaRep = g.fecha_reporte || '2026-01-01';
+                        const anio = extractYear(fechaRep);
+                        const mesNum = extractMonth(fechaRep);
+                        const mesKey = `${anio}-${mesNum}`;
+                        const ref = g.referencia || '';
+                        const tipoCir = g.tipo_circuito || (ref ? (ref.includes('_') ? ref.split('_')[0] : (ref.includes('-') ? ref.split('-')[0] : ref)) : 'General');
+
+                        return {
+                            Responsable: g.responsable || 'Sistema',
+                            Vendedor: g.vendedor_distribuidor || 'No especificado',
+                            Memorando: g.memorando || '',
+                            Fecha_Reporte: fechaRep,
+                            Mes: mesKey,
+                            Anio: anio,
+                            OP_Pedido: g.op_pedido || '',
+                            Cliente: g.cliente || 'No especificado',
+                            Nit_Cliente: g.nit_cliente || '',
+                            Ciudad: g.ciudad || 'No especificada',
+                            Remision: g.remision || '',
+                            Referencia: ref,
+                            Cantidad: Number(g.cantidad) || 1,
+                            Tipo_Solicitud: g.tipo_solicitud || 'GARANTIA',
+                            Observaciones: g.observaciones || '',
+                            Fecha_Revision: g.fecha_revision || '',
+                            No_Garantia: g.no_garantia || 'G000',
+                            Estado: g.estado || 'Aprobada',
+                            Lote_Fecha: g.lote_fecha || '',
+                            Problema: g.problema || 'No especificado',
+                            Quien_Aprobo: g.quien_aprobo_rechazo || '',
+                            TipoCir: tipoCir
+                        };
+                    });
+                }
+            } catch (e) {
+                console.error('Error cargando datos del servidor:', e);
+                rawData = [];
+            }
+
+            const anios = [...new Set(rawData.map(item => item.Anio))].filter(a => a).sort();
+            allTipoCirs = [...new Set(rawData.map(item => item.TipoCir))].filter(tc => tc && tc !== 'No especificado' && tc !== '').sort();
+
+            // Esto corre cada 15s (ver setInterval(init, ...) más abajo) para
+            // traer datos nuevos del servidor sin que la persona tenga que
+            // recargar la página. Antes, cada vez que corría, se borraba y
+            // se volvía a llenar selectedTipoCirs completo — o sea que
+            // cualquier tipo de circuito que la persona hubiera desmarcado
+            // en el filtro volvía a aparecer marcado 15 segundos después.
+            // Ahora solo se agregan a la selección los tipos que aparecen
+            // por primera vez (incluida la primera carga de la página, ya
+            // que tiposCirConocidos empieza vacío); los que ya se conocían
+            // conservan la selección que la persona haya dejado.
+            allTipoCirs.forEach(tc => {
+                if (!tiposCirConocidos.has(tc)) {
+                    tiposCirConocidos.add(tc);
+                    selectedTipoCirs.add(tc);
+                }
+            });
+
+            fillSelect('filterAnio', anios);
+            buildSlicerTipoCir();
+
+            filterData();
+        }
+
+        function formatMesLabel(mesStr) {
+            if (!mesStr || !mesStr.includes('-')) return mesStr;
+            const [anio, mes] = mesStr.split('-');
+            const mesesNombres = {
+                '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
+                '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
+                '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+            };
+            return `${mesesNombres[mes] || mes} de ${anio}`;
+        }
+
+        function fillSelect(elementId, items, isMes = false) {
+            const sel = document.getElementById(elementId);
+            const currentVal = sel.value;
+            sel.innerHTML = sel.options[0].outerHTML;
+            items.forEach(item => {
+                if (item && item !== 'No especificado' && item !== 'No asignado' && item !== '') {
+                    let opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = isMes ? formatMesLabel(item) : item;
+                    sel.appendChild(opt);
+                }
+            });
+            sel.value = currentVal;
+        }
+
+        function buildSlicerTipoCir() {
+            const container = document.getElementById('slicerContainer');
+            const currentScroll = container.scrollTop;
+            container.innerHTML = '';
+
+            allTipoCirs.forEach(tc => {
+                const isChecked = selectedTipoCirs.has(tc);
+                let div = document.createElement('div');
+                div.className = `slicer-item ${isChecked ? 'active' : ''}`;
+                div.innerHTML = `
+                    <span>${escapeHtml(tc)}</span>
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} style="pointer-events: none;">
+                `;
+                div.onclick = () => {
+                    if (selectedTipoCirs.has(tc)) {
+                        selectedTipoCirs.delete(tc);
+                    } else {
+                        selectedTipoCirs.add(tc);
+                    }
+                    buildSlicerTipoCir();
+                    filterData();
+                };
+                container.appendChild(div);
+            });
+            container.scrollTop = currentScroll;
+            filterSlicerList();
+        }
+
+        function toggleTipoCir(tc) {
+            if (selectedTipoCirs.has(tc)) {
+                selectedTipoCirs.delete(tc);
+            } else {
+                selectedTipoCirs.add(tc);
+            }
+            buildSlicerTipoCir();
+            filterData();
+        }
+
+        function selectAllTipoCir(select) {
+            selectedTipoCirs.clear();
+            if (select) {
+                allTipoCirs.forEach(tc => selectedTipoCirs.add(tc));
+            }
+            buildSlicerTipoCir();
+            filterData();
+        }
+
+        function filterSlicerList() {
+            const query = document.getElementById('slicerSearch').value.toLowerCase();
+            const items = document.querySelectorAll('#slicerContainer .slicer-item');
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        function clearSpecificFilter(type) {
+            if (type === 'Anio') document.getElementById('filterAnio').value = '';
+            if (type === 'TipoCir') selectAllTipoCir(true);
+            filterData();
+        }
+
+        function resetFilters() {
+            const anioSelect = document.getElementById('filterAnio');
+            if (anioSelect) anioSelect.value = '';
+            selectedMes = null;
+            selectedProblema = null;
+            selectedTipoSolicitud = null;
+            selectAllTipoCir(true);
+            filterData();
+        }
+
+        function filterData() {
+            const anioVal = document.getElementById('filterAnio') ? document.getElementById('filterAnio').value : '';
+
+            const filtered = rawData.filter(item => {
+                const itemAnio = item.Mes ? item.Mes.substring(0, 4) : '';
+                const itemMes = item.Mes ? item.Mes.substring(5, 7) : '';
+
+                const matchAnio = !anioVal || itemAnio === anioVal;
+                const matchMes = !selectedMes || itemMes === selectedMes;
+                const matchTipoCir = selectedTipoCirs.size === 0 || selectedTipoCirs.has(item.TipoCir);
+                const matchProblema = !selectedProblema || item.Problema === selectedProblema || (selectedProblema.endsWith('...') && item.Problema.startsWith(selectedProblema.slice(0, -3)));
+                const matchSolicitud = !selectedTipoSolicitud || item.Tipo_Solicitud === selectedTipoSolicitud;
+
+                return matchAnio && matchMes && matchTipoCir && matchProblema && matchSolicitud;
+            });
+
+            updateKPIs(filtered);
+            updateCharts(filtered);
+        }
+
+        function updateKPIs(data) {
+            const total = data.reduce((sum, item) => sum + item.Cantidad, 0);
+            const aprobadas = data.filter(item => item.Estado.toLowerCase().includes('aprobada')).reduce((sum, item) => sum + item.Cantidad, 0);
+            const rechazadas = data.filter(item => item.Estado.toLowerCase().includes('rechazada')).reduce((sum, item) => sum + item.Cantidad, 0);
+            const tasa = total > 0 ? ((aprobadas / total) * 100).toFixed(1) : 0;
+
+            const elTotal = document.getElementById('kpiTotal');
+            if (elTotal) elTotal.textContent = total.toLocaleString();
+            const elAprobadas = document.getElementById('kpiAprobadas');
+            if (elAprobadas) elAprobadas.textContent = aprobadas.toLocaleString();
+            const elRechazadas = document.getElementById('kpiRechazadas');
+            if (elRechazadas) elRechazadas.textContent = rechazadas.toLocaleString();
+            const elTasa = document.getElementById('kpiTasa');
+            if (elTasa) elTasa.textContent = tasa + '%';
+            const rowCountEl = document.getElementById('rowCount');
+            if (rowCountEl) rowCountEl.textContent = data.length.toLocaleString();
+        }
+
+        function updateCharts(data) {
+            // 1. Chart Mes
+            const anioVal = document.getElementById('filterAnio') ? document.getElementById('filterAnio').value : '';
+            const mesesLabelsFull = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+            const nombresMeses = {
+                '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
+                '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
+                '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+            };
+
+            const mesMap = {};
+            data.forEach(item => {
+                const mesKey = item.Mes || '2026-01';
+                const itemAnio = mesKey.substring(0, 4);
+                const itemMes = mesKey.substring(5, 7);
+
+                if (!anioVal || itemAnio === anioVal) {
+                    if (itemMes) {
+                        mesMap[itemMes] = (mesMap[itemMes] || 0) + item.Cantidad;
+                    }
+                }
+            });
+
+            const mesesDisplayLabels = mesesLabelsFull.map(m => nombresMeses[m]);
+            const mesesValues = mesesLabelsFull.map(m => mesMap[m] || 0);
+
+            if (chartMesInstance) chartMesInstance.destroy();
+            const ctxMes = document.getElementById('chartMes').getContext('2d');
+            chartMesInstance = new Chart(ctxMes, {
+                type: 'bar',
+                data: {
+                    labels: mesesDisplayLabels,
+                    datasets: [{
+                        label: 'Cantidad',
+                        data: mesesValues,
+                        backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            selectedMes = mesesLabelsFull[index];
+                            filterData();
+                        }
+                    }
+                }
+            });
+
+            // 3. Chart Referencias (Top 10 TipoCir)
+            const refMap = {};
+            data.forEach(item => {
+                let tc = item.TipoCir || 'Sin TipoCir';
+                refMap[tc] = (refMap[tc] || 0) + item.Cantidad;
+            });
+            const sortedRefs = Object.keys(refMap).sort((a,b) => refMap[b] - refMap[a]).slice(0, 10);
+            const refValues = sortedRefs.map(r => refMap[r]);
+
+            if (chartReferenciasInstance) chartReferenciasInstance.destroy();
+            const ctxRef = document.getElementById('chartReferencias').getContext('2d');
+            chartReferenciasInstance = new Chart(ctxRef, {
+                type: 'bar',
+                data: {
+                    labels: sortedRefs,
+                    datasets: [{
+                        label: 'Cantidad',
+                        data: refValues,
+                        backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                        borderColor: 'rgba(25, 135, 84, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            selectedTipoCirs.clear();
+                            selectedTipoCirs.add(sortedRefs[index]);
+                            buildSlicerTipoCir();
+                            filterData();
+                        }
+                    }
+                }
+            });
+
+            // 4. Chart Problemas (Top 8)
+            const probMap = {};
+            data.forEach(item => {
+                const prob = item.Problema.length > 30 ? item.Problema.substring(0, 30) + '...' : item.Problema;
+                probMap[prob] = (probMap[prob] || 0) + item.Cantidad;
+            });
+            const sortedProbs = Object.keys(probMap).sort((a,b) => probMap[b] - probMap[a]).slice(0, 8);
+            const probValues = sortedProbs.map(p => probMap[p]);
+
+            if (chartProblemasInstance) chartProblemasInstance.destroy();
+            const ctxProb = document.getElementById('chartProblemas').getContext('2d');
+            chartProblemasInstance = new Chart(ctxProb, {
+                type: 'bar',
+                data: {
+                    labels: sortedProbs,
+                    datasets: [{
+                        label: 'Cantidad',
+                        data: probValues,
+                        backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            selectedProblema = sortedProbs[index];
+                            filterData();
+                        }
+                    }
+                }
+            });
+
+            // 5. Chart Tipo Solicitud
+            const solMap = {};
+            data.forEach(item => {
+                solMap[item.Tipo_Solicitud] = (solMap[item.Tipo_Solicitud] || 0) + item.Cantidad;
+            });
+            const solLabels = Object.keys(solMap);
+            const totalSol = Object.values(solMap).reduce((a, b) => a + b, 0);
+            const solPercentages = solLabels.map(s => totalSol > 0 ? ((solMap[s] / totalSol) * 100).toFixed(1) : 0);
+
+            if (chartSolicitudInstance) chartSolicitudInstance.destroy();
+            const ctxSol = document.getElementById('chartSolicitud').getContext('2d');
+            chartSolicitudInstance = new Chart(ctxSol, {
+                type: 'pie',
+                data: {
+                    labels: solLabels.map((l, idx) => `${l} (${solPercentages[idx]}%)`),
+                    datasets: [{
+                        data: solPercentages,
+                        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            selectedTipoSolicitud = solLabels[index];
+                            filterData();
+                        }
+                    }
+                }
+            });
+        }
+
+        window.onload = () => {
+            init();
+            setInterval(init, 15000);
+        };
+    </script>
+</body>
+</html>

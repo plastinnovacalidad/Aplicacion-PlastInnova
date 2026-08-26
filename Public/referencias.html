@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear Referencia - Plast-Innova</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+
+    /* Header y pantalla de login: estructura y color institucional vienen
+       de css/comun.css (--header-bg por defecto, igual en las 7 páginas). */
+
+    /* .main-container y .content-area NO se comparten (ver nota en comun.css).
+       Fase C: el menú lateral se reemplazó por pestañas arriba, así que
+       ahora main-container apila en columna (pestañas, luego contenido)
+       en vez de las dos columnas de antes. */
+    .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
+    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+
+    .form-grid { display: grid; grid-template-columns: 160px 1fr; gap: 14px 18px; align-items: center; max-width: 700px; }
+    .form-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
+    .form-grid input, .form-grid select, .form-grid textarea { padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .form-grid textarea { resize: vertical; min-height: 60px; }
+    .form-grid .file-input { padding: 8px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; cursor: pointer; }
+    .form-grid .file-input:hover { border-color: var(--brand-primary); background: #f0f3ff; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; max-width: 700px; }
+    .btn-primary { background: var(--brand-primary-gradient); color: white; border: none; padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #f0f0f0; color: #555; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-secondary:hover { background: #e0e0e0; }
+    .form-msg { padding: 12px 16px; border-radius: 8px; margin-top: 15px; font-size: 14px; display: none; }
+    .form-msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+    .form-msg.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+
+    .edit-search { display: flex; gap: 10px; margin-bottom: 20px; max-width: 600px; }
+    .edit-search input { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    .edit-search input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .edit-ref-list { margin-bottom: 20px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 6px; }
+    .edit-ref-item { padding: 10px 14px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; transition: all 0.15s; }
+    .edit-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
+    .edit-ref-item.active { background: var(--brand-primary-gradient); color: white; border-color: transparent; }
+
+    .edit-tabs-header { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; gap: 4px; }
+    .edit-tab-btn { padding: 10px 20px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #888; border-bottom: 3px solid transparent; transition: all 0.15s; border-radius: 6px 6px 0 0; }
+    .edit-tab-btn:hover { color: var(--brand-primary); background: #f0f3ff; }
+    .edit-tab-btn.active { color: var(--brand-primary); border-bottom-color: var(--brand-primary); background: #f0f3ff; }
+    .edit-tab-content { display: none; }
+    .edit-tab-content.active { display: block; }
+    .edit-tab-btn.hidden { display: none; }
+
+    .info-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 18px; align-items: center; max-width: 700px; margin-bottom: 20px; }
+    .info-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
+    .info-grid .readonly { padding: 10px 12px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; font-size: 14px; color: #666; }
+    .badge-activa { background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
+    .badge-obsoleta { background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
+
+    .section-box { border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-bottom: 20px; background: #fafbfc; }
+    .section-box h4 { font-size: 15px; font-weight: 700; color: #444; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+    .section-box p.desc { font-size: 13px; color: #888; margin-bottom: 15px; }
+
+    /* Auditoría de Cambios — misma tabla simple que ya usa "Crear Referencia
+       (Planos)" de Metrología (Public/referencias_metrologia.html), para
+       que el historial de una referencia se vea igual sin importar el
+       módulo. */
+    .audit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .audit-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: #888; padding: 6px 8px; border-bottom: 1px solid #ddd; }
+    .audit-table td { padding: 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+
+    /* Cotas eléctricas y especificaciones de cableado — mismos campos que
+       antes se editaban solo desde Valores y Cableado, ahora disponibles
+       tanto al crear una referencia como al editarla desde acá. Cada
+       fieldset (Revisión / Prueba Mínimo / Prueba Máximo) se organiza en
+       columnas: voltaje aparte, y amperaje+potencia apilados en su propia
+       columna (medias y altas), para que potencia quede debajo de su
+       amperaje correspondiente en vez de mezclarse por un grid genérico. */
+    /* Los 4 fieldsets (Revisión / Prueba Mínimo / Prueba Máximo / Cableado)
+       van en una fila que se acomoda sola: tantas columnas como quepan de
+       al menos 300px, así en pantallas anchas quedan varios lado a lado en
+       vez de una lista larga para hacer scroll hacia abajo. */
+    .valores-fieldsets-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+    .valores-fieldset { border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px 16px 16px; margin: 0; }
+    .valores-fieldset legend { font-size: 13px; font-weight: 700; color: #444; padding: 0 6px; }
+
+    .valores-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #555; }
+    .valores-field small { font-weight: 400; color: #999; }
+    .valores-field input[type="text"], .valores-field select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; background: #fff; }
+    .valores-field input[type="text"]:focus, .valores-field select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+
+    .valores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 16px; }
+    .valores-cols { display: flex; gap: 16px; flex-wrap: wrap; }
+    .valores-col { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 150px; }
+
+    .valores-check-row { display: flex; gap: 20px; margin-bottom: 12px; }
+
+    /* Foto de la forma de cableado: miniatura + botón para subir/cambiar,
+       directamente en Crear/Editar Referencia (antes solo se podía desde
+       Valores y Cableado, y solo si la forma ya existía de antes). */
+    .valores-foto-cableado { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+    .valores-foto-preview { width: 90px; height: 70px; border-radius: 8px; border: 1px solid #ddd; background: #fafbfc; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .valores-foto-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .valores-foto-placeholder { font-size: 10px; color: #999; text-align: center; padding: 4px; line-height: 1.3; }
+    .valores-foto-upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f0f3ff; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--brand-primary); cursor: pointer; transition: background 0.15s; }
+    .valores-foto-upload-btn:hover { background: #e0e7ff; }
+    .valores-check-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #555; cursor: pointer; }
+
+    /* Foto actual de la versión que se está editando (pestaña "Modificación
+       de versión"), a la izquierda, con la foto + cotas eléctricas + cableado
+       a la derecha — mismo patrón de dos columnas que ya usa "Crear
+       Referencia (Planos)" de Metrología (Public/referencias_metrologia.html,
+       ver #planoActualBoxModif). Julio pidió que acá también se vea la foto
+       actual junto con los valores, para poder editar ambos sin cambiar de
+       pantalla. */
+    .ref-edit-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+    .ref-edit-right { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+    #fotoActualBox { min-width: 0; }
+    .foto-actual-viewer { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #fafafa; min-height: 220px; display: flex; align-items: center; justify-content: center; position: relative; }
+    .foto-actual-viewer img { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; }
+    /* Igual que en Circuitos SMD (smd.html): un overlay transparente encima
+       de la foto que bloquea el clic derecho y arrastrar-para-guardar,
+       porque la foto ya trae la marca de agua con el nombre de quien la ve. */
+    .protected-overlay { position: absolute; inset: 0; z-index: 5; background: transparent; cursor: default; }
+    @media (max-width: 1080px) {
+      .ref-edit-layout { grid-template-columns: 1fr; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>🔐 Administración Referencias</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div class="header-left">
+        <h1>➕ Crear Referencia</h1>
+        <p>Referencias, versiones y fotos de circuito — usadas por Circuitos SMD y Valores y Cableado</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span>Sesión activa: <strong id="userName">--</strong></span>
+      <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
+      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="main-container" id="appMain" style="display:none;">
+    <div class="tabs">
+      <button class="tab-btn active" id="navCrear" onclick="switchSection('crear')">📷 Crear Referencia</button>
+      <button class="tab-btn" id="navEditar" onclick="switchSection('editar')">🗄️ Editar Referencia</button>
+    </div>
+
+    <div class="content-area" id="contentArea">
+      <div id="secCrear">
+        <div class="content-title">📷 Crear Nueva Referencia</div>
+        <div class="form-grid">
+          <label>Código base *</label>
+          <input type="text" id="crearCodigo" placeholder="Ej: REF-001">
+          <label>Carpeta destino</label>
+          <select id="crearCarpetaIdx">
+            <option value="1">C:\\Users\\produ\\OneDrive\\Escritorio\\27.2 Imagen_Circuito</option>
+            <option value="0">E:\\</option>
+          </select>
+          <label>Imagen *</label>
+          <input type="file" id="crearImagen" accept="image/*" class="file-input">
+          <label>Motivo / Observación</label>
+          <textarea id="crearMotivo" placeholder="¿Por qué se crea esta referencia? (opcional)"></textarea>
+        </div>
+
+        <!-- Cotas eléctricas y especificaciones de cableado de la V1 que se
+             va a crear — opcional, se pueden dejar en blanco y completar
+             luego desde Editar Referencia. Solo aparece para quien tiene
+             permiso de gestionar Valores y Cableado. Los botones de acción
+             van al final de todo el formulario, después de esta sección. -->
+        <div class="section-box" id="crearValoresBox" style="display:none; max-width:1200px;">
+          <h4>⚡ Cotas y Especificaciones de Cableado (opcional)</h4>
+          <p class="desc">Valores eléctricos medidos y configuración de cableado de esta versión. Se pueden completar ahora o más adelante desde "Editar Referencia".</p>
+          <div class="valores-fieldsets-row" id="crearValoresFields"></div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="limpiarCrear()">Limpiar</button>
+          <button class="btn-primary" id="btnCrearRef" onclick="crearReferencia()">Crear referencia</button>
+        </div>
+        <div class="form-msg" id="crearMsg"></div>
+      </div>
+
+      <div id="secEditar" style="display:none;">
+        <div class="content-title">🗄️ Editar Referencia</div>
+        <div class="edit-search">
+          <input type="text" id="editSearchRef" placeholder="Buscar referencia..." oninput="filtrarRefsEditar()">
+        </div>
+        <div class="edit-ref-list" id="editRefList"></div>
+
+        <div id="editFormContainer" style="display:none;">
+          <div class="edit-tabs-header">
+            <button class="edit-tab-btn active" onclick="switchEditTab('info')" id="editTabInfo">📋 Información</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('modif')" id="editTabModif">✏️ Modificación de versión</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('nueva')" id="editTabNueva">🆕 Nueva versión</button>
+            <button class="edit-tab-btn hidden" onclick="switchEditTab('auditoria')" id="editTabAuditoria">📜 Auditoría de Cambios</button>
+          </div>
+
+          <div class="edit-tab-content active" id="editContentInfo">
+            <div class="info-grid">
+              <label>Código base</label>
+              <div class="readonly" id="infoCodigo">--</div>
+              <label>Versión actual</label>
+              <div class="readonly" id="infoVersion">--</div>
+              <label>Estado</label>
+              <div class="readonly" id="infoEstado">--</div>
+              <label>¿Necesita prueba?</label>
+              <div class="readonly">
+                <select id="selectPrueba" onchange="cambiarPrueba()" style="padding:8px 12px;border-radius:6px;border:1px solid #ddd;font-size:14px;cursor:pointer;min-width:160px;">
+                  <option value="1">SÍ - PENDIENTE</option>
+                  <option value="0">NO - PROBADA</option>
+                </select>
+              </div>
+              <label>Creado por</label>
+              <div class="readonly" id="infoCreadoPor">--</div>
+              <label>Fecha creación</label>
+              <div class="readonly" id="infoFecha">--</div>
+            </div>
+          </div>
+
+          <div class="edit-tab-content" id="editContentModif">
+            <!-- Foto actual a la izquierda (igual que "Plano actual" en
+                 Crear Referencia de Metrología) y a la derecha, apiladas, la
+                 subida de nueva imagen + las cotas eléctricas y
+                 especificaciones de cableado — así se ve la foto mientras se
+                 editan los valores, sin tener que ir a otra pantalla. -->
+            <div class="ref-edit-layout">
+              <div class="section-box" id="fotoActualBox" style="margin-bottom:0;">
+                <h4>📷 Foto actual</h4>
+                <p class="desc">Versión activa: <strong id="fotoActualVersionLabel">--</strong></p>
+                <div id="fotoActualViewer" class="foto-actual-viewer">
+                  <div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>
+                </div>
+              </div>
+
+              <div class="ref-edit-right">
+                <div class="section-box" style="margin-bottom:0;">
+                  <h4>✏️ Modificación de versión actual</h4>
+                  <p class="desc">Sube una nueva imagen que reemplazará la versión activa actual.</p>
+                  <div class="form-grid">
+                    <label>Nueva imagen *</label>
+                    <input type="file" id="modifImagen" accept="image/*" class="file-input">
+                    <label>Motivo del cambio *</label>
+                    <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza la imagen actual?"></textarea>
+                  </div>
+                  <div class="form-actions" style="margin-top:15px;">
+                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()">🔄 Reemplazar imagen</button>
+                  </div>
+                  <div class="form-msg" id="modifMsg"></div>
+                </div>
+
+                <!-- Antes esto vivía en su propia pestaña ("⚡ Valores y
+                     Cableado"), separada de "Modificación de versión" — Julio
+                     pidió que quedaran juntas porque ambas se editan sobre la
+                     misma versión actual, para no tener que cambiar de pestaña
+                     para ver/corregir los valores de la versión que se está
+                     modificando. Se precarga con los datos que ya tiene esa
+                     versión (ver cargarValoresEdicion) para poder corregir solo
+                     lo que cambió, en vez de partir de cero. -->
+                <div class="section-box" id="modifValoresBox" style="display:none; margin-bottom:0;">
+                  <h4>⚡ Cotas y especificaciones de cableado</h4>
+                  <p class="desc">Se editan sobre la versión actual: <strong id="editValoresVersionLabel">--</strong>.</p>
+                  <div class="valores-fieldsets-row" id="editValoresFields"></div>
+                  <div class="form-actions" style="margin-top:15px;">
+                    <button class="btn-primary" id="btnGuardarValores" onclick="guardarValoresEdicion()">💾 Guardar valores y cableado</button>
+                  </div>
+                  <div class="form-msg" id="editValoresMsg"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="edit-tab-content" id="editContentNueva">
+            <div class="section-box" style="margin-bottom:15px;">
+              <h4>🆕 Subir nueva versión</h4>
+              <p class="desc">Esto generará automáticamente la siguiente versión.</p>
+              <div class="form-grid">
+                <label>Carpeta destino</label>
+                <select id="nuevaVerCarpetaIdx">
+                  <option value="1">C:\\Users\\produ\\OneDrive\\Escritorio\\27.2 Imagen_Circuito</option>
+                  <option value="0">E:\\</option>
+                </select>
+                <label>Versión (opcional)</label>
+                <input type="text" id="nuevaVerNumero" placeholder="Ej: V4 (dejar vacío para automático)">
+                <label>Imagen *</label>
+                <input type="file" id="nuevaVerImagen" accept="image/*" class="file-input">
+                <label>Motivo del cambio</label>
+                <textarea id="nuevaVerMotivo" placeholder="¿Por qué se sube esta nueva versión?"></textarea>
+              </div>
+            </div>
+
+            <!-- Cotas y cableado de la nueva versión — a diferencia de
+                 "Modificación de versión" (que trae precargados los valores
+                 de la versión activa para corregir lo que haga falta), acá
+                 va en blanco a propósito: Julio pidió que una versión nueva
+                 empiece sin heredar en silencio los valores de la anterior,
+                 ya que puede tener especificaciones distintas. Se completa
+                 ahora o, si se deja vacío, después desde "Modificación de
+                 versión" una vez creada. -->
+            <div class="section-box" id="nuevaValoresBox" style="display:none; margin-bottom:0;">
+              <h4>⚡ Cotas y especificaciones de cableado (opcional)</h4>
+              <p class="desc">Valores eléctricos y configuración de cableado de esta nueva versión. Se pueden completar ahora o más adelante desde "Modificación de versión".</p>
+              <div class="valores-fieldsets-row" id="nuevaValoresFields"></div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersion()">⬆️ Subir nueva versión</button>
+            </div>
+            <div class="form-msg" id="nuevaVerMsg"></div>
+          </div>
+
+          <!-- Historial centralizado de esta referencia (creación, cambios
+               de versión, ediciones de valores/cableado) — cubre tanto
+               Circuitos SMD como Valores y Cableado, ya que esta pantalla es
+               la administración compartida de ambos módulos. -->
+          <div class="edit-tab-content" id="editContentAuditoria">
+            <div class="section-box" style="margin-bottom:0;">
+              <h4>📜 Auditoría de Cambios</h4>
+              <p class="desc">Historial de creación, versiones y ediciones de valores/cableado de esta referencia.</p>
+              <table class="audit-table" id="tablaAuditoriaRef">
+                <thead>
+                  <tr><th style="width:130px;">Fecha</th><th style="width:110px;">Acción</th><th>Detalle</th><th style="width:140px;">Usuario</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div class="rec-empty" id="auditoriaRefVacio" style="display:none; padding:10px;">Sin cambios registrados todavía.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script src="js/auth-comun.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let usuarioActual = null;
+    let permisosUsuario = [];
+    let referencias = [];
+    let referenciaEditando = null;
+    let datosEditando = null;
+    let seccionActual = 'crear';
+    let editTabActiva = 'info';
+
+    async function initApp() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+      try {
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        document.getElementById('userName').textContent = me.usuario || 'Usuario';
+        usuarioActual = me;
+      } catch (e) {}
+      await cargarMisPermisos();
+      if (!tienePermiso('gestion.ver')) {
+        alert('No tienes permiso para acceder a administración de referencias.');
+        location.href = 'index.html';
+        return;
+      }
+      if (tienePermiso('referencias.crear')) document.getElementById('navCrear').classList.remove('hidden');
+      else document.getElementById('navCrear').classList.add('hidden');
+      if (tienePermiso('referencias.editar')) document.getElementById('navEditar').classList.remove('hidden');
+      else document.getElementById('navEditar').classList.add('hidden');
+
+      document.getElementById('editTabAuditoria').classList.toggle('hidden', !tienePermiso('referencias.ver'));
+
+      // Cotas eléctricas y especificaciones de cableado: permiso propio
+      // ('valores_cableado.gestion'), separado de poder crear/editar la
+      // referencia y su foto — quien no lo tenga simplemente no ve esta
+      // parte del formulario.
+      const puedeValoresCableado = tienePermiso('valores_cableado.gestion');
+      const crearValoresBox = document.getElementById('crearValoresBox');
+      if (crearValoresBox) {
+        crearValoresBox.style.display = puedeValoresCableado ? 'block' : 'none';
+        if (puedeValoresCableado) {
+          await cargarFormasCableado();
+          document.getElementById('crearValoresFields').innerHTML = renderCamposValores('crearVal');
+        }
+      }
+      // Mismo bloque, pero para la pestaña "Nueva versión" del panel de
+      // edición — va en blanco (ver comentario en el HTML), no se precarga
+      // con nada.
+      const nuevaValoresBox = document.getElementById('nuevaValoresBox');
+      if (nuevaValoresBox) {
+        nuevaValoresBox.style.display = puedeValoresCableado ? 'block' : 'none';
+        if (puedeValoresCableado) {
+          document.getElementById('nuevaValoresFields').innerHTML = renderCamposValores('nuevaVal');
+        }
+      }
+      const btnVolver = document.getElementById('btnVolverPortal');
+      if (btnVolver) {
+        btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+      }
+
+      await cargarReferencias();
+
+      // Deep-link desde Valores y Cableado (↗ Editar Referencia): si viene
+      // ?editar=CODIGO en la URL, se abre directo en Editar Referencia, con
+      // esa referencia seleccionada y en la pestaña de Modificación de
+      // versión (donde ahora viven también los valores/cableado) — así ya
+      // no aterriza en un formulario de creación en blanco. Antes el link
+      // solo abría esta página sin contexto, que era justo la queja de
+      // Julio ("no me trae los valores").
+      const codigoDeepLink = new URLSearchParams(location.search).get('editar');
+      if (codigoDeepLink) {
+        if (tienePermiso('referencias.editar') && referencias.includes(codigoDeepLink)) {
+          switchSection('editar');
+          await seleccionarRefEditar(codigoDeepLink);
+          filtrarRefsEditar(); // para que quede resaltada en la lista, igual que si se hubiera hecho clic
+          switchEditTab('modif');
+          return;
+        }
+        // El botón "↗ Editar Referencia" de Valores y Cableado se muestra
+        // con el permiso 'gestion.ver', pero abrir la referencia acá exige
+        // 'referencias.editar' — hoy todo rol con 'gestion.ver' también
+        // tiene 'referencias.editar', así que esto no pasa en la práctica,
+        // pero si algún día se crea un rol que tenga uno sin el otro, antes
+        // esta página simplemente se abría vacía sin explicar por qué (el
+        // link "no hacía nada"). Ahora al menos se avisa qué pasó, en vez
+        // de fallar en silencio.
+        if (!tienePermiso('referencias.editar')) {
+          alert('No tienes permiso para editar referencias de Circuitos SMD.');
+        } else if (!referencias.includes(codigoDeepLink)) {
+          alert(`No se encontró la referencia "${codigoDeepLink}" en Circuitos SMD.`);
+        }
+      }
+
+      switchSection(tienePermiso('referencias.crear') ? 'crear' : 'editar');
+    }
+
+    // ========== COTAS ELÉCTRICAS Y ESPECIFICACIONES DE CABLEADO ==========
+    // Mismos campos que antes vivían solo en el modal de edición de Valores
+    // y Cableado (ver js/valores_cableado/app.js) — se reusan acá los
+    // nombres para no tener que traducir nada contra la API. Un mismo
+    // helper arma el HTML dos veces (uno para "Crear Referencia", otro para
+    // "Editar Referencia") usando un prefijo distinto de id por campo.
+    const CAMPOS_CABLEADO_TEXTO = [
+      ['posicion_punto', 'Posición punto', null],
+      ['referencia_cable', 'Referencia cable', null],
+    ];
+    const CAMPOS_VALORES_TODOS = [
+      'voltaje_revision', 'amperaje_medias', 'potencia_medias', 'amperaje_altas', 'potencia_altas',
+      'voltaje_min', 'amperaje_min_medias', 'potencia_min_medias', 'amperaje_min_altas', 'potencia_min_altas',
+      'voltaje_max', 'amperaje_max', 'potencia_max',
+      ...CAMPOS_CABLEADO_TEXTO.map(c => c[0]),
+    ];
+    // 'forma_cableado' no va en CAMPOS_VALORES_TODOS porque ya no es un
+    // input de texto suelto — se lee/escribe aparte con
+    // obtenerFormaCableadoActual()/llenarCamposValores() (ver más abajo),
+    // porque ahora es un desplegable con las formas ya conocidas + opción
+    // de escribir una nueva.
+    let formasCableadoConocidas = [];
+
+    async function cargarFormasCableado() {
+      try {
+        const res = await fetch('/api/valores-cableado/formas-cableado', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        formasCableadoConocidas = (res.ok && data.formas) ? data.formas : [];
+      } catch (e) { formasCableadoConocidas = []; }
+    }
+
+    function campoValorHtml(prefix, name, label, ayuda) {
+      return `<label class="valores-field">${label}<input type="text" id="${prefix}_${name}">${ayuda ? `<small>${ayuda}</small>` : ''}</label>`;
+    }
+
+    // Desplegable de "forma de cableado" (en vez de texto libre) + miniatura
+    // y botón para subir/cambiar su foto directamente desde acá — antes
+    // solo se podía subir esa foto desde Valores y Cableado, y solo si la
+    // forma ya existía de antes en algún otro producto.
+    function renderFormaCableadoBlock(prefix) {
+      const opciones = formasCableadoConocidas.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+      return `
+        <label class="valores-field">Forma de cableado
+          <select id="${prefix}_forma_cableado_select" onchange="onCambioFormaCableado('${prefix}')">
+            <option value="">-- Selecciona --</option>
+            ${opciones}
+            <option value="__nueva__">+ Nueva forma...</option>
+          </select>
+          <input type="text" id="${prefix}_forma_cableado_nueva" placeholder='Nombre exacto del archivo, ej. "1099.jpg"' style="display:none; margin-top:6px;" oninput="cargarPreviewFotoCableado('${prefix}')">
+        </label>
+        <div class="valores-foto-cableado">
+          <div class="valores-foto-preview" id="${prefix}_foto_cableado_preview"><span class="valores-foto-placeholder">Selecciona una forma</span></div>
+          <label class="valores-foto-upload-btn">
+            📤 Subir / cambiar foto
+            <input type="file" accept="image/*" id="${prefix}_foto_cableado_file" style="display:none;" onchange="onFotoCableadoSeleccionada('${prefix}', event)">
+          </label>
+        </div>
+      `;
+    }
+
+    function obtenerFormaCableadoActual(prefix) {
+      const sel = document.getElementById(`${prefix}_forma_cableado_select`);
+      if (!sel) return '';
+      if (sel.value === '__nueva__') {
+        const txt = document.getElementById(`${prefix}_forma_cableado_nueva`);
+        return txt ? txt.value.trim() : '';
+      }
+      return sel.value;
+    }
+
+    function onCambioFormaCableado(prefix) {
+      const sel = document.getElementById(`${prefix}_forma_cableado_select`);
+      const txt = document.getElementById(`${prefix}_forma_cableado_nueva`);
+      if (txt) {
+        txt.style.display = (sel && sel.value === '__nueva__') ? 'block' : 'none';
+        if (sel && sel.value !== '__nueva__') txt.value = '';
+      }
+      cargarPreviewFotoCableado(prefix);
+    }
+
+    async function cargarPreviewFotoCableado(prefix) {
+      const box = document.getElementById(`${prefix}_foto_cableado_preview`);
+      if (!box) return;
+      const forma = obtenerFormaCableadoActual(prefix);
+      if (!forma) { box.innerHTML = '<span class="valores-foto-placeholder">Selecciona o escribe una forma</span>'; return; }
+      box.innerHTML = '<span class="valores-foto-placeholder">Cargando…</span>';
+      try {
+        const res = await fetch(`/api/valores-cableado/foto-cableado/${encodeURIComponent(forma)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (res.ok && data && (data.data || data.url)) {
+          const src = data.tipo === 'archivo' ? data.data : data.url;
+          box.innerHTML = `<img src="${src}" alt="Cableado">`;
+        } else {
+          box.innerHTML = '<span class="valores-foto-placeholder">Sin foto todavía</span>';
+        }
+      } catch (e) {
+        box.innerHTML = '<span class="valores-foto-placeholder">Sin foto todavía</span>';
+      }
+    }
+
+    async function onFotoCableadoSeleccionada(prefix, e) {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const forma = obtenerFormaCableadoActual(prefix);
+      if (!forma) { alert('Primero selecciona o escribe una forma de cableado'); return; }
+      const fd = new FormData();
+      fd.append('imagen', file);
+      try {
+        const res = await fetch(`/api/valores-cableado/fotos-cableado/${encodeURIComponent(forma)}`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          // Si era una forma nueva que no estaba en la lista, se agrega de
+          // una vez para que quede disponible sin recargar la página.
+          if (!formasCableadoConocidas.includes(forma)) {
+            formasCableadoConocidas.push(forma);
+            formasCableadoConocidas.sort();
+            // Actualizar el array en memoria no le agrega la opción al
+            // <select> que ya está pintado en pantalla — antes esto dejaba
+            // "9999.jpg" fuera del desplegable hasta recargar la página
+            // (aunque la foto sí se hubiera subido bien). Se agrega la
+            // opción nueva al <select> de este mismo campo sin tocar su
+            // selección actual (sigue en "+ Nueva forma..." con el texto
+            // que el usuario ya escribió).
+            const sel = document.getElementById(`${prefix}_forma_cableado_select`);
+            if (sel && !Array.from(sel.options).some(o => o.value === forma)) {
+              const opt = document.createElement('option');
+              opt.value = forma;
+              opt.textContent = forma;
+              const optNueva = sel.querySelector('option[value="__nueva__"]');
+              sel.insertBefore(opt, optNueva);
+            }
+          }
+          await cargarPreviewFotoCableado(prefix);
+        } else {
+          alert(data.error || 'No se pudo subir la foto');
+        }
+      } catch (err) {
+        alert('Error de conexión al subir la foto');
+      }
+    }
+
+    // Cada fieldset se arma en columnas: el voltaje aparte, y cada
+    // amperaje con su potencia correspondiente apilados en la misma
+    // columna (medias y altas por separado) — así potencia siempre queda
+    // justo debajo de su amperaje, en vez de acomodarse donde alcance en
+    // un grid genérico.
+    function renderCamposValores(prefix) {
+      return `
+        <fieldset class="valores-fieldset">
+          <legend>🔧 Revisión (14V)</legend>
+          <div class="valores-cols">
+            <div class="valores-col">${campoValorHtml(prefix, 'voltaje_revision', 'Voltaje')}</div>
+            <div class="valores-col">
+              ${campoValorHtml(prefix, 'amperaje_medias', 'Amperaje medias (bajas)')}
+              ${campoValorHtml(prefix, 'potencia_medias', 'Potencia medias')}
+            </div>
+            <div class="valores-col">
+              ${campoValorHtml(prefix, 'amperaje_altas', 'Amperaje altas')}
+              ${campoValorHtml(prefix, 'potencia_altas', 'Potencia altas')}
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="valores-fieldset">
+          <legend>🔽 Prueba Mínimo</legend>
+          <div class="valores-cols">
+            <div class="valores-col">${campoValorHtml(prefix, 'voltaje_min', 'Voltaje mínimo')}</div>
+            <div class="valores-col">
+              ${campoValorHtml(prefix, 'amperaje_min_medias', 'Amperaje mín. (medias)')}
+              ${campoValorHtml(prefix, 'potencia_min_medias', 'Potencia mín. (medias)')}
+            </div>
+            <div class="valores-col">
+              ${campoValorHtml(prefix, 'amperaje_min_altas', 'Amperaje mín. (altas)')}
+              ${campoValorHtml(prefix, 'potencia_min_altas', 'Potencia mín. (altas)')}
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="valores-fieldset">
+          <legend>🔼 Prueba Máximo</legend>
+          <div class="valores-cols">
+            <div class="valores-col">${campoValorHtml(prefix, 'voltaje_max', 'Voltaje máximo')}</div>
+            <div class="valores-col">
+              ${campoValorHtml(prefix, 'amperaje_max', 'Amperaje máximo')}
+              ${campoValorHtml(prefix, 'potencia_max', 'Potencia máxima')}
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="valores-fieldset" style="grid-column: 1 / -1;">
+          <legend>⚙️ Cableado</legend>
+          <div class="valores-check-row">
+            <label><input type="checkbox" id="${prefix}_cortar_puntas"> Cortar puntas</label>
+            <label><input type="checkbox" id="${prefix}_empujar_cables"> Empujar cables</label>
+          </div>
+          <div class="valores-grid">
+            ${CAMPOS_CABLEADO_TEXTO.map(c => campoValorHtml(prefix, c[0], c[1], c[2])).join('')}
+          </div>
+          ${renderFormaCableadoBlock(prefix)}
+        </fieldset>
+      `;
+    }
+
+    function leerCamposValores(prefix) {
+      const payload = {};
+      CAMPOS_VALORES_TODOS.forEach(n => {
+        const el = document.getElementById(`${prefix}_${n}`);
+        payload[n] = el ? el.value.trim() : '';
+      });
+      const cp = document.getElementById(`${prefix}_cortar_puntas`);
+      const ec = document.getElementById(`${prefix}_empujar_cables`);
+      payload.cortar_puntas = cp && cp.checked ? 1 : 0;
+      payload.empujar_cables = ec && ec.checked ? 1 : 0;
+      payload.forma_cableado = obtenerFormaCableadoActual(prefix);
+      return payload;
+    }
+
+    function llenarCamposValores(prefix, data = {}) {
+      CAMPOS_VALORES_TODOS.forEach(n => {
+        const el = document.getElementById(`${prefix}_${n}`);
+        if (el) el.value = (data[n] === null || data[n] === undefined) ? '' : data[n];
+      });
+      const cp = document.getElementById(`${prefix}_cortar_puntas`);
+      const ec = document.getElementById(`${prefix}_empujar_cables`);
+      if (cp) cp.checked = (data.cortar_puntas === 1 || data.cortar_puntas === true || data.cortar_puntas === '1');
+      if (ec) ec.checked = (data.empujar_cables === 1 || data.empujar_cables === true || data.empujar_cables === '1');
+
+      // Forma de cableado: si el valor guardado no está en la lista de
+      // formas conocidas (poco común), se agrega como opción para no
+      // perderlo en vez de dejar el desplegable en blanco.
+      const sel = document.getElementById(`${prefix}_forma_cableado_select`);
+      const txt = document.getElementById(`${prefix}_forma_cableado_nueva`);
+      const valorForma = data.forma_cableado || '';
+      if (sel) {
+        const existeEnLista = Array.from(sel.options).some(o => o.value === valorForma);
+        if (valorForma && !existeEnLista) {
+          const opt = document.createElement('option');
+          opt.value = valorForma;
+          opt.textContent = valorForma;
+          sel.insertBefore(opt, sel.querySelector('option[value="__nueva__"]'));
+        }
+        sel.value = valorForma;
+      }
+      if (txt) { txt.value = ''; txt.style.display = 'none'; }
+      cargarPreviewFotoCableado(prefix);
+    }
+
+    async function guardarValoresParaVersion(versionId, prefix) {
+      try {
+        const payload = leerCamposValores(prefix);
+        const res = await fetch(`/api/valores-cableado/productos/${versionId}`, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        return res.ok;
+      } catch (e) { return false; }
+    }
+
+    async function cargarValoresEdicion(versionId) {
+      if (!versionId) { llenarCamposValores('editVal', {}); return; }
+      try {
+        const res = await fetch(`/api/valores-cableado/producto/${versionId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        llenarCamposValores('editVal', (res.ok && data.datos) ? data.datos : {});
+      } catch (e) { llenarCamposValores('editVal', {}); }
+    }
+
+    async function guardarValoresEdicion() {
+      if (!datosEditando || !datosEditando.version_id) return;
+      const msg = document.getElementById('editValoresMsg');
+      msg.style.display = 'none';
+      const payload = leerCamposValores('editVal');
+      try {
+        const res = await fetch(`/api/valores-cableado/productos/${datosEditando.version_id}`, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success'; msg.style.display = 'block';
+          msg.textContent = 'Valores y cableado guardados exitosamente.';
+        } else {
+          msg.className = 'form-msg error'; msg.style.display = 'block';
+          msg.textContent = data.error || 'Error al guardar';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error'; msg.style.display = 'block';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+
+    if (token) {
+      fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(async r => {
+          if (r.ok) { usuarioActual = await r.json(); initApp(); }
+          else { localStorage.removeItem('token'); token = null; document.getElementById('loginOverlay').style.display = 'flex'; }
+        })
+        .catch(() => { localStorage.removeItem('token'); token = null; document.getElementById('loginOverlay').style.display = 'flex'; });
+    } else {
+      document.getElementById('loginOverlay').style.display = 'flex';
+    }
+
+    // La lógica (fetch de /api/roles usando usuarioActual.rol) ahora vive en
+    // js/comun.js como cargarPermisosConUsuarioActual() (era idéntica en
+    // gestion.html, smd.html y referencias.html); esta página no necesita
+    // guardar la lista completa de roles, solo permisosUsuario.
+    async function cargarMisPermisos() {
+      await cargarPermisosConUsuarioActual();
+    }
+
+    function switchSection(sec) {
+      seccionActual = sec;
+      document.querySelectorAll('.tab-btn').forEach(n => n.classList.remove('active'));
+      document.getElementById('secCrear').style.display = 'none';
+      document.getElementById('secEditar').style.display = 'none';
+      const navMap = { crear: 'navCrear', editar: 'navEditar' };
+      if (navMap[sec]) document.getElementById(navMap[sec]).classList.add('active');
+      document.getElementById('sec' + sec.charAt(0).toUpperCase() + sec.slice(1)).style.display = 'block';
+      if (sec === 'editar') renderEditarSection();
+    }
+
+    function switchEditTab(tab) {
+      editTabActiva = tab;
+      document.querySelectorAll('.edit-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.edit-tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('editTab' + (tab.charAt(0).toUpperCase() + tab.slice(1))).classList.add('active');
+      document.getElementById('editContent' + (tab.charAt(0).toUpperCase() + tab.slice(1))).classList.add('active');
+    }
+
+    // preservarMsg=true se usa después de crear una referencia con éxito:
+    // se limpian los campos para la siguiente referencia, pero SIN ocultar
+    // el mensaje "Referencia creada exitosamente" que se acaba de mostrar
+    // (antes esta función siempre lo ocultaba, así que el mensaje de éxito
+    // nunca llegaba a verse — desaparecía en el mismo instante en que
+    // aparecía). El botón "Limpiar" sigue ocultando el mensaje como antes.
+    function limpiarCrear(preservarMsg) {
+      document.getElementById('crearCodigo').value = '';
+      document.getElementById('crearImagen').value = '';
+      document.getElementById('crearMotivo').value = '';
+      if (!preservarMsg) document.getElementById('crearMsg').style.display = 'none';
+      if (document.getElementById('crearValoresFields').innerHTML) llenarCamposValores('crearVal', {});
+    }
+
+    async function crearReferencia() {
+      const codigo = document.getElementById('crearCodigo').value.trim();
+      const carpetaIdx = document.getElementById('crearCarpetaIdx').value;
+      const fileInput = document.getElementById('crearImagen');
+      const motivo = document.getElementById('crearMotivo').value.trim();
+      const msg = document.getElementById('crearMsg');
+      msg.style.display = 'none';
+      if (!codigo) { alert('Ingrese un código base'); return; }
+      if (fileInput.files.length === 0) { alert('Seleccione una imagen'); return; }
+
+      const fd = new FormData();
+      fd.append('codigo_base', codigo);
+      fd.append('carpeta_idx', carpetaIdx);
+      fd.append('imagen', fileInput.files[0]);
+      fd.append('motivo', motivo);
+
+      const btn = document.getElementById('btnCrearRef');
+      btn.disabled = true; btn.textContent = 'Creando...';
+      try {
+        const res = await fetch('/api/referencias', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success'; msg.style.display = 'block';
+          msg.textContent = 'Referencia creada exitosamente.';
+          if (tienePermiso('valores_cableado.gestion') && data.version_id) {
+            const okValores = await guardarValoresParaVersion(data.version_id, 'crearVal');
+            if (!okValores) msg.textContent += ' (No se pudieron guardar las cotas/especificaciones — puedes completarlas luego desde "Editar Referencia".)';
+          }
+          limpiarCrear(true);
+          await cargarReferencias();
+        } else {
+          msg.className = 'form-msg error'; msg.style.display = 'block';
+          msg.textContent = data.error || 'Error al crear';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error'; msg.style.display = 'block';
+        msg.textContent = 'Error de conexión';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Crear referencia';
+      }
+    }
+
+    async function cargarReferencias() {
+      try {
+        const res = await fetch('/api/referencias', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        referencias = data.referencias || [];
+        if (seccionActual === 'editar') renderEditarSection();
+      } catch (e) { referencias = []; }
+    }
+
+    function renderEditarSection() {
+      filtrarRefsEditar();
+    }
+
+    function filtrarRefsEditar() {
+      const q = (document.getElementById('editSearchRef').value || '').toLowerCase();
+      const list = document.getElementById('editRefList');
+      list.innerHTML = '';
+      const filtradas = referencias.filter(r => r.toLowerCase().includes(q));
+      if (filtradas.length === 0) {
+        list.innerHTML = '<div class="rec-empty" style="padding:10px;">No se encontraron referencias</div>';
+        return;
+      }
+      filtradas.forEach(codigoBase => {
+        const item = document.createElement('div');
+        item.className = 'edit-ref-item' + (referenciaEditando === codigoBase ? ' active' : '');
+        item.textContent = codigoBase;
+        item.onclick = (e) => seleccionarRefEditar(codigoBase, e);
+        list.appendChild(item);
+      });
+    }
+
+    async function seleccionarRefEditar(codigoBase, e) {
+      referenciaEditando = codigoBase;
+      document.querySelectorAll('.edit-ref-item').forEach(el => el.classList.remove('active'));
+      if (e && e.target) e.target.classList.add('active');
+      await cargarDatosEdicion(codigoBase);
+    }
+
+    // Foto actual de la versión activa, en la pestaña "Modificación de
+    // versión" (ver .ref-edit-layout más arriba) — mismo endpoint protegido
+    // con marca de agua que usa Circuitos SMD (/api/fotos-version/:id), para
+    // que Julio vea la foto que se va a reemplazar mientras corrige los
+    // valores/cableado de esa misma versión, sin tener que ir a otra pantalla.
+    async function cargarFotoActualEdicion(versionId, codigoBaseEnCurso) {
+      const viewer = document.getElementById('fotoActualViewer');
+      if (!versionId) {
+        viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
+        return;
+      }
+      viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Cargando…</div>';
+      try {
+        const res = await fetch(`/api/fotos-version/${versionId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        // Misma protección que el resto de cargarDatosEdicion: si el usuario
+        // ya seleccionó otra referencia mientras esperábamos esta respuesta,
+        // no pisar la foto que sí corresponde a la selección actual.
+        if (referenciaEditando !== codigoBaseEnCurso) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (referenciaEditando !== codigoBaseEnCurso) return;
+          const foto = data.fotos && data.fotos[0];
+          if (foto) {
+            viewer.innerHTML = `<img src="${foto.data}" alt="${escapeHtml(foto.nombre || '')}"><div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>`;
+          } else {
+            viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
+          }
+        } else {
+          viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
+        }
+      } catch (e) {
+        if (referenciaEditando !== codigoBaseEnCurso) return;
+        viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Error al cargar la foto</div>';
+      }
+    }
+
+    async function cargarDatosEdicion(codigoBase, preservarTab) {
+      try {
+        const res = await fetch(`/api/imagen/${encodeURIComponent(codigoBase)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        // Si el usuario ya hizo clic en OTRA referencia de la lista de la
+        // izquierda mientras esperábamos esta respuesta, referenciaEditando
+        // ya cambió (se asigna de forma síncrona en seleccionarRefEditar,
+        // antes de llamar a esta función) — seguir pintando esta respuesta
+        // obsoleta sobrescribiría en pantalla los datos de la referencia
+        // que el usuario sí seleccionó al final.
+        if (referenciaEditando !== codigoBase) return;
+        datosEditando = data.datos || {};
+        document.getElementById('infoCodigo').textContent = datosEditando.codigo_base || codigoBase;
+        document.getElementById('infoVersion').textContent = datosEditando.version_actual || 'Sin versión';
+        document.getElementById('infoEstado').textContent = datosEditando.estado || '--';
+        const selPrueba = document.getElementById('selectPrueba');
+        selPrueba.value = (datosEditando.necesita_prueba === 1) ? '1' : '0';
+        document.getElementById('infoCreadoPor').textContent = datosEditando.creado_por || '--';
+        document.getElementById('infoFecha').textContent = datosEditando.fecha_creacion || '--';
+
+        document.getElementById('fotoActualVersionLabel').textContent = datosEditando.version_actual || 'Sin versión';
+        await cargarFotoActualEdicion(datosEditando.version_id, codigoBase);
+        if (referenciaEditando !== codigoBase) return;
+
+        const modifValoresBox = document.getElementById('modifValoresBox');
+        if (tienePermiso('valores_cableado.gestion')) {
+          modifValoresBox.style.display = 'block';
+          document.getElementById('editValoresFields').innerHTML = renderCamposValores('editVal');
+          document.getElementById('editValoresVersionLabel').textContent = `${datosEditando.codigo_base || codigoBase} — ${datosEditando.version_actual || 'sin versión'}`;
+          document.getElementById('editValoresMsg').style.display = 'none';
+          await cargarValoresEdicion(datosEditando.version_id);
+          if (referenciaEditando !== codigoBase) return;
+        } else {
+          modifValoresBox.style.display = 'none';
+        }
+
+        await cargarAuditoriaRef(datosEditando.codigo_base || codigoBase);
+        if (referenciaEditando !== codigoBase) return;
+
+        document.getElementById('editFormContainer').style.display = 'block';
+        switchEditTab(preservarTab ? editTabActiva : 'info');
+      } catch (e) {
+        if (referenciaEditando === codigoBase) alert('Error cargando detalles');
+      }
+    }
+
+    // ========== AUDITORÍA DE CAMBIOS (Editar Referencia) ==========
+    // Mismo endpoint que ya usa el historial de cambios global de Gestión
+    // (GET /api/seguimiento/:codigo_base, gated en 'referencias.ver') —
+    // cubre creación, cambios de versión y ediciones de valores/cableado de
+    // esta referencia, ya que esta pantalla administra ambos módulos.
+    async function cargarAuditoriaRef(codigoBase) {
+      const tbody = document.querySelector('#tablaAuditoriaRef tbody');
+      const vacio = document.getElementById('auditoriaRefVacio');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (!tienePermiso('referencias.ver')) {
+        vacio.textContent = 'No tienes permiso para ver la auditoría de cambios.';
+        vacio.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/seguimiento/${encodeURIComponent(codigoBase)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        // Misma protección que cargarDatosEdicion(): descarta la respuesta
+        // si para cuando llega el usuario ya seleccionó otra referencia.
+        if (referenciaEditando !== codigoBase) return;
+        const cambios = (res.ok && data.seguimiento) ? data.seguimiento : [];
+        vacio.textContent = 'Sin cambios registrados todavía.';
+        vacio.style.display = cambios.length === 0 ? 'block' : 'none';
+        cambios.forEach(c => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${escapeHtml(c.fecha_cambio || '--')}</td>
+            <td>${escapeHtml(c.tipo_cambio || '--')}</td>
+            <td>${escapeHtml(c.motivo || c.cambio || '--')}</td>
+            <td>${escapeHtml(c.hecho_por_nombre || 'Sistema')}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        if (referenciaEditando !== codigoBase) return;
+        vacio.textContent = 'Error al cargar la auditoría de cambios.';
+        vacio.style.display = 'block';
+      }
+    }
+
+    async function cambiarPrueba() {
+      if (!datosEditando || !datosEditando.version_id) return;
+      const val = parseInt(document.getElementById('selectPrueba').value);
+      const verId = datosEditando.version_id;
+      try {
+        const res = await fetch(`/api/versiones/${verId}/prueba`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ necesita_prueba: val })
+        });
+        if (res.ok) {
+          datosEditando.necesita_prueba = val;
+        } else {
+          alert('Error al actualizar estado de prueba');
+        }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function modificarVersionActual() {
+      if (!datosEditando || !datosEditando.codigo_base) return;
+      const fileInput = document.getElementById('modifImagen');
+      const motivo = document.getElementById('modifMotivo').value.trim();
+      const msg = document.getElementById('modifMsg');
+      msg.style.display = 'none';
+      if (fileInput.files.length === 0) { alert('Seleccione la nueva imagen'); return; }
+      if (!motivo) { alert('Ingrese el motivo del cambio'); return; }
+
+      const fd = new FormData();
+      fd.append('imagen', fileInput.files[0]);
+      fd.append('motivo', motivo);
+
+      try {
+        const res = await fetch(`/api/referencias/${encodeURIComponent(datosEditando.codigo_base)}/modificar-version`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success'; msg.style.display = 'block';
+          msg.textContent = 'Versión modificada exitosamente.';
+          document.getElementById('modifImagen').value = '';
+          document.getElementById('modifMotivo').value = '';
+          await cargarDatosEdicion(referenciaEditando, true);
+        } else {
+          msg.className = 'form-msg error'; msg.style.display = 'block';
+          msg.textContent = data.error || 'Error al modificar';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error'; msg.style.display = 'block';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+
+    async function subirNuevaVersion() {
+      if (!datosEditando || !datosEditando.codigo_base) return;
+      const carpetaIdx = document.getElementById('nuevaVerCarpetaIdx').value;
+      const versionNum = document.getElementById('nuevaVerNumero').value.trim();
+      const fileInput = document.getElementById('nuevaVerImagen');
+      const motivo = document.getElementById('nuevaVerMotivo').value.trim();
+      const msg = document.getElementById('nuevaVerMsg');
+      msg.style.display = 'none';
+      if (fileInput.files.length === 0) { alert('Seleccione la imagen para la nueva versión'); return; }
+      // El backend (POST /referencias-codigo/:codigo/versiones) ya exige
+      // el motivo y devuelve 400 si falta — antes "Modificación de versión"
+      // sí lo pedía en pantalla pero "Nueva versión" no, así que acá el
+      // usuario solo se enteraba de que faltaba después de que el servidor
+      // rechazara la petición. Se valida acá también, igual que ya se hace
+      // en modificarVersionActual(), para que el aviso salga de inmediato.
+      if (!motivo) { alert('Ingrese el motivo del cambio'); return; }
+
+      const fd = new FormData();
+      fd.append('carpeta_idx', carpetaIdx);
+      if (versionNum) fd.append('version', versionNum);
+      fd.append('imagen', fileInput.files[0]);
+      fd.append('motivo', motivo);
+
+      try {
+        const res = await fetch(`/api/referencias-codigo/${encodeURIComponent(datosEditando.codigo_base)}/versiones`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success'; msg.style.display = 'block';
+          msg.textContent = 'Nueva versión subida exitosamente.';
+          // Si tiene permiso de Valores y Cableado y llenó (aunque sea
+          // parcialmente) el bloque de cotas/cableado de esta pestaña, se
+          // guarda de una vez contra la versión recién creada — mismo
+          // patrón que ya usa crearReferencia() con 'crearVal'. Si lo dejó
+          // en blanco, esto simplemente no guarda nada (la versión queda
+          // sin ficha todavía, para completarse después).
+          if (tienePermiso('valores_cableado.gestion') && data.version && data.version.id) {
+            const okValores = await guardarValoresParaVersion(data.version.id, 'nuevaVal');
+            if (!okValores) msg.textContent += ' (No se pudieron guardar las cotas/especificaciones — puedes completarlas luego desde "Modificación de versión".)';
+          }
+          document.getElementById('nuevaVerNumero').value = '';
+          document.getElementById('nuevaVerImagen').value = '';
+          document.getElementById('nuevaVerMotivo').value = '';
+          if (document.getElementById('nuevaValoresFields').innerHTML) llenarCamposValores('nuevaVal', {});
+          await cargarDatosEdicion(referenciaEditando, true);
+        } else {
+          msg.className = 'form-msg error'; msg.style.display = 'block';
+          msg.textContent = data.error || 'Error al subir';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error'; msg.style.display = 'block';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+  </script>
+</body>
+</html>

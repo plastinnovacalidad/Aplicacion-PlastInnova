@@ -1,0 +1,62 @@
+# ===================================================================
+# Dependencias (se reinstalan con "npm install" a partir de package.json
+# y package-lock.json — package-lock.json SÍ se sube, esta carpeta no)
+# ===================================================================
+node_modules/
+
+# ===================================================================
+# Configuración local con datos sensibles (contraseñas de administrador
+# por defecto, números de WhatsApp reales, rutas propias de este equipo).
+# .env.example SÍ se sube — es la plantilla sin datos reales para que
+# cualquiera que clone el proyecto sepa qué variables tiene que llenar.
+# ===================================================================
+.env
+
+# ===================================================================
+# Base de datos real (referencias, usuarios con su contraseña cifrada,
+# números de WhatsApp, etc.) — nunca debe subirse a git: son datos reales
+# de producción de Plast-Innova, no código. Se incluyen los archivos
+# -wal y -shm que SQLite crea junto al .db (parte del mismo archivo en la
+# práctica, mientras el servidor está corriendo).
+# El archivo suelto "base_datos.db" en la raíz del proyecto (0 bytes) es
+# un archivo vacío que quedó de alguna prueba — no hace falta subirlo
+# tampoco, por si en algún momento se llena de datos reales por accidente.
+# ===================================================================
+db/base_datos.db
+db/base_datos.db-wal
+db/base_datos.db-shm
+/base_datos.db
+
+# ===================================================================
+# Sesiones activas (tokens de inicio de sesión de los usuarios en este
+# momento) — cambian todo el tiempo y no deben quedar expuestas.
+# ===================================================================
+sesiones.json
+
+# ===================================================================
+# Fotos y archivos subidos por los usuarios (fotos de circuitos, planos,
+# evidencias, etc.) y la carpeta de obsoletos — no son código del
+# proyecto, son contenido que cada instalación genera por su cuenta.
+# ===================================================================
+uploads/
+
+# ===================================================================
+# Sesión y caché del bot de WhatsApp (whatsapp-web.js) — contiene las
+# credenciales de la sesión de WhatsApp vinculada; si esto se sube,
+# cualquiera con el repositorio podría usar esa sesión de WhatsApp.
+# ===================================================================
+.wwebjs_auth/
+.wwebjs_cache/
+
+# ===================================================================
+# Archivos de registro (logs)
+# ===================================================================
+*.log
+
+# ===================================================================
+# Archivos propios del sistema operativo o del editor de código —
+# no tienen nada que ver con el proyecto en sí.
+# ===================================================================
+.DS_Store
+Thumbs.db
+.vscode/

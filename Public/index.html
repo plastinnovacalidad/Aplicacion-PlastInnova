@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Principal - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Header: estructura viene de css/comun.css; aquí solo las variables
+       que son distintas al valor por defecto (el color coincide). */
+    .header { --header-padding: 20px 40px; --header-shadow: 0 4px 15px rgba(0,0,0,0.1); --header-flex-shrink: 1; }
+    .header h1 { font-size: 24px; font-weight: 600; }
+    .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
+
+    .main-portal { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
+    .portal-title { text-align: center; margin-bottom: 18px; }
+    .portal-title h2 { font-size: 22px; color: #2d3748; font-weight: 700; margin-bottom: 4px; }
+    .portal-title p { font-size: 13px; color: #718096; }
+
+    .portal-sections { display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 1080px; }
+
+    /* Cada sección se distingue con un título + línea divisoria, pero
+       ocupando bastante menos espacio vertical que antes para que el
+       portal completo quepa más compacto en la pantalla. */
+    .portal-section .section-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 2px solid #dde3ee;
+    }
+    .portal-section .section-title .section-icon { font-size: 15px; }
+
+    /* Íconos cuadrados en vez de la tarjeta ancha de antes: cada módulo es
+       un tile fijo de 130x130 (el banner ocupa el cuadro completo), en vez
+       de una tarjeta de 300-360px de ancho con una franja de ícono de
+       160px de alto. */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, 130px); justify-content: center; gap: 14px; width: 100%; }
+
+    .portal-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.08); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; cursor: pointer; border: 1px solid #e2e8f0; text-decoration: none; color: inherit; width: 130px; }
+    .portal-card:hover { transform: translateY(-4px); box-shadow: 0 10px 22px rgba(27,79,196,0.2); border-color: #cbd5e0; }
+
+    .card-banner { height: 130px; width: 130px; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px; flex-shrink: 0; }
+    .card-banner.smd { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .card-banner.garantias { background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); }
+
+    /* Solo el ícono y el título — la descripción larga y el "Abrir Módulo..."
+       ya no van, hacían la tarjeta más grande de lo necesario. */
+    .card-body { padding: 8px 6px; display: flex; align-items: center; justify-content: center; }
+    .card-body h3 { font-size: 11px; color: #2d3748; margin: 0; font-weight: 600; text-align: center; line-height: 1.25; }
+
+    /* Login Overlay: diseño propio de esta página (tiene un subtítulo extra
+       que las demás no tienen), pero el color ya usa la misma variable
+       --header-bg institucional de css/comun.css, en vez de un morado fijo. */
+    .login-overlay { position: fixed; inset: 0; background: var(--header-bg, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%)); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .login-box { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 380px; }
+    .login-box h2 { text-align: center; margin-bottom: 8px; color: #2d3748; font-size: 24px; }
+    .login-box p { text-align: center; color: #718096; font-size: 13px; margin-bottom: 25px; }
+    .login-box input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .login-box input:focus { border-color: #1642AA; box-shadow: 0 0 0 3px rgba(22,66,169,0.15); }
+    .login-box button { width: 100%; padding: 12px; background: var(--header-bg, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%)); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .login-box button:hover { opacity: 0.9; }
+    .login-error { color: #e53e3e; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Login Overlay -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
+      <h2>Bienvenido</h2>
+      <p>Sistema Integrado de Calidad y Circuitos</p>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Ingresar al Sistema</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header">
+    <div class="header-brand">
+      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1>Sistema de Calidad y Control</h1>
+        <p>Plataforma Centralizada - Circuitos SMD & Garantías</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <button class="btn-logout" onclick="window.location.href='gestion.html'" title="Gestión y Permisos" style="font-size: 16px; padding: 6px 12px; display:none;" id="btnGestionHeader">⚙️</button>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div class="main-portal">
+    <div class="portal-title">
+      <h2>Seleccione un Módulo de Trabajo</h2>
+      <p>Elija la herramienta a la que desea acceder</p>
+    </div>
+
+    <div class="portal-sections">
+
+      <!-- Sección Electrónica: Circuitos SMD (sin gating, como siempre) y
+           Valores y Cableado (con permiso propio 'valores_cableado.ver').
+           La sección en sí no necesita ocultarse nunca: la tarjeta de SMD
+           siempre está visible. -->
+      <section class="portal-section" data-section="electronica">
+        <h3 class="section-title"><span class="section-icon">⚡</span>Electrónica</h3>
+        <div class="cards-grid">
+          <a href="smd.html" class="portal-card">
+            <div class="card-banner smd">⚡</div>
+            <div class="card-body">
+              <h3>Módulo Circuitos SMD</h3>
+            </div>
+          </a>
+
+          <a href="valores_cableado.html" class="portal-card" id="cardValoresCableado" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">🔌</div>
+            <div class="card-body">
+              <h3>Valores y Cableado</h3>
+            </div>
+          </a>
+
+          <!-- Único punto de entrada para crear referencias/versiones/fotos
+               de circuito — antes se llegaba desde un botón dentro de
+               Circuitos SMD; ahora es su propio módulo, así que crear o
+               editar una referencia para SMD o para Valores y Cableado
+               siempre empieza aquí (mismo catálogo, misma pantalla). -->
+          <a href="referencias.html" class="portal-card" id="cardCrearReferencia" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);">➕</div>
+            <div class="card-body">
+              <h3>Crear Referencia</h3>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Sección Piezas Plásticas: por ahora solo Metrología. Tiene
+           permiso propio, así que si nadie de los que puede ver este
+           portal tiene acceso, la sección completa se oculta por JS
+           (ver actualizarSeccionesVisibles). -->
+      <section class="portal-section" data-section="piezas">
+        <h3 class="section-title"><span class="section-icon">🔧</span>Piezas Plásticas</h3>
+        <div class="cards-grid">
+          <a href="metrologia.html" class="portal-card" id="cardMetrologia" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);">📐</div>
+            <div class="card-body">
+              <h3>Metrología y Planos de Molde</h3>
+            </div>
+          </a>
+
+          <!-- Igual que "Crear Referencia" es su propio módulo aparte de
+               Circuitos SMD, crear/versionar referencias de molde ahora
+               tiene su propio módulo aparte de Metrología (antes se hacía
+               con popups dentro de la pantalla de inspección). -->
+          <a href="referencias_metrologia.html" class="portal-card" id="cardCrearReferenciaMolde" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);">➕</div>
+            <div class="card-body">
+              <h3>Crear Referencia (Planos)</h3>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Sección Reportes: Tablero y Gestión de Garantías. Sin gating
+           (igual que hoy), la sección siempre se muestra. -->
+      <section class="portal-section" data-section="reportes">
+        <h3 class="section-title"><span class="section-icon">📊</span>Reportes</h3>
+        <div class="cards-grid">
+          <a href="garantias.html" class="portal-card">
+            <div class="card-banner garantias">📋</div>
+            <div class="card-body">
+              <h3>Tablero y Gestión de Garantías</h3>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Sección Calidad: Calidad General + Muestreos ISO 2859-1. Cada
+           tarjeta mantiene su propio color (dorado / verde azulado) para
+           reconocerse de un vistazo dentro de la sección. -->
+      <section class="portal-section" data-section="calidad">
+        <h3 class="section-title"><span class="section-icon">🏆</span>Calidad</h3>
+        <div class="cards-grid">
+          <a href="calidad.html" class="portal-card" id="cardCalidad" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #b7791f 0%, #975a16 100%);">🏆</div>
+            <div class="card-body">
+              <h3>Calidad General</h3>
+            </div>
+          </a>
+
+          <a href="iso2859.html" class="portal-card" id="cardIso2859" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #2c7a7b 0%, #285e61 100%);">🧪</div>
+            <div class="card-body">
+              <h3>Muestreos ISO 2859-1</h3>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Sección Bot WhatsApp: aparte, como pidió Julio. -->
+      <section class="portal-section" data-section="whatsapp">
+        <h3 class="section-title"><span class="section-icon">💬</span>Bot WhatsApp</h3>
+        <div class="cards-grid">
+          <a href="whatsapp_bot.html" class="portal-card" id="cardWhatsApp" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);">💬</div>
+            <div class="card-body">
+              <h3>Control de Registros WhatsApp</h3>
+            </div>
+          </a>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+
+    // La lógica (fetch de /api/roles + /api/me) ahora vive en js/comun.js
+    // como cargarPermisosDelUsuario() (era idéntica en garantias.html,
+    // index.html y metrologia.html).
+    async function cargarMisPermisos() {
+      await cargarPermisosDelUsuario();
+    }
+
+    async function checkSession() {
+      if (!token) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        return;
+      }
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (res.ok && data) {
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('userNameDisplay').textContent = `${data.nombre || data.usuario} (${data.rol_nombre || data.rol || 'Usuario'})`;
+          
+          await cargarMisPermisos();
+
+          const btnGestion = document.getElementById('btnGestionHeader');
+          if (btnGestion) {
+            // Antes también se mostraba con 'gestion.ver', pero ese permiso no
+            // garantiza acceso real a gestion.html (que exige 'roles.gestionar',
+            // 'usuarios.gestionar' o 'catalogos.gestionar'). Eso hacía que, por
+            // ejemplo, el rol inspector viera este botón y al entrar le negaran
+            // el acceso. 'catalogos.gestionar' se agregó aquí porque gestion.html
+            // ya permite entrar con ese permiso solo (pestaña Catálogos), pero
+            // este botón no se estaba mostrando para alguien que solo tuviera
+            // ese permiso — quedaba con acceso real pero sin forma de llegar ahí.
+            btnGestion.style.display = (tienePermiso('roles.gestionar') || tienePermiso('usuarios.gestionar') || tienePermiso('catalogos.gestionar')) ? 'inline-block' : 'none';
+          }
+
+          const cardCal = document.getElementById('cardCalidad');
+          if (cardCal) {
+            cardCal.style.display = tienePermiso('calidad.ver') ? 'flex' : 'none';
+          }
+
+          const cardValoresCableado = document.getElementById('cardValoresCableado');
+          if (cardValoresCableado) {
+            cardValoresCableado.style.display = tienePermiso('valores_cableado.ver') ? 'flex' : 'none';
+          }
+
+          // Mismo permiso que ya exigía referencias.html por su cuenta
+          // ('gestion.ver') — antes solo se llegaba ahí por un botón dentro
+          // de Circuitos SMD, ahora es su propio módulo del portal.
+          const cardCrearReferencia = document.getElementById('cardCrearReferencia');
+          if (cardCrearReferencia) {
+            cardCrearReferencia.style.display = tienePermiso('gestion.ver') ? 'flex' : 'none';
+          }
+
+          const cardWA = document.getElementById('cardWhatsApp');
+          if (cardWA) {
+            cardWA.style.display = (tienePermiso('whatsapp.bot.ver') || tienePermiso('gestion.ver')) ? 'flex' : 'none';
+          }
+
+          const cardMet = document.getElementById('cardMetrologia');
+          if (cardMet) {
+            cardMet.style.display = (tienePermiso('metrologia.ver') || tienePermiso('metrologia.gestion')) ? 'flex' : 'none';
+          }
+
+          const cardCrearReferenciaMolde = document.getElementById('cardCrearReferenciaMolde');
+          if (cardCrearReferenciaMolde) {
+            cardCrearReferenciaMolde.style.display = (tienePermiso('metrologia.crear_referencia') || tienePermiso('metrologia.versiones') || tienePermiso('metrologia.gestion')) ? 'flex' : 'none';
+          }
+
+          const cardIso = document.getElementById('cardIso2859');
+          if (cardIso) {
+            cardIso.style.display = (tienePermiso('iso2859.ver') || tienePermiso('iso2859.gestion')) ? 'flex' : 'none';
+          }
+
+          // Secciones como "Piezas Plásticas" o "Calidad" solo tienen
+          // tarjetas con permiso propio (a diferencia de "Electrónica" o
+          // "Reportes", que siempre muestran algo). Si a esta persona le
+          // ocultamos todas las tarjetas de una sección, hay que ocultar
+          // también el título de la sección — si no, queda un encabezado
+          // "Piezas Plásticas" flotando sin nada debajo.
+          actualizarSeccionesVisibles();
+
+          // Si la persona no tiene acceso a ningún módulo aparte de SMD (por
+          // ejemplo, Operario), se la manda directo a smd.html en vez de
+          // mostrarle un portal con una sola tarjeta útil. Antes esta
+          // condición solo miraba garantias.ver/gestion.ver, así que alguien
+          // con acceso ÚNICAMENTE a WhatsApp, Metrología o (ahora) Muestreos
+          // ISO 2859 también terminaba saltándose el portal sin querer —
+          // se completa la lista para que cualquier módulo aparte de SMD
+          // mantenga a la persona en el portal.
+          const tieneOtroModulo = ['garantias.ver', 'gestion.ver', 'whatsapp.bot.ver', 'metrologia.ver', 'metrologia.gestion', 'metrologia.crear_referencia', 'metrologia.versiones', 'iso2859.ver', 'iso2859.gestion', 'calidad.ver', 'valores_cableado.ver']
+            .some(p => tienePermiso(p));
+          if (!tieneOtroModulo) {
+            location.href = 'smd.html';
+            return;
+          }
+        } else {
+          localStorage.removeItem('token');
+          token = null;
+          document.getElementById('loginOverlay').style.display = 'flex';
+        }
+      } catch (e) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+      }
+    }
+
+    function actualizarSeccionesVisibles() {
+      document.querySelectorAll('.portal-section').forEach(seccion => {
+        const algunaVisible = Array.from(seccion.querySelectorAll('.portal-card'))
+          .some(card => card.style.display !== 'none');
+        seccion.style.display = algunaVisible ? '' : 'none';
+      });
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      if (!u || !p) {
+        err.textContent = 'Ingrese usuario y contraseña';
+        err.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: u, contrasena: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          await checkSession();
+        } else {
+          err.textContent = data.error || 'Credenciales inválidas';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'Error de conexión';
+        err.style.display = 'block';
+      }
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      location.reload();
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    checkSession();
+  </script>
+</body>
+</html>
