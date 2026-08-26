@@ -10,6 +10,7 @@ const whatsappAlertas = require('./data/whatsappAlertas');
 const calidadData = require('./data/calidad');
 const { generarPdfResumenCalidad } = require('./utils/pdfResumenCalidad');
 const { generarPdfReporteGarantias } = require('./utils/pdfReporteGarantias');
+const { generarPdfInspeccionMetrologia } = require('./utils/pdfInspeccionMetrologia');
 
 const {
   AREAS, TIMEZONE,
@@ -303,6 +304,56 @@ async function responderReporteGarantiasPDF(msg, etiquetaPeriodo, g) {
   try {
     const media = MessageMedia.fromFilePath(rutaArchivo);
     await msg.reply(media, null, { caption: `🛡️ *Reporte de Garantías — ${etiquetaPeriodo}*` });
+  } finally {
+    fs.unlink(rutaArchivo, () => {});
+  }
+}
+
+// Reporte de una inspección de Metrología (roadmap: separar Garantías/
+// Calidad — Julio pidió, aparte, que al guardar una inspección de un molde
+// se pueda mandar por WhatsApp un reporte con el plano, los datos
+// cargados, si cada cota quedó conforme y las fotos de evidencia. A
+// diferencia de enviarAlerta/enviarResumenPDF (que son avisos automáticos,
+// "fire and forget", sin nadie esperando el resultado), esta función la
+// llama routes/metrologia.js justo después de que la persona confirma "sí,
+// enviar" en un cuadro de diálogo — por eso SÍ devuelve un resultado
+// {enviado, motivo} en vez de solo loguear el error, para poder avisarle en
+// pantalla si no se pudo mandar (por ejemplo, porque el bot no está
+// conectado) en vez de dejarla pensando que sí se envió.
+async function enviarReporteInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta) {
+  if (!client) {
+    return { enviado: false, motivo: 'El bot de WhatsApp no está conectado en este momento.' };
+  }
+  const admins = numerosAdmin();
+  if (admins.length === 0) {
+    return { enviado: false, motivo: 'No hay ningún número configurado como administrador para recibir el reporte.' };
+  }
+
+  let rutaArchivo;
+  try {
+    rutaArchivo = await generarPdfInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta);
+  } catch (e) {
+    console.error('⚠️ No se pudo generar el PDF de la inspección de Metrología:', e.message);
+    return { enviado: false, motivo: 'No se pudo generar el PDF del reporte.' };
+  }
+
+  try {
+    const media = MessageMedia.fromFilePath(rutaArchivo);
+    const caption = `📐 *Reporte de Inspección — ${codigo}*\nFecha: ${inspeccion.fecha}  ·  Responsable: ${inspeccion.responsable}`;
+    let algunoEnviado = false;
+    for (const admin of admins) {
+      try {
+        await client.sendMessage(admin, media, { caption });
+        algunoEnviado = true;
+      } catch (e) {
+        console.error(`❌ Error enviando reporte de inspección a ${nombreDe(admin)}:`, e.message);
+      }
+    }
+    if (algunoEnviado) {
+      console.log(`🔔 Reporte de inspección "${codigo}" enviado por WhatsApp.`);
+      return { enviado: true };
+    }
+    return { enviado: false, motivo: 'No se pudo entregar el mensaje a ningún administrador.' };
   } finally {
     fs.unlink(rutaArchivo, () => {});
   }
@@ -962,4 +1013,5 @@ module.exports = {
   recargarNumerosWhatsApp,
   enviarAlerta,
   esAdmin,
+  enviarReporteInspeccionMetrologia,
 };

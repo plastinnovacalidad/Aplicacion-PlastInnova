@@ -69,6 +69,7 @@
     .badge-observacion { background: #fffaf0; color: #b7791f; }
     .btn-toggle-tabla { background: #f8fafc; border: 1px solid #e2e8f0; color: #2d3748; border-radius: 6px; padding: 7px 16px; font-size: 12.5px; cursor: pointer; font-weight: 600; margin-top: 10px; }
     .btn-toggle-tabla:hover { background: #edf2f7; }
+
   </style>
 </head>
 <body>
@@ -198,11 +199,12 @@
         usuarioActual = me;
       } catch (e) {}
       await cargarMisPermisos();
-      if (usuarioActual.rol !== 'admin' && !tienePermiso('calidad.ver')) {
+
+      if (!tienePermiso('calidad.ver')) {
         localStorage.removeItem('token');
         const err = document.getElementById('loginError');
         if (err) {
-          err.textContent = 'Acceso denegado: tu usuario no tiene permiso para ver el tablero de Calidad General.';
+          err.textContent = 'Acceso denegado: tu usuario no tiene permiso para ver el módulo de Calidad.';
           err.style.display = 'block';
         }
         document.getElementById('loginOverlay').style.display = 'flex';
@@ -226,6 +228,7 @@
         cargarMuestreosRecientes(),
       ]);
     }
+
 
     function checkSession() {
       if (token) initApp();

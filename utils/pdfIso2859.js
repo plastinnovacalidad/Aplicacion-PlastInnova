@@ -40,8 +40,13 @@ function anchoUtil(doc) {
 // para que un lote "Rechazado" se vea igual de rojo en la pantalla y en el PDF.
 function coloresEstado(valor) {
   const v = (valor || '').toString().toLowerCase();
-  if (['aceptado', 'seguir', 'aprobado', 'ninguna'].includes(v)) return { bg: COLORES.verdeBg, color: COLORES.verde };
-  if (['rechazado', 'parar', 'critico', 'crítico'].includes(v)) return { bg: COLORES.rojoBg, color: COLORES.rojo };
+  // 'conforme'/'fuera de tolerancia' son los dos estados que usa el módulo
+  // de Metrología (moldes_medidas_detalle.estado) — se agregan acá para que
+  // el reporte de inspección (utils/pdfInspeccionMetrologia.js) salga con
+  // el mismo verde/rojo que ya usan Auditoría/Lote/Trazabilidad, en vez de
+  // caer en el gris por defecto por no reconocer el texto.
+  if (['aceptado', 'seguir', 'aprobado', 'ninguna', 'conforme'].includes(v)) return { bg: COLORES.verdeBg, color: COLORES.verde };
+  if (['rechazado', 'parar', 'critico', 'crítico', 'fuera de tolerancia'].includes(v)) return { bg: COLORES.rojoBg, color: COLORES.rojo };
   if (['alerta', 'aceptado_con_obs', 'mayor'].includes(v)) return { bg: COLORES.naranjaBg, color: COLORES.naranja };
   if (v === 'menor') return { bg: COLORES.azulClaro, color: COLORES.azul };
   return { bg: COLORES.grisEstadoBg, color: COLORES.grisEstado };

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión y Tablero de Garantías</title>
+  <title>Tablero de Garantías</title>
   <link rel="icon" type="image/x-icon" href="img/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
@@ -22,94 +22,14 @@
 
     .main-container { padding: 20px 30px; display: flex; flex-direction: column; gap: 20px; flex: 1; max-width: 1600px; width: 100%; margin: 0 auto; }
 
-    /* Pestañas Principales: estilo compartido en css/comun.css (.tabs /
-       .tab-btn, Fase A de unificación de menús). */
-
-    .tab-content-section { display: none; flex-direction: column; gap: 20px; flex: 1; }
-    .tab-content-section.active { display: flex; }
-
-    /* KPIs */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
-    .kpi-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; border-left: 5px solid var(--brand-primary); }
-    .kpi-card.pendientes { border-left-color: #f6ad55; }
-    .kpi-card.aprobadas { border-left-color: #48bb78; }
-    .kpi-card.rechazadas { border-left-color: #f56565; }
-    .kpi-title { font-size: 13px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .kpi-value { font-size: 28px; font-weight: 700; color: #2d3748; margin-top: 5px; }
-
-    /* Controls bar */
-    .controls-bar { background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between; }
-    .search-box { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px; }
-    .search-box input, .search-box select { padding: 9px 14px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
-    .search-box input:focus, .search-box select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.15); }
-    .search-box input { flex: 1; }
-
-    .btn-primary { background: var(--brand-primary-gradient); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: opacity 0.2s; position: relative; z-index: 10; }
-    .btn-primary:hover { opacity: 0.9; }
-
-    /* Table Container */
-    .table-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; flex: 1; display: flex; flex-direction: column; }
-    .table-responsive { overflow-x: auto; flex: 1; max-height: calc(100vh - 200px); }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; white-space: nowrap; }
-    th { background: #f7fafc; color: #4a5568; font-weight: 600; padding: 12px 15px; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 10; }
-    td { padding: 10px 15px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
-    tr:hover { background: #f8fafc; }
-
-    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; text-align: center; }
-    .badge.aprobada { background: #c6f6d5; color: #22543d; }
-    .badge.rechazada { background: #fed7d7; color: #742a2a; }
-
-    /* Dashboard Iframe Container */
-    .dashboard-iframe-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: calc(100vh - 180px); }
+    /* Julio pidió separar en dos módulos lo que antes eran 2 pestañas acá:
+       la parte de "Gestión, Carga y Listado" (el formulario para registrar
+       devoluciones/garantías, con sus 2 modales y autocompletados) se
+       trasladó por completo al módulo de Calidad (Public/calidad.html,
+       pestaña "📋 Cargar Garantías") — así que ya no vive en este archivo.
+       Acá solo queda el Tablero Analítico, sin pestañas. */
+    .dashboard-iframe-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: calc(100vh - 140px); }
     .dashboard-iframe-container iframe { width: 100%; height: 100%; border: none; flex: 1; }
-
-    /* Modal - Estilo Formato Entrada de Mercancia por Devolucion */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 99999; padding: 20px; }
-    .modal-overlay.active { display: flex !important; }
-    .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 1250px; max-height: 94vh; display: flex; flex-direction: column; box-shadow: 0 25px 60px rgba(0,0,0,0.3); overflow-y: auto; overflow-x: visible; border: 2px solid #1a365d; }
-    
-    /* Formato Encabezado Estilo Plantilla */
-    .format-header { background: #fff; border-bottom: 3px solid #e53e3e; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; }
-    .format-brand { display: flex; flex-direction: column; }
-    .format-brand h2 { color: #1a365d; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
-    .format-brand span { color: #e53e3e; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-    
-    .format-meta { display: flex; gap: 20px; align-items: center; }
-    .meta-box { border: 2px solid #cbd5e0; border-radius: 8px; padding: 8px 15px; text-align: center; background: #f8fafc; }
-    .meta-box label { display: block; font-size: 10px; font-weight: 700; color: #4a5568; text-transform: uppercase; }
-    .meta-box input { border: none; background: transparent; font-size: 16px; font-weight: 700; color: #e53e3e; text-align: center; width: 110px; outline: none; }
-
-    .modal-body { padding: 20px 25px; overflow: visible; display: flex; flex-direction: column; gap: 20px; background: #fff; }
-
-    /* Cuadro de datos del cliente */
-    .client-box { border: 1px solid #cbd5e0; border-radius: 8px; padding: 15px; background: #f8fafc; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .form-group { display: flex; flex-direction: column; gap: 4px; }
-    .form-group label { font-size: 11px; font-weight: 700; color: #4a5568; text-transform: uppercase; }
-    .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; background: white; font-family: inherit; }
-    .form-group input:focus, .form-group select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.15); }
-    .form-group input[readonly] { background: #edf2f7; color: #4a5568; }
-
-    /* Tabla de items estilo formato */
-    .items-table-wrapper { border: 2px solid var(--brand-primary-dark); border-radius: 8px; overflow: visible; }
-    .items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .items-table th { background: var(--brand-primary-dark); color: white; padding: 10px 12px; font-weight: 600; text-align: left; font-size: 12px; text-transform: uppercase; white-space: nowrap; }
-    .items-table td { padding: 8px 10px; border-top: 1px solid #cbd5e0; vertical-align: middle; background: #fff; position: relative; }
-    .items-table input, .items-table select { width: 100%; padding: 7px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; }
-    
-    .btn-danger-sm { background: #fed7d7; color: #9b2c2c; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
-    .btn-danger-sm:hover { background: #feb2b2; }
-    .btn-success-sm { background: #c6f6d5; color: #22543d; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-success-sm:hover { background: #9ae6b4; }
-
-    .modal-footer { padding: 15px 25px; background: #f7fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-    .btn-secondary { background: #e2e8f0; color: #4a5568; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
-    .btn-secondary:hover { background: #cbd5e0; }
-
-    /* Autocomplete Datalist styling helpers */
-    .autocomplete-container { position: relative; }
-    .suggestions-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e0; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 999999; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
-    .suggestion-item { padding: 9px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #edf2f7; }
-    .suggestion-item:hover, .suggestion-item.selected { background: #ebf8ff; color: var(--brand-primary-dark); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -117,7 +37,7 @@
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
       <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>📋 Tablero y Gestión de Garantías</h2>
+      <h2>📊 Tablero de Garantías</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -129,7 +49,7 @@
     <div class="header-brand">
       <img src="img/logo.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
-        <h1>Tablero y Gestión de Garantías</h1>
+        <h1>Tablero de Garantías</h1>
       </div>
     </div>
     <div class="header-right">
@@ -140,258 +60,15 @@
   </div>
 
   <div class="main-container" id="appMain" style="display:none;">
-    <!-- Navegación por pestañas -->
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchMainTab('gestion')" id="btnTabGestion">📋 Gestión, Carga y Listado</button>
-      <button class="tab-btn" onclick="switchMainTab('dashboard')" id="btnTabDashboard">📊 Tablero Analítico (Dashboard)</button>
-    </div>
-
-    <!-- SECCIÓN 1: GESTIÓN Y CARGA -->
-    <div class="tab-content-section active" id="secGestion">
-      <!-- Controls -->
-      <div class="controls-bar">
-        <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Buscar por No. Garantía, Cliente, NIT, Referencia..." oninput="filtrarGarantias()">
-          <select id="filterEstado" onchange="filtrarGarantias()">
-            <option value="">Todos los Estados</option>
-            <option value="Aprobada">Aprobada</option>
-            <option value="Rechazada">Rechazada</option>
-          </select>
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn-primary" id="btnNuevaEntrada" onclick="abrirModalNueva()" style="padding: 14px 28px; font-size: 16px; font-weight: 700;">+ Nueva Entrada de Mercancía por Devolución</button>
-        </div>
-      </div>
-
-      <!-- Table -->
-      <div class="table-container">
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>No. Registro</th>
-                <th>Fecha Reporte</th>
-                <th>NIT Cliente</th>
-                <th>Cliente / Razón Social</th>
-                <th>Ciudad</th>
-                <th>Asesora</th>
-                <th>Remisión</th>
-                <th>Referencia</th>
-                <th>Cantidad</th>
-                <th>Tipo Solicitud</th>
-                <th>Estado</th>
-                <th>Causal / Problema</th>
-                <th>Revisión Gar.</th>
-                <th>Aprobó/Rechazó</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tablaGarantiasBody">
-              <!-- Dinámico -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECCIÓN 2: TABLERO ANALÍTICO (DASHBOARD) -->
-    <div class="tab-content-section" id="secDashboard">
-      <div class="dashboard-iframe-container">
-        <iframe src="dashboard_garantias.html" id="dashboardIframe"></iframe>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Estilo Formato Entrada de Mercancia por Devolucion -->
-  <div class="modal-overlay" id="modalGarantia">
-    <div class="modal-content">
-      
-      <!-- Encabezado Tipo Formato Físico -->
-      <div class="format-header">
-        <div class="format-brand">
-          <h2>PLAST INNOVA</h2>
-          <span id="modalTitle">Entrada de Mercancía por Devolución</span>
-        </div>
-        <div class="format-meta">
-          <div class="meta-box">
-            <label>No. Registro</label>
-            <input type="text" id="no_garantia" readonly>
-          </div>
-          <div class="meta-box" style="background: #fff;">
-            <label>Fecha Reporte</label>
-            <input type="date" id="fecha_reporte" tabindex="2" style="width: 140px; font-size: 13px; color: #2d3748; text-align: center;" onkeydown="handleFechaKeydown(event)">
-          </div>
-          <button type="button" class="modal-close" onclick="cerrarModal()" style="background:none; border:none; color:#1a365d; font-size:24px; cursor:pointer; margin-left: 10px;">&times;</button>
-        </div>
-      </div>
-
-      <div class="modal-body">
-        
-        <!-- Bloque Datos del Cliente con Asesora Select -->
-        <div class="client-box">
-          <div class="form-group autocomplete-container">
-            <label>Nit Cliente *</label>
-            <input type="text" id="nit_cliente" tabindex="1" placeholder="Escriba NIT..." oninput="buscarClienteNit(this.value)" onkeydown="handleNitKeydown(event)">
-            <div class="suggestions-list" id="sugClientes"></div>
-          </div>
-          <div class="form-group" style="grid-column: span 2;">
-            <label>Cliente (Razón Social)</label>
-            <input type="text" id="cliente" placeholder="Autocompletado..." readonly>
-          </div>
-          <div class="form-group">
-            <label>Ciudad</label>
-            <input type="text" id="ciudad" placeholder="Autocompletado..." readonly>
-          </div>
-
-          <div class="form-group">
-            <label>Código Vendedor</label>
-            <input type="text" id="responsable" placeholder="Cod" readonly>
-          </div>
-          <div class="form-group">
-            <label>Asesora</label>
-            <select id="asesora" onkeydown="handleAsesoraKeydown(event)">
-              <option value="">Seleccione Asesora...</option>
-              <option value="Lorena">Lorena</option>
-              <option value="Wendy">Wendy</option>
-              <option value="Paola">Paola</option>
-              <option value="Jenny">Jenny</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>No. Remisión / Factura</label>
-            <input type="text" id="remision" tabindex="3" placeholder="Ej. 726" onkeydown="handleRemisionKeydown(event)">
-          </div>
-
-          <div class="form-group">
-            <label>Fecha Revisión</label>
-            <input type="date" id="fecha_revision" readonly>
-          </div>
-          <div class="form-group" style="grid-column: span 3;">
-            <label>Recibido / Aprobado por</label>
-            <input type="text" id="quien_aprobo_rechazo" readonly>
-          </div>
-        </div>
-
-        <!-- Tabla Estilo Formato para los Artículos -->
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div style="font-weight: 700; font-size: 13px; color: #1a365d; text-transform: uppercase;" id="itemsTitle">Detalle de Artículos Devueltos</div>
-            <button type="button" class="btn-success-sm" id="btnAddItem" onclick="agregarItemFila()">+ Añadir Referencia (Tab)</button>
-          </div>
-
-          <div class="items-table-wrapper">
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th style="width: 7%;">Cant.</th>
-                  <th style="width: 20%;">Referencia *</th>
-                  <th style="width: 14%;">Tipo Solicitud</th>
-                  <th style="width: 14%;">Estado</th>
-                  <th style="width: 15%;">Lote / Fecha</th>
-                  <th style="width: 15%;">Causal / Problema</th>
-                  <th style="width: 10%;">Observación</th>
-                  <th style="width: 5%; text-align:center;" id="thAccion">Quitar</th>
-                </tr>
-              </thead>
-              <tbody id="itemsTableBody">
-                <!-- Filas dinámicas -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-        <button type="button" class="btn-primary" id="btnGuardarModal" onclick="guardarLoteGarantias()">Guardar Entrada de Mercancía</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Editar Garantía -->
-  <div class="modal-overlay" id="modalEditarGarantia">
-    <div class="modal-content" style="max-width: 700px;">
-      <div class="format-header">
-        <div class="format-brand">
-          <h2>PLAST INNOVA</h2>
-          <span id="modalEditarTitle">Editar Registro de Garantía</span>
-        </div>
-        <button type="button" class="modal-close" onclick="cerrarModalEditar()" style="background:none; border:none; color:#1a365d; font-size:24px; cursor:pointer;">&times;</button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="edit_id">
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-          <div class="form-group">
-            <label>No. Registro</label>
-            <input type="text" id="edit_no_garantia" readonly>
-          </div>
-          <div class="form-group">
-            <label>Fecha Reporte</label>
-            <input type="date" id="edit_fecha_reporte" readonly>
-          </div>
-          <div class="form-group" style="grid-column: span 2;">
-            <label>Cliente</label>
-            <input type="text" id="edit_cliente" readonly>
-          </div>
-          <div class="form-group">
-            <label>Remisión</label>
-            <input type="text" id="edit_remision">
-          </div>
-          <div class="form-group">
-            <label>Referencia</label>
-            <input type="text" id="edit_referencia">
-          </div>
-          <div class="form-group">
-            <label>Cantidad</label>
-            <input type="number" id="edit_cantidad" min="1">
-          </div>
-          <div class="form-group">
-            <label>Tipo Solicitud</label>
-            <select id="edit_tipo_solicitud">
-              <option value="GARANTIA">GARANTÍA</option>
-              <option value="CAMBIO">CAMBIO</option>
-              <option value="DEVOLUCION">DEVOLUCIÓN</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Estado</label>
-            <select id="edit_estado">
-              <option value="Aprobada">Aprobada</option>
-              <option value="Rechazada">Rechazada</option>
-              <option value="Pendiente">Pendiente</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Lote / Fecha</label>
-            <input type="text" id="edit_lote_fecha">
-          </div>
-          <div class="form-group">
-            <label>Aprobó / Rechazó</label>
-            <input type="text" id="edit_quien_aprobo">
-          </div>
-          <div class="form-group autocomplete-container" style="grid-column: span 2;">
-            <label>Causal / Problema</label>
-            <input type="text" id="edit_problema" placeholder="Buscar causal..." oninput="buscarProblemaFila(this)" onkeydown="handleProblemaKeydown(event, this)">
-            <div class="suggestions-list"></div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" onclick="cerrarModalEditar()">Cancelar</button>
-        <button type="button" class="btn-primary" onclick="guardarEdicionGarantia()">Guardar Cambios</button>
-      </div>
+    <div class="dashboard-iframe-container">
+      <iframe src="dashboard_garantias.html" id="dashboardIframe"></iframe>
     </div>
   </div>
 
   <script src="js/comun.js"></script>
   <script>
     let token = localStorage.getItem('token');
-    let garantiasData = [];
     let usuarioActual = '';
-    let clienteSelectedIndex = -1;
-    let refSelectedIndex = -1;
-    let problemaSelectedIndex = -1;
     let permisosUsuario = [];
 
     // La lógica (fetch de /api/roles + /api/me) ahora vive en js/comun.js
@@ -399,30 +76,6 @@
     // index.html y metrologia.html).
     async function cargarMisPermisos() {
       await cargarPermisosDelUsuario();
-    }
-
-    function switchMainTab(tab) {
-      document.getElementById('btnTabGestion').classList.remove('active');
-      document.getElementById('btnTabDashboard').classList.remove('active');
-      document.getElementById('secGestion').classList.remove('active');
-      document.getElementById('secDashboard').classList.remove('active');
-
-      if (tab === 'gestion') {
-        document.getElementById('btnTabGestion').classList.add('active');
-        document.getElementById('secGestion').classList.add('active');
-      } else {
-        if (!tienePermiso('garantias.dashboard')) {
-          alert('No tienes permiso para ver el Tablero Analítico (Dashboard).');
-          switchMainTab('gestion');
-          return;
-        }
-        document.getElementById('btnTabDashboard').classList.add('active');
-        document.getElementById('secDashboard').classList.add('active');
-        const iframe = document.getElementById('dashboardIframe');
-        if (iframe && iframe.contentWindow && typeof iframe.contentWindow.init === 'function') {
-          iframe.contentWindow.init();
-        }
-      }
     }
 
     async function init() {
@@ -433,11 +86,33 @@
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('appHeader').style.display = 'flex';
       document.getElementById('appMain').style.display = 'flex';
-      await cargarGarantias();
-      setDefaultDates();
 
-      const btn1 = document.getElementById('btnNuevaEntrada');
-      if (btn1) btn1.addEventListener('click', abrirModalNueva);
+      // El tablero vive en un iframe aparte (dashboard_garantias.html) que
+      // toma el token de localStorage al cargar. Como el iframe puede
+      // haber empezado a cargar antes de que termine el login, se le pide
+      // que se refresque apenas ya hay sesión válida — si todavía no ha
+      // terminado de cargar, se espera a que cargue y ahí se le pide (esto
+      // ya se hacía antes al cambiar a la pestaña del tablero; ahora se
+      // hace una sola vez porque ya no hay pestañas).
+      const iframe = document.getElementById('dashboardIframe');
+      if (iframe) {
+        if (iframe.contentWindow && typeof iframe.contentWindow.init === 'function') {
+          iframe.contentWindow.init();
+        } else {
+          iframe.addEventListener('load', () => {
+            if (iframe.contentWindow && typeof iframe.contentWindow.init === 'function') iframe.contentWindow.init();
+          });
+        }
+      }
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      mostrarLogin();
     }
 
     // mostrarLogin() y doLogin() ahora viven en js/comun.js (eran idénticas
@@ -452,18 +127,17 @@
         if (res.ok && data) {
           usuarioActual = data.nombre || data.usuario;
           document.getElementById('userNameDisplay').textContent = `${data.nombre || data.usuario} (${data.rol_nombre || data.rol || 'Usuario'})`;
-          document.getElementById('quien_aprobo_rechazo').value = usuarioActual;
 
           await cargarMisPermisos();
-          if (!tienePermiso('garantias.ver')) {
-            alert('No tienes permiso para acceder al módulo de garantías.');
+          // Este módulo ahora es solo el Tablero Analítico — la parte de
+          // cargar/gestionar garantías se movió a Calidad (ver comentario
+          // arriba de ".dashboard-iframe-container"). El permiso que manda
+          // acá es "garantias.dashboard" (antes era "garantias.ver", que
+          // ahora solo aplica a la pestaña de Cargar Garantías en Calidad).
+          if (!tienePermiso('garantias.dashboard')) {
+            alert('No tienes permiso para ver el Tablero de Garantías.');
             location.href = 'index.html';
             return false;
-          }
-
-          const btnGestion = document.getElementById('btnGestionHeader');
-          if (btnGestion) {
-            btnGestion.style.display = tienePermiso('gestion.ver') ? 'inline-block' : 'none';
           }
 
           const btnVolver = document.getElementById('btnVolverPortal');
@@ -471,15 +145,6 @@
             btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
           }
 
-          if (!tienePermiso('garantias.crear')) {
-            const btnNew = document.getElementById('btnNuevaEntrada');
-            if (btnNew) btnNew.style.display = 'none';
-          }
-
-          if (!tienePermiso('garantias.dashboard')) {
-            const btnDash = document.getElementById('btnTabDashboard');
-            if (btnDash) btnDash.style.display = 'none';
-          }
           return true;
         } else {
           localStorage.removeItem('token');
@@ -490,584 +155,6 @@
       } catch (e) {
         mostrarLogin();
         return false;
-      }
-    }
-
-    async function doLogout() {
-      if (token) {
-        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
-      }
-      localStorage.removeItem('token');
-      token = null;
-      mostrarLogin();
-    }
-
-    function setDefaultDates() {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('fecha_reporte').value = today;
-      document.getElementById('fecha_revision').value = today;
-    }
-
-    async function cargarGarantias() {
-      token = localStorage.getItem('token');
-      try {
-        const res = await fetch('/api/garantias', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!res.ok) {
-          if (res.status === 403) {
-            alert('No tienes permiso para ver las garantías.');
-            location.href = 'index.html';
-            return;
-          }
-        }
-        garantiasData = await res.json();
-        renderizarGarantias(garantiasData);
-        actualizarKPIs(garantiasData);
-      } catch (e) {
-        console.error('Error cargando garantías', e);
-      }
-    }
-
-    function actualizarKPIs(data) {}
-
-    function renderizarGarantias(data) {
-      const tbody = document.getElementById('tablaGarantiasBody');
-      tbody.innerHTML = '';
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; color: #a0aec0; padding: 20px;">No se encontraron registros de devoluciones.</td></tr>`;
-        return;
-      }
-      const puedeEditar = tienePermiso('garantias.editar');
-      const puedeEliminar = tienePermiso('garantias.eliminar');
-
-      for (const g of data) {
-        const estadoLower = (g.estado || '').toLowerCase();
-        let badgeClass = 'aprobada';
-        if (estadoLower.includes('rechaz')) badgeClass = 'rechazada';
-
-        let accionesHtml = '<div style="display: flex; gap: 4px;">';
-        if (puedeEditar) {
-          accionesHtml += `<button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="abrirModalEditar(${g.id})" title="Editar">✏️</button>`;
-        }
-        if (puedeEliminar) {
-          accionesHtml += `<button type="button" class="btn-danger-sm" style="padding: 4px 8px; font-size: 12px;" onclick="eliminarGarantia(${g.id})" title="Eliminar">🗑️</button>`;
-        }
-        if (!puedeEditar && !puedeEliminar) {
-          accionesHtml += '<span style="color:#a0aec0;font-size:12px;">Sin permisos</span>';
-        }
-        accionesHtml += '</div>';
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${escapeHtml(g.no_garantia || '')}</strong></td>
-          <td>${escapeHtml(g.fecha_reporte || '')}</td>
-          <td>${escapeHtml(g.nit_cliente || '')}</td>
-          <td>${escapeHtml(g.cliente || '')}</td>
-          <td>${escapeHtml(g.ciudad || '')}</td>
-          <td>${escapeHtml(g.vendedor_distribuidor || g.responsable || '')}</td>
-          <td>${escapeHtml(g.remision || '')}</td>
-          <td>${escapeHtml(g.referencia || '')}</td>
-          <td>${g.cantidad || 1}</td>
-          <td>${escapeHtml(g.tipo_solicitud || '')}</td>
-          <td><span class="badge ${badgeClass}">${escapeHtml(g.estado || 'Aprobada')}</span></td>
-          <td>${escapeHtml(g.problema || '')}</td>
-          <td>${escapeHtml(g.fecha_revision || '')}</td>
-          <td>${escapeHtml(g.quien_aprobo_rechazo || '')}</td>
-          <td>${accionesHtml}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-    }
-
-    function filtrarGarantias() {
-      const query = document.getElementById('searchInput').value.toLowerCase();
-      const estadoFilter = document.getElementById('filterEstado').value.toLowerCase();
-
-      const filtradas = garantiasData.filter(g => {
-        const matchQuery = 
-          (g.no_garantia || '').toLowerCase().includes(query) ||
-          (g.cliente || '').toLowerCase().includes(query) ||
-          (g.nit_cliente || '').toLowerCase().includes(query) ||
-          (g.remision || '').toLowerCase().includes(query) ||
-          (g.referencia || '').toLowerCase().includes(query) ||
-          (g.problema || '').toLowerCase().includes(query);
-        
-        const matchEstado = !estadoFilter || (g.estado || '').toLowerCase() === estadoFilter;
-
-        return matchQuery && matchEstado;
-      });
-
-      renderizarGarantias(filtradas);
-    }
-
-    function abrirModalNueva() {
-      console.log('abrirModalNueva ejecutado');
-      token = localStorage.getItem('token');
-      const titleEl = document.getElementById('modalTitle');
-      if (titleEl) {
-        titleEl.textContent = 'Nueva Entrada de Mercancía por Devolución';
-      }
-      
-      const modal = document.getElementById('modalGarantia');
-      if (modal) {
-        modal.classList.add('active');
-        modal.style.display = 'flex';
-      }
-
-      setDefaultDates();
-      document.getElementById('nit_cliente').value = '';
-      document.getElementById('cliente').value = '';
-      document.getElementById('ciudad').value = '';
-      document.getElementById('responsable').value = '';
-      document.getElementById('asesora').value = '';
-      document.getElementById('remision').value = '';
-      
-      document.getElementById('itemsTableBody').innerHTML = '';
-      agregarItemFila();
-      setTimeout(() => document.getElementById('nit_cliente').focus(), 100);
-
-      fetch('/api/siguiente-garantia', { headers: { 'Authorization': 'Bearer ' + token } })
-        .then(r => r.json())
-        .then(data => { document.getElementById('no_garantia').value = data.siguiente; })
-        .catch(e => { document.getElementById('no_garantia').value = 'G2146'; });
-    }
-
-    function cerrarModal() {
-      const modal = document.getElementById('modalGarantia');
-      if (modal) {
-        modal.classList.remove('active');
-        modal.style.display = 'none';
-      }
-    }
-
-    function agregarItemFila() {
-      const tbody = document.getElementById('itemsTableBody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="number" class="item-cant" value="1" min="1"></td>
-        <td class="autocomplete-container">
-          <input type="text" class="item-ref" placeholder="Buscar ref..." oninput="buscarRefFila(this)" onkeydown="handleRefKeydown(event, this)">
-          <div class="suggestions-list"></div>
-        </td>
-        <td>
-          <select class="item-tiposol">
-            <option value="GARANTIA" selected>GARANTÍA</option>
-            <option value="CAMBIO">CAMBIO</option>
-            <option value="DEVOLUCION">DEVOLUCIÓN</option>
-          </select>
-        </td>
-        <td>
-          <select class="item-estado">
-            <option value="Aprobada" selected>Aprobada</option>
-            <option value="Rechazada">Rechazada</option>
-          </select>
-        </td>
-        <td><input type="text" class="item-lote" placeholder="Lote / Fecha"></td>
-        <td class="autocomplete-container">
-          <input type="text" class="item-prob" placeholder="Buscar causal..." oninput="buscarProblemaFila(this)" onkeydown="handleProblemaKeydown(event, this)">
-          <div class="suggestions-list"></div>
-        </td>
-        <td>
-          <input type="text" class="item-obs" placeholder="Obs..." onkeydown="handleItemKeydown(event, this)">
-        </td>
-        <td style="text-align:center;"><button type="button" class="btn-danger-sm" onclick="this.closest('tr').remove()">&times;</button></td>
-      `;
-      tbody.appendChild(tr);
-
-      const cantInput = tr.querySelector('.item-cant');
-      setTimeout(() => cantInput.focus(), 50);
-    }
-
-    function handleItemKeydown(e, input) {
-      if (e.key === 'Tab' && !e.shiftKey) {
-        const row = input.closest('tr');
-        const isLastRow = row === document.querySelector('#itemsTableBody tr:last-child');
-        if (isLastRow) {
-          e.preventDefault();
-          agregarItemFila();
-        }
-      }
-    }
-
-    function handleFechaKeydown(e) {
-      if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('asesora').focus();
-      }
-    }
-
-    function handleAsesoraKeydown(e) {
-      if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('remision').focus();
-      }
-    }
-
-    function handleRemisionKeydown(e) {
-      if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') {
-        e.preventDefault();
-        const firstRowCant = document.querySelector('#itemsTableBody tr:first-child .item-cant');
-        if (firstRowCant) {
-          firstRowCant.focus();
-        } else {
-          agregarItemFila();
-        }
-      }
-    }
-
-    function handleNitKeydown(e) {
-      const sugDiv = document.getElementById('sugClientes');
-      const items = sugDiv.querySelectorAll('.suggestion-item');
-      if (items.length === 0) return;
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        clienteSelectedIndex = Math.min(clienteSelectedIndex + 1, items.length - 1);
-        actualizarSeleccionSug(items, clienteSelectedIndex);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        clienteSelectedIndex = Math.max(clienteSelectedIndex - 1, 0);
-        actualizarSeleccionSug(items, clienteSelectedIndex);
-      } else if (e.key === 'Enter' && clienteSelectedIndex >= 0 && clienteSelectedIndex < items.length) {
-        e.preventDefault();
-        items[clienteSelectedIndex].click();
-      }
-    }
-
-    function handleRefKeydown(e, input) {
-      const sugDiv = input.nextElementSibling;
-      const items = sugDiv.querySelectorAll('.suggestion-item');
-      if (items.length === 0) return;
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        refSelectedIndex = Math.min(refSelectedIndex + 1, items.length - 1);
-        actualizarSeleccionSug(items, refSelectedIndex);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        refSelectedIndex = Math.max(refSelectedIndex - 1, 0);
-        actualizarSeleccionSug(items, refSelectedIndex);
-      } else if (e.key === 'Enter' && refSelectedIndex >= 0 && refSelectedIndex < items.length) {
-        e.preventDefault();
-        e.stopPropagation();
-        items[refSelectedIndex].click();
-      }
-    }
-
-    function actualizarSeleccionSug(items, activeIndex) {
-      items.forEach((item, idx) => {
-        if (idx === activeIndex) {
-          item.classList.add('selected');
-          item.scrollIntoView({ block: 'nearest' });
-        } else {
-          item.classList.remove('selected');
-        }
-      });
-    }
-
-    async function buscarClienteNit(q) {
-      const sugDiv = document.getElementById('sugClientes');
-      clienteSelectedIndex = -1;
-      if (!q || q.length < 1) {
-        sugDiv.style.display = 'none';
-        return;
-      }
-      try {
-        const res = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(q)}`, { headers: { 'Authorization': 'Bearer ' + token } });
-        const clientes = await res.json();
-        sugDiv.innerHTML = '';
-        if (clientes.length === 0) {
-          sugDiv.style.display = 'none';
-          return;
-        }
-        clientes.forEach((c) => {
-          const item = document.createElement('div');
-          item.className = 'suggestion-item';
-          item.innerHTML = `<strong>${escapeHtml(c.nit || '')}</strong> - ${escapeHtml(c.razon_social || '')} (${escapeHtml(c.ciudad || '')})`;
-          item.onclick = () => seleccionarCliente(c);
-          sugDiv.appendChild(item);
-        });
-        sugDiv.style.display = 'block';
-      } catch (e) {
-        sugDiv.style.display = 'none';
-      }
-    }
-
-    function seleccionarCliente(c) {
-      document.getElementById('nit_cliente').value = c.nit;
-      document.getElementById('cliente').value = c.razon_social;
-      document.getElementById('ciudad').value = c.ciudad;
-      document.getElementById('responsable').value = c.codigo_vendedor;
-      
-      const asesoraSelect = document.getElementById('asesora');
-      if (c.nombre_vendedor) {
-        for (let opt of asesoraSelect.options) {
-          if (c.nombre_vendedor.toLowerCase().includes(opt.value.toLowerCase())) {
-            asesoraSelect.value = opt.value;
-            break;
-          }
-        }
-      }
-
-      document.getElementById('sugClientes').style.display = 'none';
-      document.getElementById('fecha_reporte').focus();
-    }
-
-    async function buscarRefFila(input) {
-      const q = input.value.trim();
-      const sugDiv = input.nextElementSibling;
-      refSelectedIndex = -1;
-      if (!q || q.length < 2) {
-        sugDiv.style.display = 'none';
-        return;
-      }
-      try {
-        const res = await fetch(`/api/referencias-pt/buscar?q=${encodeURIComponent(q)}`, { headers: { 'Authorization': 'Bearer ' + token } });
-        const refs = await res.json();
-        sugDiv.innerHTML = '';
-        if (refs.length === 0) {
-          sugDiv.style.display = 'none';
-          return;
-        }
-        refs.forEach((r) => {
-          const item = document.createElement('div');
-          item.className = 'suggestion-item';
-          item.innerHTML = `<strong>${escapeHtml(r.referencia || '')}</strong> (Línea: ${escapeHtml(r.linea_base || '')})`;
-          item.onclick = () => {
-            input.value = r.referencia;
-            sugDiv.style.display = 'none';
-            const row = input.closest('tr');
-            row.querySelector('.item-tiposol').focus();
-          };
-          sugDiv.appendChild(item);
-        });
-        sugDiv.style.display = 'block';
-      } catch (e) {
-        sugDiv.style.display = 'none';
-      }
-    }
-
-    // Autocompletar de "Causal / Problema" contra el catálogo de
-    // tipificación (garantias_tipificacion_problemas — ver migración #7 en
-    // db/init.js): antes era un campo de texto libre donde cada quien
-    // escribía "G12 - NO PRENDE" a mano, con el riesgo de errores de tipeo
-    // o de inventar un código que no existe. Mismo patrón que buscarRefFila
-    // de aquí arriba (lista de sugerencias con teclado), pero contra
-    // /api/garantias/problemas/buscar.
-    function handleProblemaKeydown(e, input) {
-      const sugDiv = input.nextElementSibling;
-      const items = sugDiv.querySelectorAll('.suggestion-item');
-      if (items.length === 0) return;
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        problemaSelectedIndex = Math.min(problemaSelectedIndex + 1, items.length - 1);
-        actualizarSeleccionSug(items, problemaSelectedIndex);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        problemaSelectedIndex = Math.max(problemaSelectedIndex - 1, 0);
-        actualizarSeleccionSug(items, problemaSelectedIndex);
-      } else if (e.key === 'Enter' && problemaSelectedIndex >= 0 && problemaSelectedIndex < items.length) {
-        e.preventDefault();
-        e.stopPropagation();
-        items[problemaSelectedIndex].click();
-      }
-    }
-
-    async function buscarProblemaFila(input) {
-      const q = input.value.trim();
-      const sugDiv = input.nextElementSibling;
-      problemaSelectedIndex = -1;
-      if (!q) {
-        sugDiv.style.display = 'none';
-        return;
-      }
-      try {
-        const res = await fetch(`/api/garantias/problemas/buscar?q=${encodeURIComponent(q)}`, { headers: { 'Authorization': 'Bearer ' + token } });
-        const problemas = await res.json();
-        sugDiv.innerHTML = '';
-        if (problemas.length === 0) {
-          sugDiv.style.display = 'none';
-          return;
-        }
-        problemas.forEach((p) => {
-          const item = document.createElement('div');
-          item.className = 'suggestion-item';
-          item.innerHTML = `<strong>${escapeHtml(p.codigo)}</strong> - ${escapeHtml(p.descripcion)}`;
-          item.onclick = () => {
-            input.value = `${p.codigo} - ${p.descripcion}`;
-            sugDiv.style.display = 'none';
-            const row = input.closest('tr');
-            const obsInput = row ? row.querySelector('.item-obs') : null;
-            if (obsInput) obsInput.focus();
-          };
-          sugDiv.appendChild(item);
-        });
-        sugDiv.style.display = 'block';
-      } catch (e) {
-        sugDiv.style.display = 'none';
-      }
-    }
-
-    function refrescarTodo() {
-      cargarGarantias();
-      const iframe = document.getElementById('dashboardIframe');
-      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.init === 'function') {
-        iframe.contentWindow.init();
-      }
-    }
-
-    async function guardarLoteGarantias() {
-      const nit_cliente = document.getElementById('nit_cliente').value.trim();
-      if (!nit_cliente) {
-        alert('Por favor ingrese el NIT del cliente.');
-        return;
-      }
-
-      const rows = document.querySelectorAll('#itemsTableBody tr');
-      const items = [];
-      for (const row of rows) {
-        const cantidad = parseInt(row.querySelector('.item-cant').value) || 1;
-        const referencia = row.querySelector('.item-ref').value.trim();
-        const tipo_solicitud = row.querySelector('.item-tiposol').value;
-        const estado = row.querySelector('.item-estado').value;
-        const lote_fecha = row.querySelector('.item-lote').value.trim();
-        const problema = row.querySelector('.item-prob').value.trim();
-        const observaciones = row.querySelector('.item-obs').value.trim();
-
-        if (referencia) {
-          items.push({ referencia, cantidad, tipo_solicitud, estado, lote_fecha, problema, observaciones });
-        }
-      }
-
-      if (items.length === 0) {
-        alert('Debe agregar al menos una referencia con código válido.');
-        return;
-      }
-
-      const asesoraVal = document.getElementById('asesora').value.trim();
-      const payload = {
-        fecha_reporte: document.getElementById('fecha_reporte').value,
-        nit_cliente: nit_cliente,
-        cliente: document.getElementById('cliente').value,
-        ciudad: document.getElementById('ciudad').value,
-        responsable: document.getElementById('responsable').value,
-        vendedor_distribuidor: asesoraVal,
-        remision: document.getElementById('remision').value,
-        fecha_revision: document.getElementById('fecha_revision').value,
-        quien_aprobo_rechazo: document.getElementById('quien_aprobo_rechazo').value,
-        items: items
-      };
-
-      try {
-        const res = await fetch('/api/garantias', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          cerrarModal();
-          refrescarTodo();
-        } else {
-          const err = await res.json();
-          alert(err.error || 'Error al guardar la entrada de mercancía');
-        }
-      } catch (e) {
-        alert('Error de conexión al guardar');
-      }
-    }
-
-    function abrirModalEditar(id) {
-      const g = garantiasData.find(item => item.id === id);
-      if (!g) return;
-
-      document.getElementById('edit_id').value = g.id;
-      document.getElementById('edit_no_garantia').value = g.no_garantia || '';
-      document.getElementById('edit_fecha_reporte').value = g.fecha_reporte || '';
-      document.getElementById('edit_cliente').value = (g.nit_cliente ? g.nit_cliente + ' - ' : '') + (g.cliente || '');
-      document.getElementById('edit_remision').value = g.remision || '';
-      document.getElementById('edit_referencia').value = g.referencia || '';
-      document.getElementById('edit_cantidad').value = g.cantidad || 1;
-      document.getElementById('edit_tipo_solicitud').value = g.tipo_solicitud || 'GARANTIA';
-      document.getElementById('edit_estado').value = g.estado || 'Aprobada';
-      document.getElementById('edit_problema').value = g.problema || '';
-      document.getElementById('edit_lote_fecha').value = g.lote_fecha || '';
-      document.getElementById('edit_quien_aprobo').value = g.quien_aprobo_rechazo || usuarioActual;
-
-      const modal = document.getElementById('modalEditarGarantia');
-      if (modal) {
-        modal.classList.add('active');
-        modal.style.display = 'flex';
-      }
-    }
-
-    function cerrarModalEditar() {
-      const modal = document.getElementById('modalEditarGarantia');
-      if (modal) {
-        modal.classList.remove('active');
-        modal.style.display = 'none';
-      }
-    }
-
-    async function guardarEdicionGarantia() {
-      const id = document.getElementById('edit_id').value;
-      const payload = {
-        remision: document.getElementById('edit_remision').value.trim(),
-        referencia: document.getElementById('edit_referencia').value.trim(),
-        cantidad: parseInt(document.getElementById('edit_cantidad').value) || 1,
-        tipo_solicitud: document.getElementById('edit_tipo_solicitud').value,
-        estado: document.getElementById('edit_estado').value,
-        problema: document.getElementById('edit_problema').value.trim(),
-        lote_fecha: document.getElementById('edit_lote_fecha').value.trim(),
-        quien_aprobo_rechazo: document.getElementById('edit_quien_aprobo').value.trim()
-      };
-
-      try {
-        const res = await fetch(`/api/garantias/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          cerrarModalEditar();
-          refrescarTodo();
-        } else {
-          const err = await res.json();
-          alert(err.error || 'Error al actualizar garantía');
-        }
-      } catch (e) {
-        alert('Error de conexión al actualizar');
-      }
-    }
-
-    async function eliminarGarantia(id) {
-      // El número de garantía se busca en memoria (igual que hace
-      // abrirModalEditar) en vez de recibirlo como parámetro desde el
-      // atributo onclick, para no tener que insertar texto libre del
-      // cliente dentro de un atributo HTML.
-      const g = garantiasData.find(item => item.id === id);
-      const noGarantia = g ? g.no_garantia : id;
-      if (!confirm(`¿Está seguro de eliminar el registro de garantía ${noGarantia}?`)) {
-        return;
-      }
-      try {
-        const res = await fetch(`/api/garantias/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (res.ok) {
-          refrescarTodo();
-        } else {
-          const err = await res.json();
-          alert(err.error || 'Error al eliminar la garantía');
-        }
-      } catch (e) {
-        alert('Error de conexión al eliminar');
       }
     }
 
