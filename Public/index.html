@@ -175,7 +175,7 @@
           <a href="garantias.html" class="portal-card">
             <div class="card-banner garantias">📋</div>
             <div class="card-body">
-              <h3>Tablero y Gestión de Garantías</h3>
+              <h3>Tablero de Garantías</h3>
             </div>
           </a>
         </div>
@@ -191,6 +191,18 @@
             <div class="card-banner" style="background: linear-gradient(135deg, #b7791f 0%, #975a16 100%);">🏆</div>
             <div class="card-body">
               <h3>Calidad General</h3>
+            </div>
+          </a>
+
+          <!-- "Cargar Garantías" (antes una pestaña de garantias.html, y
+               brevemente una segunda pestaña dentro de calidad.html) — Julio
+               pidió que fuera un módulo aparte, no una pestaña de Calidad,
+               así que ahora es su propia página (garantias_gestion.html)
+               con su propia tarjeta acá, dentro de la sección Calidad. -->
+          <a href="garantias_gestion.html" class="portal-card" id="cardCargarGarantias" style="display: none;">
+            <div class="card-banner garantias">📋</div>
+            <div class="card-body">
+              <h3>Cargar Garantías</h3>
             </div>
           </a>
 
@@ -261,6 +273,15 @@
           const cardCal = document.getElementById('cardCalidad');
           if (cardCal) {
             cardCal.style.display = tienePermiso('calidad.ver') ? 'flex' : 'none';
+          }
+
+          // "Cargar Garantías" es su propio módulo (ver comentario en el
+          // HTML de la sección Calidad) — usa el mismo permiso que ya
+          // exigía esa funcionalidad ("garantias.ver"), sin depender de
+          // "calidad.ver".
+          const cardCargarGarantias = document.getElementById('cardCargarGarantias');
+          if (cardCargarGarantias) {
+            cardCargarGarantias.style.display = tienePermiso('garantias.ver') ? 'flex' : 'none';
           }
 
           const cardValoresCableado = document.getElementById('cardValoresCableado');

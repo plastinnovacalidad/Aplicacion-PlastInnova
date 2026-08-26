@@ -981,7 +981,6 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          alert('¡Registro de inspección guardado con éxito!');
           // "Responsable" NO se limpia: siempre debe quedar el usuario de la
           // sesión (antes se vaciaba y, al ser de solo lectura, ya no había
           // forma de volver a llenarlo sin recargar la página — eso hubiera
@@ -996,11 +995,38 @@
             b.textContent = '○';
             b.title = 'Pendiente';
           });
+
+          // Julio pidió que, apenas se guarda la inspección, se pregunte si
+          // se genera y manda un reporte (plano + datos + conforme/no
+          // conforme + fotos) por WhatsApp al número administrador. La
+          // inspección ya quedó guardada en este punto pase lo que pase con
+          // el envío — si el bot no está conectado, se avisa acá pero no se
+          // pierde ni se vuelve a pedir el registro.
+          if (confirm('¡Registro de inspección guardado con éxito!\n\n¿Generar y enviar el reporte de esta inspección por WhatsApp al número administrador?')) {
+            await enviarReporteInspeccion(data.inspeccion_id);
+          }
         } else {
           alert(data.error || 'Error al guardar inspección');
         }
       } catch (e) {
         alert('Error de conexión');
+      }
+    }
+
+    async function enviarReporteInspeccion(inspeccionId) {
+      try {
+        const res = await fetch(`/api/moldes/inspeccion/${inspeccionId}/enviar-reporte`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('📨 Reporte enviado por WhatsApp al número administrador.');
+        } else {
+          alert('No se pudo enviar el reporte: ' + (data.error || 'error desconocido') + '\n\nLa inspección ya quedó guardada de todas formas.');
+        }
+      } catch (e) {
+        alert('No se pudo enviar el reporte por un error de conexión.\n\nLa inspección ya quedó guardada de todas formas.');
       }
     }
 

@@ -12,6 +12,7 @@ const { siguienteVersionAutomatica } = require('../utils/versiones');
 const { asyncHandler } = require('../middleware/errores');
 const { enTransaccion } = require('../db/connection');
 const metroData = require('../data/metrologia');
+const whatsappService = require('../whatsapp_bot_service');
 
 const router = express.Router();
 
@@ -494,6 +495,38 @@ router.get('/moldes/inspeccion-detalle/:id', validarToken, requerirPermisoAltern
   if (!inspeccion) return res.status(404).json({ error: 'Inspección no encontrada' });
   const medidas = await metroData.listarMedidasDeInspeccion(inspId);
   res.json({ inspeccion, medidas });
+}));
+
+// Julio pidió que, después de guardar una inspección, se pueda generar y
+// mandar por WhatsApp un reporte (plano + datos + conforme/no conforme +
+// fotos de evidencia) al número administrador — ver utils/pdfInspeccionMetrologia.js
+// y whatsapp_bot_service.enviarReporteInspeccionMetrologia(). Mismo permiso
+// que exige guardar la inspección (POST .../medidas más arriba), porque es
+// un paso que se ofrece justo después de ese guardado, no una vista nueva.
+// A diferencia de las alertas automáticas (enviarAlerta/enviarResumenPDF,
+// que son "fire and forget"), acá SÍ se espera el resultado real del envío
+// para poder avisarle a la persona en pantalla si no se pudo mandar (por
+// ejemplo, porque el bot de WhatsApp no está conectado en ese momento) —
+// eso nunca afecta la inspección ya guardada, que para este punto ya quedó
+// guardada de forma independiente.
+router.post('/moldes/inspeccion/:id/enviar-reporte', validarToken, requerirPermisoAlternativo(['metrologia.inspeccionar', 'metrologia.gestion']), asyncHandler(async (req, res) => {
+  const inspId = parseInt(req.params.id, 10);
+  if (isNaN(inspId)) return res.status(400).json({ error: 'ID inválido' });
+
+  const inspeccion = await metroData.buscarInspeccionConCreador(inspId);
+  if (!inspeccion) return res.status(404).json({ error: 'Inspección no encontrada' });
+
+  const medidas = await metroData.listarMedidasDeInspeccion(inspId);
+  const versionActiva = await metroData.buscarVersionActiva(inspeccion.referencia_id);
+  const planoRuta = versionActiva ? versionActiva.archivo_ruta : null;
+  const codigo = inspeccion.molde || `Molde #${inspeccion.referencia_id}`;
+
+  const resultado = await whatsappService.enviarReporteInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta);
+  if (resultado.enviado) {
+    res.json({ success: true });
+  } else {
+    res.status(502).json({ error: resultado.motivo || 'No se pudo enviar el reporte por WhatsApp.' });
+  }
 }));
 
 module.exports = router;
