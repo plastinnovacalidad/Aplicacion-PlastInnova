@@ -266,7 +266,14 @@
 
     <div class="visor-panel">
       <div class="photos-section">
-        <div class="photos-title" id="photoTitle">📷 Selecciona una referencia</div>
+        <!-- Julio pidió quitar este título (repetía la referencia, ej.
+             "📷 SUP/1077/RS/MUL") — es redundante con la referencia ya
+             seleccionada y resaltada en la lista de la izquierda, y así se
+             gana espacio en pantalla. Se deja oculto (no se borra del todo)
+             porque seleccionarReferencia() le sigue poniendo el texto por
+             JS — mismo patrón que otros campos "ocultos pero con datos"
+             de la aplicación (ver metrologia.html). -->
+        <div class="photos-title" id="photoTitle" style="display:none;">📷 Selecciona una referencia</div>
         <div class="smd-version-chips" id="versionChips" style="display:none;"></div>
         <div class="photos-wrapper" id="photosWrapper">
           <div style="color:#999;font-size:14px;">Selecciona una referencia para ver su foto</div>

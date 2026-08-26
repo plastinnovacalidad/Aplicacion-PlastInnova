@@ -146,9 +146,14 @@ async function migrarContrasenasAntiguas() {
 //        elec_fotos_cableado (catálogo de fotos por forma de cableado,
 //        compartida entre varias referencias). Los datos existentes se
 //        cargan aparte con scripts/migrar_valores_cableado.js, no aquí.
+//   #19 - elec_config_cableado: agrega columna no_aplica_medias. Algunas
+//        referencias no manejan valores de "Medias (Bajas)" por diseño
+//        (solo Altas) — antes eso se contaba como "faltante" en la alerta
+//        de Valores y Cableado sin serlo. Se marca a mano por versión desde
+//        "Editar Referencia".
 //
 // Si en el futuro se necesita otro cambio de esquema, seguir el mismo
-// patrón: agregar un nuevo bloque "MIGRACIÓN #19" (y sumarlo a esta lista)
+// patrón: agregar un nuevo bloque "MIGRACIÓN #20" (y sumarlo a esta lista)
 // en vez de modificar el CREATE TABLE original, para que instalaciones ya
 // existentes también reciban el cambio la próxima vez que arranque el
 // servidor.
@@ -1145,6 +1150,7 @@ async function inicializarBaseDatos() {
         empujar_cables INTEGER DEFAULT 0,
         forma_cableado TEXT,
         referencia_cable TEXT,
+        no_aplica_medias INTEGER DEFAULT 0,
         FOREIGN KEY (version_id) REFERENCES versiones(id) ON DELETE CASCADE
       );
       CREATE TABLE IF NOT EXISTS elec_fotos_cableado (
@@ -1156,6 +1162,24 @@ async function inicializarBaseDatos() {
     `);
   } catch (e) {
     console.error('⚠️ Error creando tablas de Valores y Cableado:', e.message);
+  }
+
+  // MIGRACIÓN #19: elec_config_cableado — agrega columna no_aplica_medias.
+  // Julio señaló que algunas referencias no manejan valores de "Medias
+  // (Bajas)" (solo Altas) por diseño, y antes esto se contaba como
+  // "faltante" en la alerta roja de Valores y Cableado sin serlo
+  // realmente. Este interruptor, marcado a mano por versión desde "Editar
+  // Referencia", saca esos 4 campos (amperaje/potencia medias y sus
+  // mínimos) de la cuenta de faltantes para esa versión, y la ficha los
+  // muestra como "N/A" en vez de "—".
+  try {
+    const colsCableado = await db.all("PRAGMA table_info(elec_config_cableado)");
+    if (!colsCableado.map(c => c.name).includes('no_aplica_medias')) {
+      await db.run('ALTER TABLE elec_config_cableado ADD COLUMN no_aplica_medias INTEGER DEFAULT 0');
+      console.log('➕ Columna no_aplica_medias agregada a elec_config_cableado');
+    }
+  } catch (e) {
+    console.error('⚠️ Error verificando columna no_aplica_medias en elec_config_cableado:', e.message);
   }
 
   // Usuarios por defecto si está vacío

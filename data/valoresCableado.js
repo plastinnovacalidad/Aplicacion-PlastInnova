@@ -46,7 +46,8 @@ async function listarProductos() {
       rr.voltaje_min, rr.voltaje_max,
       rr.amperaje_min_bajas, rr.amperaje_min_altas, rr.amperaje_max,
       rr.potencia_min_bajas, rr.potencia_min_altas, rr.potencia_max,
-      cc.cortar_puntas, cc.posicion_punto, cc.empujar_cables, cc.forma_cableado, cc.referencia_cable
+      cc.cortar_puntas, cc.posicion_punto, cc.empujar_cables, cc.forma_cableado, cc.referencia_cable,
+      cc.no_aplica_medias
     FROM versiones v
     JOIN referencias r ON r.id = v.referencia_id
     LEFT JOIN elec_mediciones m ON m.version_id = v.id
@@ -95,6 +96,7 @@ async function listarProductos() {
       empujar_cables: row.empujar_cables,
       forma_cableado: row.forma_cableado,
       referencia_cable: row.referencia_cable,
+      no_aplica_medias: row.no_aplica_medias,
       imagenes,
     };
   });
@@ -144,7 +146,8 @@ async function obtenerFichaVersion(versionId) {
       rr.voltaje_min, rr.voltaje_max,
       rr.amperaje_min_bajas, rr.amperaje_min_altas, rr.amperaje_max,
       rr.potencia_min_bajas, rr.potencia_min_altas, rr.potencia_max,
-      cc.cortar_puntas, cc.posicion_punto, cc.empujar_cables, cc.forma_cableado, cc.referencia_cable
+      cc.cortar_puntas, cc.posicion_punto, cc.empujar_cables, cc.forma_cableado, cc.referencia_cable,
+      cc.no_aplica_medias
     FROM versiones v
     JOIN referencias r ON r.id = v.referencia_id
     LEFT JOIN elec_mediciones m ON m.version_id = v.id
@@ -176,6 +179,7 @@ async function obtenerFichaVersion(versionId) {
     empujar_cables: row.empujar_cables,
     forma_cableado: row.forma_cableado,
     referencia_cable: row.referencia_cable,
+    no_aplica_medias: row.no_aplica_medias,
   };
 }
 
@@ -213,12 +217,13 @@ async function guardarFichaVersion(versionId, datos = {}) {
   );
 
   await db.run(
-    `INSERT INTO elec_config_cableado (version_id, cortar_puntas, posicion_punto, empujar_cables, forma_cableado, referencia_cable)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO elec_config_cableado (version_id, cortar_puntas, posicion_punto, empujar_cables, forma_cableado, referencia_cable, no_aplica_medias)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(version_id) DO UPDATE SET
        cortar_puntas=excluded.cortar_puntas, posicion_punto=excluded.posicion_punto,
-       empujar_cables=excluded.empujar_cables, forma_cableado=excluded.forma_cableado, referencia_cable=excluded.referencia_cable`,
-    [versionId, datos.cortar_puntas ? 1 : 0, datos.posicion_punto ?? null, datos.empujar_cables ? 1 : 0, datos.forma_cableado ?? null, datos.referencia_cable ?? null]
+       empujar_cables=excluded.empujar_cables, forma_cableado=excluded.forma_cableado, referencia_cable=excluded.referencia_cable,
+       no_aplica_medias=excluded.no_aplica_medias`,
+    [versionId, datos.cortar_puntas ? 1 : 0, datos.posicion_punto ?? null, datos.empujar_cables ? 1 : 0, datos.forma_cableado ?? null, datos.referencia_cable ?? null, datos.no_aplica_medias ? 1 : 0]
   );
 }
 

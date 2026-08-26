@@ -216,7 +216,14 @@
       </div>
 
       <div class="panel-card" id="detailPanel">
-        <div class="panel-header">
+        <!-- Julio pidió quitar este encabezado ("Referencia: X" / "Plano
+             Activo: ruta (V1)") — es redundante con la referencia ya
+             seleccionada y resaltada en ".ref-item.active" del panel de la
+             izquierda, y así se gana espacio en pantalla. Se deja oculto
+             (no se borra del todo) porque cargarReferencia() le sigue
+             poniendo el texto por JS — mismo patrón que los campos ocultos
+             de "Datos Inspección" un poco más abajo en este mismo archivo. -->
+        <div class="panel-header" style="display:none;">
           <h2 id="refTitleDisplay">Referencia: -</h2>
           <div style="display:flex; align-items:center; gap:12px;">
             <span id="refMetaDisplay" style="font-size: 12px; color: #718096;"></span>
@@ -232,7 +239,10 @@
           <div class="tab-content active" id="tabInspeccion">
             <!-- Taller Blueprint Viewer directly inline (700px height) -->
             <div class="viewer-container">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
+              <!-- Título "Plano Activo (Altura de 700px)" y el hint de
+                   "Clic en el plano para ampliar" que estaban acá se
+                   quitaron por pedido de Julio, mismo motivo que arriba. -->
+              <div style="display:none; justify-content:space-between; align-items:center;">
                 <h3 style="font-size: 15px; color: #2d3748;">Plano Activo (Altura de 700px)</h3>
                 <span style="font-size: 12px; color: #a0aec0;">🔍 Clic en el plano para ampliar</span>
               </div>

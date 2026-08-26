@@ -30,6 +30,11 @@ const ValoresCableadoApp = (() => {
   let selectedKey = null;
   let selectedVersion = null;
   let searchText = '';
+  // Pestaña activa del panel de Observaciones/Recomendaciones (ver más abajo,
+  // sección OBSERVACIONES / RECOMENDACIONES). Se recuerda acá afuera para que
+  // no se resetee a "obs" cada vez que se repinta la ficha (por ejemplo al
+  // cambiar de versión con los chips).
+  let tabObsRec = 'obs';
 
   async function iniciar() {
     await cargarDatos();
@@ -78,14 +83,24 @@ const ValoresCableadoApp = (() => {
 
     filtradas.forEach(key => {
       const productos = grupos[key];
-      const nVersiones = new Set(productos.map(p => p.version).filter(Boolean)).size;
+
+      // Punto rojo — mismo patrón que "necesita prueba" en Circuitos SMD
+      // (Public/smd.html, .prueba-dot): en vez de calcular esto en el
+      // servidor, se reusan los datos que ya trajo /productos y se revisa
+      // la versión que se vería de entrada (misma que elige mostrarFicha)
+      // con la misma regla de la alerta "FALTAN VALORES".
+      const versionPorDefecto = elegirVersionPorDefecto(productos);
+      const faltanValores = contarCamposFaltantes(versionPorDefecto) > 0;
 
       const item = document.createElement('div');
       item.className = 'vc-ref-item' + (key === selectedKey ? ' active' : '');
       item.dataset.key = key;
+      // El "N v." que antes aparecía acá (cantidad de versiones) se quitó
+      // por pedido de Julio — el nombre de la referencia queda solo, y el
+      // punto rojo (cuando aplica) es la única marca aparte del nombre.
       item.innerHTML = `
         <span class="vc-ref-name">${escapeHtml(key)}</span>
-        ${nVersiones > 1 ? `<span class="vc-ref-versions">${nVersiones} v.</span>` : ''}
+        ${faltanValores ? `<span class="vc-ref-dot" title="Le faltan valores"></span>` : ''}
       `;
       item.addEventListener('click', () => seleccionarClave(key));
       list.appendChild(item);
@@ -125,6 +140,24 @@ const ValoresCableadoApp = (() => {
     return masAlta(conFoto.length > 0 ? conFoto : base);
   }
 
+  // Cuántos campos de la ficha le faltan a una versión — misma regla que la
+  // alerta "⚠️ FALTAN VALORES" de la ficha (ver mostrarFicha más abajo),
+  // pero como función aparte para poder reusarla también en la lista de la
+  // izquierda (el punto rojo, ver construirSidebar). Los 4 campos de
+  // "Medias (Bajas)" no cuentan si la versión tiene marcado que no aplican.
+  const CAMPOS_MEDIAS_BAJAS = ['amperaje_medias', 'potencia_medias', 'amperaje_min_medias', 'potencia_min_medias'];
+  function contarCamposFaltantes(p) {
+    const noAplicaMedias = (p.no_aplica_medias === 1 || p.no_aplica_medias === true || p.no_aplica_medias === '1');
+    const campos = [
+      'voltaje_revision', 'amperaje_altas', 'potencia_altas',
+      'voltaje_min', 'amperaje_min_altas', 'potencia_min_altas',
+      'voltaje_max', 'amperaje_max', 'potencia_max',
+      'cortar_puntas', 'posicion_punto', 'empujar_cables', 'forma_cableado', 'referencia_cable',
+      ...(noAplicaMedias ? [] : CAMPOS_MEDIAS_BAJAS),
+    ];
+    return campos.filter(c => p[c] === null || p[c] === undefined || p[c] === '').length;
+  }
+
   // ========== FICHA ==========
   function mostrarFicha() {
     const main = document.getElementById('vc-main-panel');
@@ -156,7 +189,6 @@ const ValoresCableadoApp = (() => {
     }
 
     const p = currentProduct;
-    const colorName = (COLOR_MAP[p.color] || { name: p.color || '' }).name;
 
     // ==================== ALERTA DE VALORES FALTANTES ====================
     // Julio pidió una alerta roja flotante, mismo estilo que "⚠️ NECESITA
@@ -164,13 +196,14 @@ const ValoresCableadoApp = (() => {
     // sus campos — así se nota de una vez que la referencia está incompleta,
     // sin tener que revisar campo por campo. Cuenta TODOS los campos de la
     // ficha (eléctricos y de cableado), no solo los eléctricos.
-    const CAMPOS_A_VALIDAR = [
-      'voltaje_revision', 'amperaje_medias', 'potencia_medias', 'amperaje_altas', 'potencia_altas',
-      'voltaje_min', 'amperaje_min_medias', 'potencia_min_medias', 'amperaje_min_altas', 'potencia_min_altas',
-      'voltaje_max', 'amperaje_max', 'potencia_max',
-      'cortar_puntas', 'posicion_punto', 'empujar_cables', 'forma_cableado', 'referencia_cable',
-    ];
-    const camposFaltantes = CAMPOS_A_VALIDAR.filter(c => p[c] === null || p[c] === undefined || p[c] === '').length;
+    //
+    // Los 4 campos de "Medias (Bajas)" son la excepción: algunas referencias
+    // no los manejan por diseño (solo Altas). Cuando la versión tiene
+    // marcado "no_aplica_medias" (ver Editar Referencia), esos 4 campos se
+    // sacan de la cuenta de faltantes y se muestran como "N/A" más abajo en
+    // vez de contar como un campo sin llenar.
+    const noAplicaMedias = (p.no_aplica_medias === 1 || p.no_aplica_medias === true || p.no_aplica_medias === '1');
+    const camposFaltantes = contarCamposFaltantes(p);
 
     const imgs = p.imagenes || [];
     const imgCircuito = imgs.find(i => i.tipo === 'circuito');
@@ -205,28 +238,83 @@ const ValoresCableadoApp = (() => {
       if (v === 1 || v === true || v === '1' || v === 'true') return `<span class="vc-val-yes">SÍ ✓</span>`;
       return `<span class="vc-val-no">NO <span class="vc-x-red">✗</span></span>`;
     };
+    // Para las 4 líneas de "Medias (Bajas)" en los displays de abajo: si la
+    // versión tiene marcado que no aplica, se muestra "N/A" en vez del
+    // valor (que en ese caso siempre va a estar vacío) — así no se ve como
+    // un dato que falta, sino como un campo que a propósito no corresponde
+    // a esta referencia.
+    const valMedias = (v, unidad) => noAplicaMedias
+      ? `<span class="vc-val vc-na">N/A</span>`
+      : `<span class="vc-val">${fmtNum(v)}</span><span class="vc-unit">${unidad}</span>`;
+
+    // ==================== OBSERVACIONES / RECOMENDACIONES ====================
+    // Julio pidió lo mismo que ya existe en Circuitos SMD: una nota general
+    // de la referencia (Observaciones, una sola por referencia, la puede
+    // editar quien tenga el permiso) y un hilo de mensajes cortos
+    // (Recomendaciones, cualquiera con permiso de crear puede enviar uno,
+    // pero solo ve los que él mismo envió a menos que tenga el permiso de
+    // "ver todas" — esa regla ya la aplica el backend, acá solo se respeta
+    // el resultado). Usa los MISMOS permisos y los MISMOS endpoints que
+    // Circuitos SMD (observaciones.ver/editar, recomendaciones.ver/crear/
+    // eliminar) porque es la misma referencia (mismo codigo_base) — no hace
+    // falta duplicar nada.
+    const puedeVerObs = tienePermiso('observaciones.ver');
+    const puedeEditarObs = tienePermiso('observaciones.editar');
+    const puedeVerRec = tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear');
+    const puedeCrearRec = tienePermiso('recomendaciones.crear');
+    const puedeEliminarRec = tienePermiso('recomendaciones.eliminar');
+    const mostrarObsRec = puedeVerObs || puedeVerRec;
+    // Si la pestaña recordada ya no aplica (por ejemplo el usuario perdió el
+    // permiso, o nunca lo tuvo), cae a la primera pestaña disponible.
+    if (tabObsRec === 'obs' && !puedeVerObs) tabObsRec = puedeVerRec ? 'rec' : 'obs';
+    if (tabObsRec === 'rec' && !puedeVerRec) tabObsRec = puedeVerObs ? 'obs' : 'rec';
+
+    const obsRecHtml = !mostrarObsRec ? '' : `
+      <div class="vc-obsrec-card">
+        <div class="vc-obsrec-tabs">
+          ${puedeVerObs ? `<button type="button" class="vc-obsrec-tab${tabObsRec === 'obs' ? ' active' : ''}" data-vctab="obs">📋 Observaciones</button>` : ''}
+          ${puedeVerRec ? `<button type="button" class="vc-obsrec-tab${tabObsRec === 'rec' ? ' active' : ''}" data-vctab="rec">📝 Recomendaciones</button>` : ''}
+        </div>
+        ${puedeVerObs ? `
+        <div class="vc-obsrec-content${tabObsRec === 'obs' ? ' active' : ''}" id="vc-content-obs">
+          <textarea class="vc-obs-textarea" id="vc-obs-textarea" placeholder="No hay observaciones para esta referencia..."${puedeEditarObs ? '' : ' readonly'}></textarea>
+          <div class="vc-obs-meta" id="vc-obs-meta"></div>
+          <div class="vc-obs-actions" id="vc-obs-actions">
+            ${puedeEditarObs ? `<button type="button" class="vc-btn-enviar" id="vc-btn-guardar-obs">💾 Guardar observación</button>` : ''}
+          </div>
+        </div>` : ''}
+        ${puedeVerRec ? `
+        <div class="vc-obsrec-content${tabObsRec === 'rec' ? ' active' : ''}" id="vc-content-rec">
+          <div class="vc-rec-lista" id="vc-rec-lista"><div class="vc-rec-empty">Cargando…</div></div>
+          ${puedeCrearRec ? `
+          <div class="vc-rec-form">
+            <textarea class="vc-rec-textarea" id="vc-rec-input" placeholder="Escribe una recomendación..."></textarea>
+            <div class="vc-rec-actions"><button type="button" class="vc-btn-enviar" id="vc-btn-enviar-rec">Enviar recomendación</button></div>
+          </div>` : ''}
+        </div>` : ''}
+      </div>
+    `;
+
+    // Julio pidió quitar el título/subtítulo que repetía la referencia acá
+    // arriba de las fotos ("⚡ 0111 — Am — V4" / "SUP/0111/Am/Mul") — es
+    // redundante con la referencia que ya está seleccionada y resaltada en
+    // el panel de la izquierda, y así se gana espacio en pantalla. Los
+    // chips de versión SÍ se conservan (no son solo un encabezado, sirven
+    // para cambiar de versión) — el bloque completo del header ahora solo
+    // aparece cuando hay más de una versión que elegir.
+    const fichaHeaderHtml = versiones.length <= 1 ? '' : `
+      <div class="vc-ficha-header">
+        <div class="vc-version-chips">
+          ${versiones.map(v => `
+            <button type="button" class="vc-version-chip ${v === selectedVersion ? 'active' : ''}" data-version="${escapeHtml(v)}">${escapeHtml(v)}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
 
     main.innerHTML = `
       <div class="vc-ficha">
-        <div class="vc-ficha-header">
-          <div class="vc-ficha-header-top">
-            <div>
-              <h2>
-                ⚡ ${escapeHtml(p.ref_base || '')}
-                ${colorName ? `— ${escapeHtml(colorName)}` : ''}
-                ${p.version ? `— ${escapeHtml(p.version)}` : ''}
-              </h2>
-              <div class="vc-sub">${escapeHtml(p.codigo_completo || '')}</div>
-            </div>
-          </div>
-          ${versiones.length > 1 ? `
-            <div class="vc-version-chips">
-              ${versiones.map(v => `
-                <button type="button" class="vc-version-chip ${v === selectedVersion ? 'active' : ''}" data-version="${escapeHtml(v)}">${escapeHtml(v)}</button>
-              `).join('')}
-            </div>
-          ` : ''}
-        </div>
+        ${fichaHeaderHtml}
 
         <!-- Alerta flotante de valores faltantes — mismo estilo que
              "⚠️ NECESITA PRUEBA" en Circuitos SMD. Vive fuera de
@@ -256,8 +344,8 @@ const ValoresCableadoApp = (() => {
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Medias (Bajas) ═══</div>
                 <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_revision)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_medias)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_medias)}</span><span class="vc-unit">W</span></span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Current</span><span>${valMedias(p.amperaje_medias, 'A')}</span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Power</span><span>${valMedias(p.potencia_medias, 'W')}</span></div>
               </div>
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Altas ═══</div>
@@ -272,8 +360,8 @@ const ValoresCableadoApp = (() => {
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Medias (Bajas) ═══</div>
                 <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_min)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_min_medias)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_min_medias)}</span><span class="vc-unit">W</span></span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Current</span><span>${valMedias(p.amperaje_min_medias, 'A')}</span></div>
+                <div class="vc-display-line"><span class="vc-lbl">Power</span><span>${valMedias(p.potencia_min_medias, 'W')}</span></div>
               </div>
               <div class="vc-display-section">
                 <div class="vc-display-section-label">═══ Altas ═══</div>
@@ -310,6 +398,8 @@ const ValoresCableadoApp = (() => {
             </div>
           </div>
 
+          ${obsRecHtml}
+
           <!-- La tarjeta de Auditoría de Cambios que estuvo acá brevemente
                se quitó: Julio pidió que ese historial se vea centralizado en
                "Crear Referencia" (Public/referencias.html, que ya sirve a
@@ -325,6 +415,172 @@ const ValoresCableadoApp = (() => {
 
     if (imgCircuito) cargarFotoCircuito(imgCircuito.version_id);
     if (imgCableado) cargarFotoCableado(imgCableado.forma_cableado);
+
+    if (mostrarObsRec) {
+      wireObsRecPanel();
+      if (puedeVerObs) cargarObservacionesVC();
+      if (puedeVerRec) cargarRecomendacionesVC(puedeEliminarRec);
+    }
+  }
+
+  // ========== OBSERVACIONES / RECOMENDACIONES ==========
+  // Igual que en Circuitos SMD (Public/smd.html), pero apuntando a
+  // "selectedKey" (que es el mismo codigo_completo === codigo_base de la
+  // referencia) en vez de "referenciaActiva". No cambian al cambiar de
+  // versión (chips) porque Observaciones/Recomendaciones son por referencia
+  // completa, no por versión — por eso mostrarFicha() las vuelve a pedir
+  // cada vez que se repinta (cambio de versión incluido), pero siempre
+  // devuelven lo mismo mientras "selectedKey" no cambie.
+  function irATabObsRec(tab) {
+    tabObsRec = tab;
+    document.querySelectorAll('.vc-obsrec-tab').forEach(b => b.classList.toggle('active', b.dataset.vctab === tab));
+    document.querySelectorAll('.vc-obsrec-content').forEach(c => c.classList.remove('active'));
+    const content = document.getElementById(tab === 'obs' ? 'vc-content-obs' : 'vc-content-rec');
+    if (content) content.classList.add('active');
+  }
+
+  function wireObsRecPanel() {
+    document.querySelectorAll('.vc-obsrec-tab').forEach(btn => {
+      btn.addEventListener('click', () => irATabObsRec(btn.dataset.vctab));
+    });
+    const btnGuardarObs = document.getElementById('vc-btn-guardar-obs');
+    if (btnGuardarObs) btnGuardarObs.addEventListener('click', guardarObservacionVC);
+    const btnEnviarRec = document.getElementById('vc-btn-enviar-rec');
+    if (btnEnviarRec) btnEnviarRec.addEventListener('click', enviarRecomendacionVC);
+  }
+
+  async function cargarObservacionesVC() {
+    if (!selectedKey) return;
+    const claveEnCurso = selectedKey;
+    const textarea = document.getElementById('vc-obs-textarea');
+    const meta = document.getElementById('vc-obs-meta');
+    if (!textarea) return;
+    try {
+      const res = await fetch('/api/observaciones/' + encodeURIComponent(selectedKey), {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      // Si el usuario ya cambió de referencia mientras esperábamos esta
+      // respuesta, no la pintamos — igual que en smd.html.
+      if (selectedKey !== claveEnCurso) return;
+      if (res.status === 403) { textarea.value = ''; if (meta) meta.textContent = ''; return; }
+      const data = await res.json();
+      if (selectedKey !== claveEnCurso) return;
+      if (data.observacion) {
+        textarea.value = data.observacion.observacion || '';
+        const fecha = data.observacion.actualizado_en
+          ? new Date(data.observacion.actualizado_en).toLocaleString('es-ES')
+          : '';
+        const autor = data.observacion.actualizado_por_nombre || '';
+        if (meta) meta.textContent = fecha ? `Última actualización: ${fecha}${autor ? ' por ' + autor : ''}` : '';
+      } else {
+        textarea.value = '';
+        if (meta) meta.textContent = '';
+      }
+    } catch (e) {
+      if (selectedKey !== claveEnCurso) return;
+      textarea.value = '';
+      if (meta) meta.textContent = '';
+    }
+  }
+
+  async function guardarObservacionVC() {
+    if (!selectedKey) return;
+    const textarea = document.getElementById('vc-obs-textarea');
+    const btn = document.getElementById('vc-btn-guardar-obs');
+    if (!textarea || !btn) return;
+    const texto = textarea.value;
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    try {
+      const res = await fetch('/api/observaciones/' + encodeURIComponent(selectedKey), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ observacion: texto })
+      });
+      if (res.ok) {
+        await cargarObservacionesVC();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert('Error: ' + (err.error || 'No se pudo guardar'));
+      }
+    } catch (e) {
+      alert('Error de conexión: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '💾 Guardar observación';
+    }
+  }
+
+  async function cargarRecomendacionesVC(puedeEliminarRec) {
+    if (!selectedKey) return;
+    const claveEnCurso = selectedKey;
+    const listaContainer = document.getElementById('vc-rec-lista');
+    if (!listaContainer) return;
+    try {
+      const res = await fetch('/api/recomendaciones/' + encodeURIComponent(selectedKey), {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (selectedKey !== claveEnCurso) return;
+      if (res.status === 403) { listaContainer.innerHTML = '<div class="vc-rec-empty">No tienes permiso para ver recomendaciones.</div>'; return; }
+      const data = await res.json();
+      if (selectedKey !== claveEnCurso) return;
+      const lista = data.recomendaciones || [];
+      if (lista.length === 0) { listaContainer.innerHTML = '<div class="vc-rec-empty">No hay recomendaciones para esta referencia.</div>'; return; }
+      let html = '<div class="vc-rec-list">';
+      lista.forEach(rec => {
+        const fecha = new Date(rec.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const deleteBtn = puedeEliminarRec ? `<button type="button" class="vc-rec-bubble-delete" title="Eliminar">×</button>` : '';
+        html += `<div class="vc-rec-bubble" data-recid="${rec.id}">${deleteBtn}<div class="vc-rec-bubble-header"><span class="vc-rec-bubble-author">${escapeHtml(rec.autor)}</span><span class="vc-rec-bubble-date">${fecha}</span></div><div class="vc-rec-bubble-text">${escapeHtml(rec.recomendacion)}</div></div>`;
+      });
+      html += '</div>';
+      listaContainer.innerHTML = html;
+      if (puedeEliminarRec) {
+        listaContainer.querySelectorAll('.vc-rec-bubble-delete').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const bubble = btn.closest('.vc-rec-bubble');
+            borrarRecomendacionVC(parseInt(bubble.dataset.recid, 10));
+          });
+        });
+      }
+    } catch (e) {
+      if (selectedKey !== claveEnCurso) return;
+      listaContainer.innerHTML = '<div class="vc-rec-empty">Error al cargar recomendaciones.</div>';
+    }
+  }
+
+  async function enviarRecomendacionVC() {
+    if (!selectedKey) return;
+    const input = document.getElementById('vc-rec-input');
+    const btn = document.getElementById('vc-btn-enviar-rec');
+    if (!input || !btn) return;
+    const texto = input.value.trim();
+    if (!texto) { alert('Escribe una recomendación'); return; }
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    try {
+      const res = await fetch('/api/recomendacion', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ referencia: selectedKey, recomendacion: texto })
+      });
+      if (res.ok) {
+        input.value = '';
+        await cargarRecomendacionesVC(tienePermiso('recomendaciones.eliminar'));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert('Error: ' + (err.error || 'Error al guardar'));
+      }
+    } catch (e) {
+      alert('Error de conexión: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar recomendación';
+    }
+  }
+
+  async function borrarRecomendacionVC(id) {
+    if (!confirm('¿Seguro que quieres eliminar esta recomendación?')) return;
+    try {
+      const res = await fetch('/api/recomendacion/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) await cargarRecomendacionesVC(true);
+      else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+    } catch (e) { alert('Error de conexión'); }
   }
 
   // La foto de circuito viene protegida (con marca de agua del nombre de
