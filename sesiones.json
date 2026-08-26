@@ -85,14 +85,6 @@
     "rol": "admin",
     "ultimaActividad": 1787598336631
   },
-  "kc1tiiira19mt8vx8mq": {
-    "id": 1,
-    "nombre": "Administrador",
-    "usuario": "admin",
-    "rol_id": 1,
-    "rol": "admin",
-    "ultimaActividad": 1787687120683
-  },
   "w28blak1gubmt8y6w45": {
     "id": 1,
     "nombre": "Administrador",
@@ -108,5 +100,13 @@
     "rol_id": 1,
     "rol": "admin",
     "ultimaActividad": 1787679712160
+  },
+  "s8qgddty8bmmta0h0r1": {
+    "id": 1,
+    "nombre": "Administrador",
+    "usuario": "admin",
+    "rol_id": 1,
+    "rol": "admin",
+    "ultimaActividad": 1787744030111
   }
 }

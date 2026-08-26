@@ -158,6 +158,20 @@ const ValoresCableadoApp = (() => {
     const p = currentProduct;
     const colorName = (COLOR_MAP[p.color] || { name: p.color || '' }).name;
 
+    // ==================== ALERTA DE VALORES FALTANTES ====================
+    // Julio pidió una alerta roja flotante, mismo estilo que "⚠️ NECESITA
+    // PRUEBA" en Circuitos SMD, cuando a esta ficha le falte cualquiera de
+    // sus campos — así se nota de una vez que la referencia está incompleta,
+    // sin tener que revisar campo por campo. Cuenta TODOS los campos de la
+    // ficha (eléctricos y de cableado), no solo los eléctricos.
+    const CAMPOS_A_VALIDAR = [
+      'voltaje_revision', 'amperaje_medias', 'potencia_medias', 'amperaje_altas', 'potencia_altas',
+      'voltaje_min', 'amperaje_min_medias', 'potencia_min_medias', 'amperaje_min_altas', 'potencia_min_altas',
+      'voltaje_max', 'amperaje_max', 'potencia_max',
+      'cortar_puntas', 'posicion_punto', 'empujar_cables', 'forma_cableado', 'referencia_cable',
+    ];
+    const camposFaltantes = CAMPOS_A_VALIDAR.filter(c => p[c] === null || p[c] === undefined || p[c] === '').length;
+
     const imgs = p.imagenes || [];
     const imgCircuito = imgs.find(i => i.tipo === 'circuito');
     const imgCableado = imgs.find(i => i.tipo === 'cableado');
@@ -212,6 +226,14 @@ const ValoresCableadoApp = (() => {
               `).join('')}
             </div>
           ` : ''}
+        </div>
+
+        <!-- Alerta flotante de valores faltantes — mismo estilo que
+             "⚠️ NECESITA PRUEBA" en Circuitos SMD. Vive fuera de
+             .vc-ficha-scroll para quedar siempre visible aunque se
+             desplace hacia abajo. -->
+        <div class="vc-alerta-badge${camposFaltantes > 0 ? ' visible' : ''}">
+          <span>⚠️ FALTAN ${camposFaltantes} VALOR${camposFaltantes === 1 ? '' : 'ES'}</span>
         </div>
 
         <div class="vc-ficha-scroll">
