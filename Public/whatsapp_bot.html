@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Control de Registros WhatsApp - Calidad & Circuitos SMD</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* Header: estructura y color institucional vienen de css/comun.css;
        aquí solo las variables de tamaño, que son distintas al valor por
@@ -17,23 +15,25 @@
     .header { --header-padding: 20px 40px; --header-shadow: 0 4px 15px rgba(0,0,0,0.1); --header-flex-shrink: 1; }
     .header h1 { font-size: 24px; font-weight: 600; }
     .header p { font-size: 13px; opacity: 0.9; margin-top: 3px; }
-    .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer; font-size: 12px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
     .btn-action:hover { background: rgba(255,255,255,0.35); }
 
     .container { flex: 1; padding: 30px 40px; max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 30px; }
 
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-    .stat-card { background: white; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 20px; border-left: 5px solid #25D366; }
+    .stat-card { background: white; padding: 20px 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(17,27,67,0.05); display: flex; align-items: center; gap: 20px; border-left: 5px solid #25D366; }
     .stat-icon { font-size: 36px; }
     .stat-info h3 { font-size: 14px; color: #718096; font-weight: 600; }
     .stat-info p { font-size: 24px; color: #2d3748; font-weight: 700; margin-top: 4px; }
 
-    .section-card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
+    .section-card { background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(17,27,67,0.05); overflow: hidden; display: flex; flex-direction: column; }
     .section-header { padding: 20px 25px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
     .section-header h2 { font-size: 18px; color: #2d3748; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 
     .table-responsive { width: 100%; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    /* Tablas con teléfonos, IDs, horas y fechas — datos densos, se
+       mantienen en Segoe UI en vez de Rubik. */
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     th { background: #edf2f7; color: #4a5568; padding: 12px 16px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
     td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #2d3748; }
     tr:hover { background: #f7fafc; }
@@ -79,8 +79,8 @@
 
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>💬 Control de Registros WhatsApp</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-brands fa-whatsapp"></i> Control de Registros WhatsApp</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -90,25 +90,25 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div>
-        <h1>💬 Control de Registros WhatsApp (Bot)</h1>
+        <h1><i class="fa-brands fa-whatsapp"></i> Control de Registros WhatsApp (Bot)</h1>
         <p>Monitoreo en tiempo real de entradas, salidas y sesiones activas en áreas</p>
       </div>
     </div>
     <div class="header-right">
       <span id="userNameDisplay">Usuario</span>
-      <button class="btn-action" onclick="enviarResumenManual()">📊 Enviar Resumen Diario</button>
-      <a href="index.html" class="btn-action">← Volver al Portal</a>
+      <button class="btn-action" onclick="enviarResumenManual()"><i class="fa-solid fa-chart-column"></i> Enviar Resumen Diario</button>
+      <a href="index.html" class="btn-action"><i class="fa-solid fa-arrow-left"></i> Volver al Portal</a>
       <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
     </div>
   </div>
 
   <div class="container" id="appMain" style="display:none;">
     <div class="tabs-bar">
-      <button class="tab-btn active" data-tab="actividad">📋 Actividad</button>
-      <button class="tab-btn" data-tab="numeros" id="tabBtnNumeros" style="display:none;">📇 Números Autorizados</button>
-      <button class="tab-btn" data-tab="alertas" id="tabBtnAlertas" style="display:none;">🔔 Alertas de Calidad</button>
+      <button class="tab-btn active" data-tab="actividad"><i class="fa-solid fa-clipboard-list"></i> Actividad</button>
+      <button class="tab-btn" data-tab="numeros" id="tabBtnNumeros" style="display:none;"><i class="fa-solid fa-address-card"></i> Números Autorizados</button>
+      <button class="tab-btn" data-tab="alertas" id="tabBtnAlertas" style="display:none;"><i class="fa-solid fa-bell"></i> Alertas de Calidad</button>
     </div>
 
     <div class="tab-panel" id="tabPanelActividad">
@@ -121,7 +121,7 @@
         </div>
       </div>
       <div class="stat-card" style="border-left-color: var(--brand-primary);">
-        <div class="stat-icon">📋</div>
+        <div class="stat-icon"><i class="fa-solid fa-clipboard-list"></i></div>
         <div class="stat-info">
           <h3>Registros Totales (Historial)</h3>
           <p id="statRegistrosTotal">0</p>
@@ -133,7 +133,7 @@
     <div class="section-card">
       <div class="section-header">
         <h2>🟢 Sesiones Activas en Áreas</h2>
-        <button class="btn-sm primary" onclick="cargarDatos()">🔄 Actualizar</button>
+        <button class="btn-sm primary" onclick="cargarDatos()"><i class="fa-solid fa-arrow-rotate-right"></i> Actualizar</button>
       </div>
       <div class="table-responsive">
         <table>
@@ -156,7 +156,7 @@
     <!-- Historical Logs Section -->
     <div class="section-card">
       <div class="section-header">
-        <h2>📜 Historial de Entradas y Salidas</h2>
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> Historial de Entradas y Salidas</h2>
         <div class="toolbar">
           <select id="filtroLimite" onchange="cargarDatos()">
             <option value="50">Últimos 50</option>
@@ -190,15 +190,15 @@
     <!-- Números Autorizados (solo whatsapp.bot.gestionar) — su propia pestaña -->
     <div class="section-card" id="seccionNumeros" style="display:none;">
       <div class="section-header">
-        <h2>📇 Números Autorizados del Bot</h2>
+        <h2><i class="fa-solid fa-address-card"></i> Números Autorizados del Bot</h2>
       </div>
       <div class="form-inline">
         <input type="text" id="nuevoNumeroTelefono" placeholder="Identificador WhatsApp (ej: 573001234567@c.us)" style="min-width:260px;">
         <input type="text" id="nuevoNumeroNombre" placeholder="Nombre a mostrar">
         <label><input type="checkbox" id="nuevoNumeroAdmin"> Administrador (acceso completo: recibe resúmenes/alertas y puede usar todos los comandos)</label>
-        <button class="btn-sm primary" onclick="agregarNumero()">➕ Agregar</button>
+        <button class="btn-sm primary" onclick="agregarNumero()"><i class="fa-solid fa-plus"></i> Agregar</button>
       </div>
-      <p class="alerta-desc" style="padding: 0 25px 12px;">💡 "Administrador" da acceso a todo de una vez. Para dar acceso solo a algunas funciones (ej: solo marcar entrada/salida, o solo el resumen diario), deja "Administrador" sin marcar y usa "⚙️ Permisos" en cada número.</p>
+      <p class="alerta-desc" style="padding: 0 25px 12px;"><i class="fa-solid fa-lightbulb"></i> "Administrador" da acceso a todo de una vez. Para dar acceso solo a algunas funciones (ej: solo marcar entrada/salida, o solo el resumen diario), deja "Administrador" sin marcar y usa "<i class="fa-solid fa-gear"></i> Permisos" en cada número.</p>
       <div class="table-responsive">
         <table>
           <thead>
@@ -221,7 +221,7 @@
     <!-- Configuración de Alertas de Calidad (solo whatsapp.bot.gestionar) — su propia pestaña -->
     <div class="section-card" id="seccionAlertas" style="display:none;">
       <div class="section-header">
-        <h2>🔔 Alertas en Tiempo Real</h2>
+        <h2><i class="fa-solid fa-bell"></i> Alertas en Tiempo Real</h2>
       </div>
       <p class="alerta-desc" style="margin:-0.5rem 0 1rem;">Avisos de un evento puntual, apenas pasa (un lote rechazado, un pico de garantías, etc.).</p>
       <div class="table-responsive">
@@ -240,7 +240,7 @@
       </div>
 
       <div class="section-header" style="margin-top:1.5rem;">
-        <h2>📊 Resúmenes Periódicos</h2>
+        <h2><i class="fa-solid fa-chart-column"></i> Resúmenes Periódicos</h2>
       </div>
       <p class="alerta-desc" style="margin:-0.5rem 0 1rem;">Reportes de calidad con hora fija, no ligados a un evento en particular.</p>
       <div class="table-responsive">
@@ -335,10 +335,10 @@
             <tr>
               <td><strong>${escapeHtml(s.nombre || '')}</strong></td>
               <td><code>${escapeHtml(s.telefono || '')}</code></td>
-              <td>📍 <strong>${escapeHtml(s.area_nombre || '')}</strong></td>
-              <td>🕐 ${escapeHtml(s.entrada || '')}</td>
+              <td><i class="fa-solid fa-location-dot"></i> <strong>${escapeHtml(s.area_nombre || '')}</strong></td>
+              <td><i class="fa-solid fa-clock"></i> ${escapeHtml(s.entrada || '')}</td>
               <td>
-                <button class="btn-sm danger" data-telefono-cerrar="${escapeHtml(s.telefono || '')}">🔴 Cerrar Sesión</button>
+                <button class="btn-sm danger" data-telefono-cerrar="${escapeHtml(s.telefono || '')}"><i class="fa-solid fa-circle-xmark"></i> Cerrar Sesión</button>
               </td>
             </tr>
           `).join('');
@@ -370,7 +370,7 @@
                 <span class="badge ${r.tipo === 'ENTRADA' ? 'entrada' : 'salida'}">${escapeHtml(r.tipo || '')}</span>
                 ${r.cerrado_por_admin ? '<span class="badge admin" title="Cerrado por administrador">Admin</span>' : ''}
               </td>
-              <td>📍 ${escapeHtml(r.area_nombre || '-')}</td>
+              <td><i class="fa-solid fa-location-dot"></i> ${escapeHtml(r.area_nombre || '-')}</td>
               <td>${escapeHtml(r.entrada || '-')}</td>
               <td>${escapeHtml(r.salida || '-')}</td>
               <td><strong>${escapeHtml(r.duracion || '-')}</strong></td>
@@ -450,11 +450,11 @@
               </label>
             </td>
             <td>
-              <button class="btn-sm primary" data-id-toggle-permisos="${n.id}">⚙️ Permisos${n.es_admin ? '' : ` (${permisos.length})`}</button>
+              <button class="btn-sm primary" data-id-toggle-permisos="${n.id}"><i class="fa-solid fa-gear"></i> Permisos${n.es_admin ? '' : ` (${permisos.length})`}</button>
             </td>
             <td>
-              <button class="btn-sm primary" data-id-admin="${n.id}" data-es-admin="${n.es_admin ? '1' : '0'}">${n.es_admin ? '⬇️ Quitar admin' : '⬆️ Hacer admin'}</button>
-              <button class="btn-sm danger" data-id-eliminar="${n.id}" data-nombre-eliminar="${escapeHtml(n.nombre)}">🗑️</button>
+              <button class="btn-sm primary" data-id-admin="${n.id}" data-es-admin="${n.es_admin ? '1' : '0'}">${n.es_admin ? '<i class="fa-solid fa-arrow-down"></i> Quitar admin' : '<i class="fa-solid fa-arrow-up"></i> Hacer admin'}</button>
+              <button class="btn-sm danger" data-id-eliminar="${n.id}" data-nombre-eliminar="${escapeHtml(n.nombre)}"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>
           <tr id="filaPermisos${n.id}" style="display:none;">
@@ -462,7 +462,7 @@
               ${n.es_admin
                 ? '<span class="alerta-desc">Este número es administrador: ya tiene acceso a todo. Quita "Administrador" si quieres darle solo algunas funciones.</span>'
                 : `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:4px;">${casillas}</div>
-                   <button class="btn-sm primary" style="margin-top:8px;" data-id-guardar-permisos="${n.id}">💾 Guardar permisos</button>`
+                   <button class="btn-sm primary" style="margin-top:8px;" data-id-guardar-permisos="${n.id}"><i class="fa-solid fa-floppy-disk"></i> Guardar permisos</button>`
               }
             </td>
           </tr>

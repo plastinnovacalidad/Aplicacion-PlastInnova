@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Valores y Cableado - Calidad & Circuitos SMD</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <link rel="stylesheet" href="css/valores_cableado.css">
   <style>
@@ -23,8 +21,8 @@
 
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>⚡ Valores y Cableado</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-bolt"></i> Valores y Cableado</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -34,15 +32,15 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div>
-        <h1>⚡ Valores y Cableado</h1>
+        <h1><i class="fa-solid fa-bolt"></i> Valores y Cableado</h1>
         <p>Valores eléctricos medidos y configuración de cableado</p>
       </div>
     </div>
     <div class="header-right">
       <span id="userNameDisplay">Usuario</span>
-      <a href="index.html" class="btn-header" id="btnVolverPortal">← Volver al Portal</a>
+      <a href="index.html" class="btn-header" id="btnVolverPortal"><i class="fa-solid fa-arrow-left"></i> Volver al Portal</a>
       <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
     </div>
   </div>
@@ -51,7 +49,7 @@
     <div class="vc-app">
       <aside class="vc-sidebar">
         <div class="vc-sidebar-header">
-          <span>📑 Referencias</span>
+          <span><i class="fa-solid fa-list"></i> Referencias</span>
           <span class="vc-ref-count" id="vc-ref-count">0</span>
         </div>
         <div class="vc-search-box">
@@ -62,7 +60,7 @@
 
       <main class="vc-main" id="vc-main-panel">
         <div class="vc-empty-state">
-          <div class="vc-empty-icon">⚡</div>
+          <div class="vc-empty-icon"><i class="fa-solid fa-bolt"></i></div>
           <h2>Selecciona una referencia</h2>
           <p>Elige una referencia del panel izquierdo para ver su ficha de valores y cableado</p>
         </div>

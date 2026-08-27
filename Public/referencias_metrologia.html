@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crear Referencia de Planos - Plast-Innova</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
 
     /* Header, login y pestañas superiores vienen de css/comun.css — esta
        página reusa exactamente los mismos nombres de clase que ya usa
@@ -19,20 +17,20 @@
        localmente (no viven en comun.css porque no las usa ninguna otra
        pantalla). */
     .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
-    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+    .content-area { flex: 1; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
 
     .form-grid { display: grid; grid-template-columns: 160px 1fr; gap: 14px 18px; align-items: center; max-width: 700px; }
     .form-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
     .form-grid input, .form-grid select, .form-grid textarea { padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .form-grid textarea { resize: vertical; min-height: 60px; }
     .form-grid .file-input { padding: 8px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; cursor: pointer; }
     .form-grid .file-input:hover { border-color: var(--brand-primary); background: #f0f3ff; }
     .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; max-width: 700px; }
-    .btn-primary { background: var(--brand-primary-gradient); color: white; border: none; padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: opacity 0.2s; }
+    .btn-primary { background: var(--brand-primary-gradient); color: white; border: none; padding: 10px 28px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; transition: opacity 0.2s; }
     .btn-primary:hover { opacity: 0.9; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: #f0f0f0; color: #555; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-secondary { background: #f0f0f0; color: #555; border: none; padding: 10px 24px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
     .btn-secondary:hover { background: #e0e0e0; }
     .form-msg { padding: 12px 16px; border-radius: 8px; margin-top: 15px; font-size: 14px; display: none; }
     .form-msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
@@ -40,9 +38,9 @@
 
     .edit-search { display: flex; gap: 10px; margin-bottom: 20px; max-width: 600px; }
     .edit-search input { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-    .edit-search input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .edit-search input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .edit-ref-list { margin-bottom: 20px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 6px; }
-    .edit-ref-item { padding: 10px 14px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .edit-ref-item { padding: 10px 14px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; border: 1px solid transparent; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .edit-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
     .edit-ref-item.active { background: var(--brand-primary-gradient); color: white; border-color: transparent; }
     .edit-ref-item .edit-ref-sub { font-size: 11px; opacity: 0.75; white-space: nowrap; }
@@ -57,7 +55,7 @@
 
     .info-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 18px; align-items: center; max-width: 700px; margin-bottom: 20px; }
     .info-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
-    .info-grid .readonly { padding: 10px 12px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; font-size: 14px; color: #666; }
+    .info-grid .readonly { padding: 10px 12px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; font-size: 14px; color: #666; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .badge-activa { background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
     .badge-obsoleta { background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
 
@@ -68,11 +66,11 @@
     /* Tabla de cotas iniciales — misma idea que ya existía en el modal viejo
        de Metrología, solo que ahora vive dentro de una section-box en vez
        de un popup. */
-    .cotas-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; }
+    .cotas-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .cotas-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: #888; padding: 6px 8px; border-bottom: 1px solid #ddd; }
     .cotas-table td { padding: 4px 8px; }
-    .cotas-table input { width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; }
-    .cotas-table input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .cotas-table input { width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; outline: none; }
+    .cotas-table input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .btn-quitar-cota { background: #f8d7da; color: #721c24; border: none; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .btn-quitar-cota:hover { background: #f5c6cb; }
     .btn-agregar-cota { background: #f0f3ff; color: var(--brand-primary); border: 1px solid #cbd5e0; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
@@ -114,8 +112,8 @@
 <body>
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>🔐 Administración de Planos de Molde</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-lock"></i> Administración de Planos de Molde</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -125,28 +123,28 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
-        <h1>📐 Crear Referencia (Planos)</h1>
+        <h1><i class="fa-solid fa-ruler-combined"></i> Crear Referencia (Planos)</h1>
         <p>Referencias, versiones y planos de molde — usados por Metrología</p>
       </div>
     </div>
     <div class="header-right">
       <span>Sesión activa: <strong id="userName">--</strong></span>
       <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
-      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+      <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
     </div>
   </div>
 
   <div class="main-container" id="appMain" style="display:none;">
     <div class="tabs">
-      <button class="tab-btn active" id="navCrear" onclick="switchSection('crear')">📐 Crear Referencia</button>
-      <button class="tab-btn" id="navEditar" onclick="switchSection('editar')">🗄️ Editar Referencia</button>
+      <button class="tab-btn active" id="navCrear" onclick="switchSection('crear')"><i class="fa-solid fa-ruler-combined"></i> Crear Referencia</button>
+      <button class="tab-btn" id="navEditar" onclick="switchSection('editar')"><i class="fa-solid fa-box-archive"></i> Editar Referencia</button>
     </div>
 
     <div class="content-area" id="contentArea">
       <div id="secCrear">
-        <div class="content-title">📐 Crear Nueva Referencia de Molde</div>
+        <div class="content-title"><i class="fa-solid fa-ruler-combined"></i> Crear Nueva Referencia de Molde</div>
         <div class="form-grid">
           <label>Código base *</label>
           <input type="text" id="crearCodigo" placeholder="Ej: Iny/Rep/9999">
@@ -161,7 +159,7 @@
         <!-- Cotas iniciales del plano que se va a crear — opcional, se
              pueden dejar en blanco y completar luego desde Metrología. -->
         <div class="section-box">
-          <h4>📏 Cotas Iniciales (opcional)</h4>
+          <h4><i class="fa-solid fa-ruler"></i> Cotas Iniciales (opcional)</h4>
           <p class="desc">Medidas estándar y tolerancias de este plano. Se pueden agregar ahora o más adelante desde Metrología.</p>
           <table class="cotas-table" id="tablaCotasCrear">
             <thead>
@@ -180,7 +178,7 @@
       </div>
 
       <div id="secEditar" style="display:none;">
-        <div class="content-title">🗄️ Editar Referencia de Molde</div>
+        <div class="content-title"><i class="fa-solid fa-box-archive"></i> Editar Referencia de Molde</div>
         <div class="edit-search">
           <input type="text" id="editSearchRef" placeholder="Buscar referencia..." oninput="filtrarRefsEditar()">
         </div>
@@ -188,10 +186,10 @@
 
         <div id="editFormContainer" style="display:none;">
           <div class="edit-tabs-header">
-            <button class="edit-tab-btn active" onclick="switchEditTab('info')" id="editTabInfo">📋 Información</button>
-            <button class="edit-tab-btn" onclick="switchEditTab('modif')" id="editTabModif">✏️ Modificación de versión</button>
-            <button class="edit-tab-btn" onclick="switchEditTab('nueva')" id="editTabNueva">🆕 Nueva versión</button>
-            <button class="edit-tab-btn hidden" onclick="switchEditTab('auditoria')" id="editTabAuditoria">📜 Auditoría de Cambios</button>
+            <button class="edit-tab-btn active" onclick="switchEditTab('info')" id="editTabInfo"><i class="fa-solid fa-clipboard-list"></i> Información</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('modif')" id="editTabModif"><i class="fa-solid fa-pen-to-square"></i> Modificación de versión</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('nueva')" id="editTabNueva"><i class="fa-solid fa-square-plus"></i> Nueva versión</button>
+            <button class="edit-tab-btn hidden" onclick="switchEditTab('auditoria')" id="editTabAuditoria"><i class="fa-solid fa-scroll"></i> Auditoría de Cambios</button>
           </div>
 
           <div class="edit-tab-content active" id="editContentInfo">
@@ -222,7 +220,7 @@
                  formulario de reemplazo. -->
             <div class="metro-edit-layout">
               <div class="section-box" id="planoActualBoxModif" style="margin-bottom:0;">
-                <h4>📄 Plano actual</h4>
+                <h4><i class="fa-solid fa-file-lines"></i> Plano actual</h4>
                 <p class="desc">Versión activa: <strong id="planoActualVersionModif">--</strong></p>
                 <div id="planoActualViewerModif" class="plano-viewer">
                   <div class="rec-empty" style="padding:20px;text-align:center;">Sin plano cargado</div>
@@ -236,7 +234,7 @@
                      mismo al momento de reemplazar el plano, en vez de tener
                      que ir a otro lado. -->
                 <div class="section-box" id="cotasGestionBoxModif" style="margin-bottom:0;">
-                  <h4>📏 Cotas de esta referencia</h4>
+                  <h4><i class="fa-solid fa-ruler"></i> Cotas de esta referencia</h4>
                   <p class="desc">Estas cotas aplican a todas las versiones del plano. Se pueden revisar y actualizar aquí si es necesario.</p>
                   <table class="cotas-table" id="tablaCotasGestionModif">
                     <thead>
@@ -248,7 +246,7 @@
                 </div>
 
                 <div class="section-box" style="margin-bottom:0;">
-                  <h4>✏️ Modificación de versión actual</h4>
+                  <h4><i class="fa-solid fa-pen-to-square"></i> Modificación de versión actual</h4>
                   <p class="desc">Sube un nuevo archivo que reemplazará el plano de la versión activa actual (sin crear una versión nueva).</p>
                   <div class="form-grid" style="grid-template-columns: 1fr;">
                     <label style="text-align:left;">Nuevo archivo *</label>
@@ -257,7 +255,7 @@
                     <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza el plano actual? (opcional)"></textarea>
                   </div>
                   <div class="form-actions" style="margin-top:15px; justify-content:flex-start;">
-                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActualMolde()">🔄 Reemplazar plano</button>
+                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActualMolde()"><i class="fa-solid fa-rotate"></i> Reemplazar plano</button>
                   </div>
                   <div class="form-msg" id="modifMsg"></div>
                 </div>
@@ -271,7 +269,7 @@
                  derecha, botón de subir al final de esa columna. -->
             <div class="metro-edit-layout">
               <div class="section-box" id="planoActualBoxNueva" style="margin-bottom:0;">
-                <h4>📄 Plano actual (versión activa)</h4>
+                <h4><i class="fa-solid fa-file-lines"></i> Plano actual (versión activa)</h4>
                 <p class="desc">Versión activa: <strong id="planoActualVersionNueva">--</strong> — se muestra como referencia antes de subir la nueva versión.</p>
                 <div id="planoActualViewerNueva" class="plano-viewer">
                   <div class="rec-empty" style="padding:20px;text-align:center;">Sin plano cargado</div>
@@ -284,7 +282,7 @@
                      estuvieran disponibles "lo mismo para la nueva
                      versión". -->
                 <div class="section-box" id="cotasGestionBoxNueva" style="margin-bottom:0;">
-                  <h4>📏 Cotas de esta referencia</h4>
+                  <h4><i class="fa-solid fa-ruler"></i> Cotas de esta referencia</h4>
                   <p class="desc">Estas cotas aplican a todas las versiones del plano. Se pueden revisar y actualizar aquí antes o después de subir la nueva versión.</p>
                   <table class="cotas-table" id="tablaCotasGestionNueva">
                     <thead>
@@ -296,7 +294,7 @@
                 </div>
 
                 <div class="section-box" style="margin-bottom:0;">
-                  <h4>🆕 Subir nueva versión</h4>
+                  <h4><i class="fa-solid fa-square-plus"></i> Subir nueva versión</h4>
                   <p class="desc">Esto generará automáticamente la siguiente versión (o usa la que escribas abajo).</p>
                   <div class="form-grid" style="grid-template-columns: 1fr;">
                     <label style="text-align:left;">Versión (opcional)</label>
@@ -307,7 +305,7 @@
                     <textarea id="nuevaVerMotivo" placeholder="¿Por qué se sube esta nueva versión?"></textarea>
                   </div>
                   <div class="form-actions" style="justify-content:flex-start;">
-                    <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersionMolde()">⬆️ Subir nueva versión</button>
+                    <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersionMolde()"><i class="fa-solid fa-upload"></i> Subir nueva versión</button>
                   </div>
                   <div class="form-msg" id="nuevaVerMsg"></div>
                 </div>
@@ -317,7 +315,7 @@
 
           <div class="edit-tab-content" id="editContentAuditoria">
             <div class="section-box" style="margin-bottom:0;">
-              <h4>📜 Auditoría de Cambios</h4>
+              <h4><i class="fa-solid fa-scroll"></i> Auditoría de Cambios</h4>
               <p class="desc">Historial de creación, versiones, cotas y modificaciones de esta referencia.</p>
               <table class="cotas-table" id="tablaAuditoriaMolde">
                 <thead>
@@ -428,7 +426,7 @@
         <td><input type="text" class="cota-nombre" placeholder="Ej: A"></td>
         <td><input type="number" step="0.001" class="cota-estandar" placeholder="0.000"></td>
         <td><input type="number" step="0.001" class="cota-tol" placeholder="0.000"></td>
-        <td><button type="button" class="btn-quitar-cota" onclick="this.closest('tr').remove()">✕</button></td>
+        <td><button type="button" class="btn-quitar-cota" onclick="this.closest('tr').remove()"><i class="fa-solid fa-xmark"></i></button></td>
       `;
       tbody.appendChild(tr);
     }
@@ -608,8 +606,8 @@
         <td><input type="number" step="0.001" class="cota-estandar" value="${estandar}" ${puedeEditarCotasMolde ? '' : 'disabled'} placeholder="0.000"></td>
         <td><input type="number" step="0.001" class="cota-tol" value="${tol}" ${puedeEditarCotasMolde ? '' : 'disabled'} placeholder="0.000"></td>
         <td style="white-space:nowrap;">
-          ${puedeEditarCotasMolde ? `<button type="button" class="btn-agregar-cota" style="padding:5px 10px; margin-right:4px;" onclick="guardarFilaCotaGestion(this.closest('tr'), '${suffix}')">💾</button>` : ''}
-          ${puedeEliminar ? `<button type="button" class="btn-quitar-cota" onclick="eliminarFilaCotaGestion(this.closest('tr'), '${suffix}')">✕</button>` : ''}
+          ${puedeEditarCotasMolde ? `<button type="button" class="btn-agregar-cota" style="padding:5px 10px; margin-right:4px;" onclick="guardarFilaCotaGestion(this.closest('tr'), '${suffix}')"><i class="fa-solid fa-floppy-disk"></i></button>` : ''}
+          ${puedeEliminar ? `<button type="button" class="btn-quitar-cota" onclick="eliminarFilaCotaGestion(this.closest('tr'), '${suffix}')"><i class="fa-solid fa-xmark"></i></button>` : ''}
         </td>
       `;
     }

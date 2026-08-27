@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crear Referencia - Plast-Innova</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
 
     /* Header y pantalla de login: estructura y color institucional vienen
        de css/comun.css (--header-bg por defecto, igual en las 7 páginas). */
@@ -19,20 +17,20 @@
        ahora main-container apila en columna (pestañas, luego contenido)
        en vez de las dos columnas de antes. */
     .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
-    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+    .content-area { flex: 1; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
 
     .form-grid { display: grid; grid-template-columns: 160px 1fr; gap: 14px 18px; align-items: center; max-width: 700px; }
     .form-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
     .form-grid input, .form-grid select, .form-grid textarea { padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .form-grid textarea { resize: vertical; min-height: 60px; }
     .form-grid .file-input { padding: 8px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; cursor: pointer; }
     .form-grid .file-input:hover { border-color: var(--brand-primary); background: #f0f3ff; }
     .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; max-width: 700px; }
-    .btn-primary { background: var(--brand-primary-gradient); color: white; border: none; padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: opacity 0.2s; }
+    .btn-primary { background: var(--brand-primary-gradient); color: white; border: none; padding: 10px 28px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; transition: opacity 0.2s; }
     .btn-primary:hover { opacity: 0.9; }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: #f0f0f0; color: #555; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-secondary { background: #f0f0f0; color: #555; border: none; padding: 10px 24px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
     .btn-secondary:hover { background: #e0e0e0; }
     .form-msg { padding: 12px 16px; border-radius: 8px; margin-top: 15px; font-size: 14px; display: none; }
     .form-msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
@@ -40,9 +38,9 @@
 
     .edit-search { display: flex; gap: 10px; margin-bottom: 20px; max-width: 600px; }
     .edit-search input { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-    .edit-search input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .edit-search input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .edit-ref-list { margin-bottom: 20px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 6px; }
-    .edit-ref-item { padding: 10px 14px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; transition: all 0.15s; }
+    .edit-ref-item { padding: 10px 14px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; border: 1px solid transparent; transition: all 0.15s; }
     .edit-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
     .edit-ref-item.active { background: var(--brand-primary-gradient); color: white; border-color: transparent; }
 
@@ -56,7 +54,7 @@
 
     .info-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 18px; align-items: center; max-width: 700px; margin-bottom: 20px; }
     .info-grid label { font-size: 13px; font-weight: 600; color: #555; text-align: right; }
-    .info-grid .readonly { padding: 10px 12px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; font-size: 14px; color: #666; }
+    .info-grid .readonly { padding: 10px 12px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; font-size: 14px; color: #666; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .badge-activa { background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
     .badge-obsoleta { background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; }
 
@@ -68,7 +66,7 @@
        (Planos)" de Metrología (Public/referencias_metrologia.html), para
        que el historial de una referencia se vea igual sin importar el
        módulo. */
-    .audit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .audit-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .audit-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: #888; padding: 6px 8px; border-bottom: 1px solid #ddd; }
     .audit-table td { padding: 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
 
@@ -98,8 +96,8 @@
 
     .valores-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #555; }
     .valores-field small { font-weight: 400; color: #999; }
-    .valores-field input[type="text"], .valores-field select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; background: #fff; }
-    .valores-field input[type="text"]:focus, .valores-field select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .valores-field input[type="text"], .valores-field select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; outline: none; background: #fff; }
+    .valores-field input[type="text"]:focus, .valores-field select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     /* Campos de "Medias (Bajas)" deshabilitados al marcar "No maneja Medias
        (Bajas)" — sin esto se veían igual que un campo vacío normal, dando
        a entender que sí se podían llenar. */
@@ -153,7 +151,7 @@
     .valores-forma-box-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
     .valores-forma-select-field { max-width: 340px; }
     .valores-forma-select-field select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; background: #fff; }
-    .valores-forma-select-field select:focus, .valores-forma-select-field input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .valores-forma-select-field select:focus, .valores-forma-select-field input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
 
     /* Foto de la forma de cableado: miniatura + botón para subir/cambiar,
        directamente en Crear/Editar Referencia (antes solo se podía desde
@@ -193,8 +191,8 @@
 <body>
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>🔐 Administración Referencias</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-lock"></i> Administración Referencias</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -204,28 +202,28 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
-        <h1>➕ Crear Referencia</h1>
+        <h1><i class="fa-solid fa-plus"></i> Crear Referencia</h1>
         <p>Referencias, versiones y fotos de circuito — usadas por Circuitos SMD y Valores y Cableado</p>
       </div>
     </div>
     <div class="header-right">
       <span>Sesión activa: <strong id="userName">--</strong></span>
       <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
-      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+      <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
     </div>
   </div>
 
   <div class="main-container" id="appMain" style="display:none;">
     <div class="tabs">
-      <button class="tab-btn active" id="navCrear" onclick="switchSection('crear')">📷 Crear Referencia</button>
-      <button class="tab-btn" id="navEditar" onclick="switchSection('editar')">🗄️ Editar Referencia</button>
+      <button class="tab-btn active" id="navCrear" onclick="switchSection('crear')"><i class="fa-solid fa-camera"></i> Crear Referencia</button>
+      <button class="tab-btn" id="navEditar" onclick="switchSection('editar')"><i class="fa-solid fa-box-archive"></i> Editar Referencia</button>
     </div>
 
     <div class="content-area" id="contentArea">
       <div id="secCrear">
-        <div class="content-title">📷 Crear Nueva Referencia</div>
+        <div class="content-title"><i class="fa-solid fa-camera"></i> Crear Nueva Referencia</div>
         <!-- Antes estos 4 campos iban sueltos, sin caja ni encabezado, justo
              encima de la caja sí organizada de "Cotas y Especificaciones de
              Cableado" — se veía como si fueran de dos pantallas distintas
@@ -233,7 +231,7 @@
              que ya usan esa sección y las pestañas de Editar Referencia, así
              las 4 zonas del formulario se ven parte de una sola pantalla. -->
         <div class="section-box" style="max-width:700px;">
-          <h4>📝 Datos de la Referencia</h4>
+          <h4><i class="fa-solid fa-note-sticky"></i> Datos de la Referencia</h4>
           <div class="form-grid">
             <label>Código base *</label>
             <input type="text" id="crearCodigo" placeholder="Ej: REF-001">
@@ -255,7 +253,7 @@
              permiso de gestionar Valores y Cableado. Los botones de acción
              van al final de todo el formulario, después de esta sección. -->
         <div class="section-box" id="crearValoresBox" style="display:none; max-width:1200px;">
-          <h4>⚡ Cotas y Especificaciones de Cableado (opcional)</h4>
+          <h4><i class="fa-solid fa-bolt"></i> Cotas y Especificaciones de Cableado (opcional)</h4>
           <p class="desc">Valores eléctricos medidos y configuración de cableado de esta versión. Se pueden completar ahora o más adelante desde "Editar Referencia".</p>
           <div class="valores-fieldsets-row" id="crearValoresFields"></div>
         </div>
@@ -268,7 +266,7 @@
       </div>
 
       <div id="secEditar" style="display:none;">
-        <div class="content-title">🗄️ Editar Referencia</div>
+        <div class="content-title"><i class="fa-solid fa-box-archive"></i> Editar Referencia</div>
         <div class="edit-search">
           <input type="text" id="editSearchRef" placeholder="Buscar referencia..." oninput="filtrarRefsEditar()">
         </div>
@@ -276,10 +274,10 @@
 
         <div id="editFormContainer" style="display:none;">
           <div class="edit-tabs-header">
-            <button class="edit-tab-btn active" onclick="switchEditTab('info')" id="editTabInfo">📋 Información</button>
-            <button class="edit-tab-btn" onclick="switchEditTab('modif')" id="editTabModif">✏️ Modificación de versión</button>
-            <button class="edit-tab-btn" onclick="switchEditTab('nueva')" id="editTabNueva">🆕 Nueva versión</button>
-            <button class="edit-tab-btn hidden" onclick="switchEditTab('auditoria')" id="editTabAuditoria">📜 Auditoría de Cambios</button>
+            <button class="edit-tab-btn active" onclick="switchEditTab('info')" id="editTabInfo"><i class="fa-solid fa-clipboard-list"></i> Información</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('modif')" id="editTabModif"><i class="fa-solid fa-pen-to-square"></i> Modificación de versión</button>
+            <button class="edit-tab-btn" onclick="switchEditTab('nueva')" id="editTabNueva"><i class="fa-solid fa-square-plus"></i> Nueva versión</button>
+            <button class="edit-tab-btn hidden" onclick="switchEditTab('auditoria')" id="editTabAuditoria"><i class="fa-solid fa-scroll"></i> Auditoría de Cambios</button>
           </div>
 
           <div class="edit-tab-content active" id="editContentInfo">
@@ -312,7 +310,7 @@
                  editan los valores, sin tener que ir a otra pantalla. -->
             <div class="ref-edit-layout">
               <div class="section-box" id="fotoActualBox" style="margin-bottom:0;">
-                <h4>📷 Foto actual</h4>
+                <h4><i class="fa-solid fa-camera"></i> Foto actual</h4>
                 <p class="desc">Versión activa: <strong id="fotoActualVersionLabel">--</strong></p>
                 <div id="fotoActualViewer" class="foto-actual-viewer">
                   <div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>
@@ -321,7 +319,7 @@
 
               <div class="ref-edit-right">
                 <div class="section-box" style="margin-bottom:0;">
-                  <h4>✏️ Modificación de versión actual</h4>
+                  <h4><i class="fa-solid fa-pen-to-square"></i> Modificación de versión actual</h4>
                   <p class="desc">Sube una nueva imagen que reemplazará la versión activa actual.</p>
                   <div class="form-grid">
                     <label>Nueva imagen *</label>
@@ -330,7 +328,7 @@
                     <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza la imagen actual?"></textarea>
                   </div>
                   <div class="form-actions" style="margin-top:15px;">
-                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()">🔄 Reemplazar imagen</button>
+                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()"><i class="fa-solid fa-rotate"></i> Reemplazar imagen</button>
                   </div>
                   <div class="form-msg" id="modifMsg"></div>
                 </div>
@@ -344,11 +342,11 @@
                      versión (ver cargarValoresEdicion) para poder corregir solo
                      lo que cambió, en vez de partir de cero. -->
                 <div class="section-box" id="modifValoresBox" style="display:none; margin-bottom:0;">
-                  <h4>⚡ Cotas y especificaciones de cableado</h4>
+                  <h4><i class="fa-solid fa-bolt"></i> Cotas y especificaciones de cableado</h4>
                   <p class="desc">Se editan sobre la versión actual: <strong id="editValoresVersionLabel">--</strong>.</p>
                   <div class="valores-fieldsets-row" id="editValoresFields"></div>
                   <div class="form-actions" style="margin-top:15px;">
-                    <button class="btn-primary" id="btnGuardarValores" onclick="guardarValoresEdicion()">💾 Guardar valores y cableado</button>
+                    <button class="btn-primary" id="btnGuardarValores" onclick="guardarValoresEdicion()"><i class="fa-solid fa-floppy-disk"></i> Guardar valores y cableado</button>
                   </div>
                   <div class="form-msg" id="editValoresMsg"></div>
                 </div>
@@ -358,7 +356,7 @@
 
           <div class="edit-tab-content" id="editContentNueva">
             <div class="section-box" style="margin-bottom:15px;">
-              <h4>🆕 Subir nueva versión</h4>
+              <h4><i class="fa-solid fa-square-plus"></i> Subir nueva versión</h4>
               <p class="desc">Esto generará automáticamente la siguiente versión.</p>
               <div class="form-grid">
                 <label>Carpeta destino</label>
@@ -384,13 +382,13 @@
                  ahora o, si se deja vacío, después desde "Modificación de
                  versión" una vez creada. -->
             <div class="section-box" id="nuevaValoresBox" style="display:none; margin-bottom:0;">
-              <h4>⚡ Cotas y especificaciones de cableado (opcional)</h4>
+              <h4><i class="fa-solid fa-bolt"></i> Cotas y especificaciones de cableado (opcional)</h4>
               <p class="desc">Valores eléctricos y configuración de cableado de esta nueva versión. Se pueden completar ahora o más adelante desde "Modificación de versión".</p>
               <div class="valores-fieldsets-row" id="nuevaValoresFields"></div>
             </div>
 
             <div class="form-actions">
-              <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersion()">⬆️ Subir nueva versión</button>
+              <button class="btn-primary" id="btnNuevaVersion" onclick="subirNuevaVersion()"><i class="fa-solid fa-upload"></i> Subir nueva versión</button>
             </div>
             <div class="form-msg" id="nuevaVerMsg"></div>
           </div>
@@ -401,7 +399,7 @@
                la administración compartida de ambos módulos. -->
           <div class="edit-tab-content" id="editContentAuditoria">
             <div class="section-box" style="margin-bottom:0;">
-              <h4>📜 Auditoría de Cambios</h4>
+              <h4><i class="fa-solid fa-scroll"></i> Auditoría de Cambios</h4>
               <p class="desc">Historial de creación, versiones y ediciones de valores/cableado de esta referencia.</p>
               <table class="audit-table" id="tablaAuditoriaRef">
                 <thead>
@@ -573,7 +571,7 @@
       const opciones = formasCableadoConocidas.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
       return `
         <div class="valores-forma-box">
-          <div class="valores-forma-box-header">🖼️ Forma de cableado</div>
+          <div class="valores-forma-box-header"><i class="fa-solid fa-image"></i> Forma de cableado</div>
           <div class="valores-forma-box-body">
             <label class="valores-field valores-forma-select-field">¿Qué forma es esta?
               <select id="${prefix}_forma_cableado_select" onchange="onCambioFormaCableado('${prefix}')">
@@ -591,7 +589,7 @@
               <div class="valores-foto-preview" id="${prefix}_foto_cableado_preview"><span class="valores-foto-placeholder">Selecciona una forma</span></div>
               <div class="valores-foto-info">
                 <label class="valores-foto-upload-btn">
-                  📤 Subir / cambiar foto
+                  <i class="fa-solid fa-file-arrow-up"></i> Subir / cambiar foto
                   <input type="file" accept="image/*" id="${prefix}_foto_cableado_file" style="display:none;" onchange="onFotoCableadoSeleccionada('${prefix}', event)">
                 </label>
                 <small>Reemplaza la foto guardada para la forma elegida arriba.</small>
@@ -721,7 +719,7 @@
         </label>
         <div class="valores-etapas-row">
           <div class="valores-etapa valores-etapa-verde">
-            <div class="valores-etapa-header">🔧 Revisión (14V)</div>
+            <div class="valores-etapa-header"><i class="fa-solid fa-wrench"></i> Revisión (14V)</div>
             <div class="valores-etapa-body">
               ${campoValorHtml(prefix, 'voltaje_revision', 'Voltaje')}
               <div class="valores-etapa-medias-altas">
@@ -739,7 +737,7 @@
             </div>
           </div>
           <div class="valores-etapa valores-etapa-azul">
-            <div class="valores-etapa-header">🔽 Prueba Mínimo</div>
+            <div class="valores-etapa-header"><i class="fa-solid fa-arrow-down"></i> Prueba Mínimo</div>
             <div class="valores-etapa-body">
               ${campoValorHtml(prefix, 'voltaje_min', 'Voltaje')}
               <div class="valores-etapa-medias-altas">
@@ -757,7 +755,7 @@
             </div>
           </div>
           <div class="valores-etapa valores-etapa-naranja">
-            <div class="valores-etapa-header">🔼 Prueba Máximo</div>
+            <div class="valores-etapa-header"><i class="fa-solid fa-arrow-up"></i> Prueba Máximo</div>
             <div class="valores-etapa-body">
               ${campoValorHtml(prefix, 'voltaje_max', 'Voltaje')}
               ${campoValorHtml(prefix, 'amperaje_max', 'Current')}
@@ -766,7 +764,7 @@
           </div>
         </div>
         <fieldset class="valores-fieldset">
-          <legend>⚙️ Cableado</legend>
+          <legend><i class="fa-solid fa-gear"></i> Cableado</legend>
           <div class="valores-check-row">
             <label><input type="checkbox" id="${prefix}_cortar_puntas"> Cortar puntas</label>
             <label><input type="checkbox" id="${prefix}_empujar_cables"> Empujar cables</label>

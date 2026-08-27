@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Revisión Circuitos SMD</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; user-select: none; -webkit-user-select: none; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #F7F8FA; color: #333; min-height: 100vh; user-select: none; -webkit-user-select: none; }
     .protected-overlay { position: absolute; inset: 0; z-index: 50; background: transparent; cursor: default; }
 
     /* Header, header-left, btn-header y btn-logout vienen de css/comun.css —
@@ -25,9 +23,9 @@
        "right-panel" a estos nombres para que el nombre ya no diga lo
        contrario de dónde está cada uno en la pantalla. */
     .visor-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow: hidden; min-width: 0; max-height: calc(100vh - 100px); }
-    .lista-panel { width: 320px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; max-height: calc(100vh - 100px); }
+    .lista-panel { width: 320px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(17,27,67,.08); display: flex; flex-direction: column; overflow: hidden; max-height: calc(100vh - 100px); }
 
-    .photos-section { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 20px; flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; position: relative; }
+    .photos-section { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(17,27,67,.08); padding: 20px; flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; position: relative; }
     .photos-title { font-size: 28px; font-weight: 700; text-align: center; letter-spacing: 1px; color: #444; margin-bottom: 15px; flex-shrink: 0; }
 
     /* Chips de versión, arriba de la foto — mismo lenguaje visual que ya
@@ -40,12 +38,12 @@
       transition: all 0.15s; font-family: inherit;
     }
     .smd-version-chip:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
-    .smd-version-chip.active { background: var(--brand-primary-gradient); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.3); }
+    .smd-version-chip.active { background: var(--brand-primary-gradient); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(44,67,162,0.3); }
     .smd-version-chip.obsoleta:not(.active) { border-style: dashed; color: #999; }
     .smd-version-chip.obsoleta:not(.active)::after { content: ' (obsoleta)'; font-size: 10px; }
     .photos-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; }
     .photo-card { position: relative; border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid #e0e0e0; background: #f8f8f8; transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; max-width: 90%; max-height: 90%; }
-    .photo-card:hover { border-color: var(--brand-primary); transform: scale(1.01); box-shadow: 0 8px 25px rgba(27,79,196,0.3); }
+    .photo-card:hover { border-color: var(--brand-primary); transform: scale(1.01); box-shadow: 0 8px 25px rgba(44,67,162,0.3); }
     .photo-card img { max-width: 520px; max-height: 380px; width: auto; height: auto; object-fit: contain; display: block; }
     .photo-card .photo-name { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; font-size: 12px; padding: 25px 10px 10px; opacity: 0; transition: opacity 0.2s; text-align: center; }
     .photo-card:hover .photo-name { opacity: 1; }
@@ -55,13 +53,13 @@
       position: absolute;
       bottom: 20px;
       right: 20px;
-      background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+      background: linear-gradient(135deg, #FF0000 0%, #DF0000 100%);
       color: white;
       padding: 12px 20px;
       border-radius: 10px;
       font-size: 14px;
       font-weight: 700;
-      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+      box-shadow: 0 4px 15px rgba(255,0,0,0.4);
       z-index: 100;
       display: none;
       align-items: center;
@@ -70,9 +68,9 @@
     }
     .prueba-badge.visible { display: flex; }
     @keyframes pulseBadge {
-      0% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
-      50% { transform: scale(1.03); box-shadow: 0 6px 25px rgba(255, 71, 87, 0.6); }
-      100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+      0% { transform: scale(1); box-shadow: 0 4px 15px rgba(255,0,0,0.4); }
+      50% { transform: scale(1.03); box-shadow: 0 6px 25px rgba(255,0,0,0.6); }
+      100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255,0,0,0.4); }
     }
     .prueba-badge button {
       background: rgba(255,255,255,0.25);
@@ -88,7 +86,7 @@
     .prueba-badge button:hover { background: rgba(255,255,255,0.4); }
 
     /* Panel de pestañas (Observaciones / Recomendaciones) */
-    .tabs-panel { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; min-height: 200px; max-height: 340px; flex-shrink: 0; }
+    .tabs-panel { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(17,27,67,.08); display: flex; flex-direction: column; overflow: hidden; min-height: 200px; max-height: 340px; flex-shrink: 0; }
     .tabs-header { display: flex; border-bottom: 1px solid #eee; background: #fafbfc; flex-shrink: 0; }
     /* El color/estado activo de .tab-btn viene de css/comun.css (Fase A);
        aquí solo se ajusta el tamaño para que ocupe todo el ancho de esta
@@ -103,13 +101,13 @@
     .rec-bubble-author { font-size: 12px; font-weight: 700; color: var(--brand-primary); }
     .rec-bubble-date { font-size: 11px; color: #aaa; }
     .rec-bubble-text { white-space: pre-wrap; }
-    .rec-bubble-delete { position: absolute; top: 8px; right: 8px; background: #ff4757; color: white; border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+    .rec-bubble-delete { position: absolute; top: 8px; right: 8px; background: #FF0000; color: white; border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
     .rec-bubble:hover .rec-bubble-delete { opacity: 1; }
-    .rec-bubble-delete:hover { background: #e04040; }
+    .rec-bubble-delete:hover { background: #B00000; }
 
     .rec-form { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border-top: 1px solid #eee; padding-top: 12px; }
     .rec-textarea { width: 100%; min-height: 55px; max-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-    .rec-textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .rec-textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .rec-actions { display: flex; justify-content: flex-end; }
     .btn-enviar { background: var(--brand-primary-gradient); color: white; border: none; padding: 9px 24px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: opacity 0.2s, transform 0.1s; }
     .btn-enviar:hover { opacity: 0.9; }
@@ -119,7 +117,7 @@
 
     /* Observaciones en pestaña */
     .obs-textarea { width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-    .obs-textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .obs-textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .obs-textarea:read-only { background: #f8f9fa; color: #666; }
     .obs-meta { font-size: 11px; color: #aaa; text-align: right; margin-top: 4px; }
     .obs-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
@@ -130,10 +128,14 @@
     .ref-search input { width: 100%; padding: 10px 12px 10px 35px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center; }
     .ref-search input:focus { border-color: var(--brand-primary); }
     .ref-list { flex: 1; overflow-y: auto; padding: 10px; }
-    .ref-item { padding: 12px 15px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #444; border: 1px solid transparent; transition: all 0.15s; word-break: break-all; display: flex; justify-content: space-between; align-items: center; }
+    /* Los códigos de referencia (ej. SUP/1077/RS/MUL) son un dato, no
+       lenguaje — el manual de marca pide Segoe UI para eso (tipografía de
+       datos, ya la usaba la app), aunque el resto de la página pase a
+       Rubik. */
+    .ref-item { padding: 12px 15px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; font-size: 13px; color: #444; border: 1px solid transparent; transition: all 0.15s; word-break: break-all; display: flex; justify-content: space-between; align-items: center; }
     .ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
-    .ref-item.active { background: var(--brand-primary-gradient); color: white; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }
-    .ref-item .prueba-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; display: none; flex-shrink: 0; }
+    .ref-item.active { background: var(--brand-primary-gradient); color: white; border-color: transparent; box-shadow: 0 2px 8px rgba(44,67,162,0.35); }
+    .ref-item .prueba-dot { width: 8px; height: 8px; border-radius: 50%; background: #FF0000; display: none; flex-shrink: 0; }
     .ref-item .prueba-dot.visible { display: inline-block; }
 
     .lightbox-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
@@ -206,7 +208,7 @@
       font-style: italic;
     }
     .lightbox-obs-panel.hidden { display: none; }
-    .lightbox-btn.active { background: rgba(27,79,196,0.5); border-color: rgba(27,79,196,0.7); }
+    .lightbox-btn.active { background: rgba(44,67,162,0.5); border-color: rgba(44,67,162,0.7); }
     @media (max-width: 1024px) {
       .lightbox-obs-panel {
         position: relative;
@@ -224,8 +226,8 @@
   <!-- LOGIN -->
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>🔐 Revisión Circuitos SMD</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-lock"></i> Revisión Circuitos SMD</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -236,16 +238,16 @@
   <!-- HEADER -->
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
-        <h1>📋 Revisión Circuitos SMD</h1>
+        <h1><i class="fa-solid fa-clipboard-list"></i> Revisión Circuitos SMD</h1>
         <p>Sistema de inspección de imágenes</p>
       </div>
     </div>
     <div class="header-right">
       <span>Sesión activa: <strong id="userName">--</strong></span>
       <a href="index.html" class="btn-header" id="btnVolverPortal">&larr; Volver al Portal</a>
-      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+      <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
     </div>
   </div>
 
@@ -255,7 +257,7 @@
          en Planos/Metrología -->
     <div class="lista-panel">
       <div class="ref-header">
-        <span>📑 Referencias</span>
+        <span><i class="fa-solid fa-list"></i> Referencias</span>
         <span class="ref-count" id="refCount">0</span>
       </div>
       <div class="ref-search">
@@ -267,13 +269,13 @@
     <div class="visor-panel">
       <div class="photos-section">
         <!-- Julio pidió quitar este título (repetía la referencia, ej.
-             "📷 SUP/1077/RS/MUL") — es redundante con la referencia ya
+             "SUP/1077/RS/MUL") — es redundante con la referencia ya
              seleccionada y resaltada en la lista de la izquierda, y así se
              gana espacio en pantalla. Se deja oculto (no se borra del todo)
              porque seleccionarReferencia() le sigue poniendo el texto por
              JS — mismo patrón que otros campos "ocultos pero con datos"
              de la aplicación (ver metrologia.html). -->
-        <div class="photos-title" id="photoTitle" style="display:none;">📷 Selecciona una referencia</div>
+        <div class="photos-title" id="photoTitle" style="display:none;"><i class="fa-solid fa-camera"></i> Selecciona una referencia</div>
         <div class="smd-version-chips" id="versionChips" style="display:none;"></div>
         <div class="photos-wrapper" id="photosWrapper">
           <div style="color:#999;font-size:14px;">Selecciona una referencia para ver su foto</div>
@@ -281,7 +283,7 @@
 
         <!-- Badge flotante NECESITA PRUEBA -->
         <div class="prueba-badge" id="pruebaBadge">
-          <span>⚠️ NECESITA PRUEBA</span>
+          <span><i class="fa-solid fa-triangle-exclamation"></i> NECESITA PRUEBA</span>
           <button onclick="marcarPruebaHecha()" id="btnPruebaHecha">Marcar como probada</button>
         </div>
       </div>
@@ -289,8 +291,8 @@
       <!-- Panel de Pestañas: Observaciones / Recomendaciones -->
       <div class="tabs-panel" id="tabsPanel" style="display:none;">
         <div class="tabs-header">
-          <button class="tab-btn active" onclick="switchTab('observaciones')" id="tabObs">📋 Observaciones</button>
-          <button class="tab-btn" onclick="switchTab('recomendaciones')" id="tabRec">📝 Recomendaciones</button>
+          <button class="tab-btn active" onclick="switchTab('observaciones')" id="tabObs"><i class="fa-solid fa-clipboard-list"></i> Observaciones</button>
+          <button class="tab-btn" onclick="switchTab('recomendaciones')" id="tabRec"><i class="fa-solid fa-note-sticky"></i> Recomendaciones</button>
         </div>
 
         <!-- Contenido Observaciones -->
@@ -323,17 +325,17 @@
   <div class="lightbox-overlay" id="lightbox" onclick="closeLightbox(event)">
     <button class="lightbox-close" onclick="closeLightboxBtn()">&times;</button>
     <div class="lightbox-toolbar">
-      <button class="lightbox-btn" onclick="zoomOut(event)" title="Alejar">−</button>
-      <button class="lightbox-btn" onclick="zoomReset(event)" title="Restablecer">⟲</button>
-      <button class="lightbox-btn" onclick="zoomIn(event)" title="Acercar">+</button>
-      <button class="lightbox-btn" onclick="toggleObsPanel(event)" title="Mostrar/Ocultar observaciones" id="btnToggleObs">📋</button>
+      <button class="lightbox-btn" onclick="zoomOut(event)" title="Alejar"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+      <button class="lightbox-btn" onclick="zoomReset(event)" title="Restablecer"><i class="fa-solid fa-arrows-rotate"></i></button>
+      <button class="lightbox-btn" onclick="zoomIn(event)" title="Acercar"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+      <button class="lightbox-btn" onclick="toggleObsPanel(event)" title="Mostrar/Ocultar observaciones" id="btnToggleObs"><i class="fa-solid fa-clipboard-list"></i></button>
     </div>
     <div class="lightbox-img-container" id="imgContainer" style="position: relative;">
       <img class="lightbox-img" id="lightboxImg" src="" alt="">
       <div class="protected-overlay" oncontextmenu="return false;" ondragstart="return false;"></div>
     </div>
     <div class="lightbox-obs-panel" id="lightboxObsPanel">
-      <h4>📋 Observaciones</h4>
+      <h4><i class="fa-solid fa-clipboard-list"></i> Observaciones</h4>
       <p id="lightboxObsText">Cargando...</p>
     </div>
     <div class="lightbox-info" id="lightboxInfo">Scroll para zoom · Arrastra para mover</div>
@@ -452,7 +454,7 @@
     async function seleccionarReferencia(ref) {
       referenciaActiva = ref;
       filtrarReferencias();
-      document.getElementById('photoTitle').textContent = '📷 ' + referenciaActiva;
+      document.getElementById('photoTitle').textContent = referenciaActiva;
 
       // Mostrar panel de pestañas
       const tabsPanel = document.getElementById('tabsPanel');
@@ -694,7 +696,7 @@
       if (!textarea || !actions) return;
 
       if (!tienePermiso('observaciones.ver')) {
-        document.getElementById('obsContainer').innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver observaciones.</span></div>';
+        document.getElementById('obsContainer').innerHTML = '<div class="rec-readonly"><span><i class="fa-solid fa-lock"></i></span><span>No tienes permiso para ver observaciones.</span></div>';
         return;
       }
 
@@ -705,7 +707,7 @@
         actions.innerHTML = '';
       } else {
         textarea.readOnly = false;
-        actions.innerHTML = `<button class="btn-enviar" id="btnGuardarObs" onclick="guardarObservacion()">💾 Guardar observación</button>`;
+        actions.innerHTML = `<button class="btn-enviar" id="btnGuardarObs" onclick="guardarObservacion()"><i class="fa-solid fa-floppy-disk"></i> Guardar observación</button>`;
       }
     }
 
@@ -763,7 +765,7 @@
           alert('Error: ' + (err.error || 'No se pudo guardar'));
         }
       } catch (e) { alert('Error de conexión: ' + e.message); }
-      finally { btn.disabled = false; btn.textContent = '💾 Guardar observación'; }
+      finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar observación'; }
     }
 
     // ==================== RECOMENDACIONES (Tab) ====================
@@ -775,7 +777,7 @@
       if (tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear')) {
         listaContainer.innerHTML = '<div class="rec-empty">Selecciona una referencia para ver las recomendaciones.</div>';
       } else {
-        listaContainer.innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver recomendaciones.</span></div>';
+        listaContainer.innerHTML = '<div class="rec-readonly"><span><i class="fa-solid fa-lock"></i></span><span>No tienes permiso para ver recomendaciones.</span></div>';
       }
 
       if (tienePermiso('recomendaciones.crear')) {
@@ -797,7 +799,7 @@
 
       const puedeVer = tienePermiso('recomendaciones.ver') || tienePermiso('recomendaciones.crear');
       if (!puedeVer) {
-        listaContainer.innerHTML = '<div class="rec-readonly"><span>🔒</span><span>No tienes permiso para ver recomendaciones.</span></div>';
+        listaContainer.innerHTML = '<div class="rec-readonly"><span><i class="fa-solid fa-lock"></i></span><span>No tienes permiso para ver recomendaciones.</span></div>';
         return;
       }
 

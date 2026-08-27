@@ -14,13 +14,16 @@ const PDFDocument = require('pdfkit');
 
 const { RAIZ_PROYECTO } = require('../settings/paths');
 
-const LOGO_PATH = path.join(RAIZ_PROYECTO, 'Public', 'img', 'logo.png');
+// Igual que en settings/paths.js: ya no hay copia en Public/img/, se lee
+// directo de la carpeta del manual de marca (versión a color, porque este
+// encabezado se dibuja sobre fondo blanco/claro).
+const LOGO_PATH = path.join(RAIZ_PROYECTO, 'Plast Innova design system', 'assets', 'app-logo.png');
 const MARGEN = 40;
 
 const COLORES = {
-  azul: '#1B4FC4',
-  azulOscuro: '#1642AA',
-  azulClaro: '#EAF0FE',
+  azul: '#2C43A2',
+  azulOscuro: '#233685',
+  azulClaro: '#EEF1FA',
   gris: '#718096',
   grisBorde: '#DCE3ED',
   grisFilaAlterna: '#F7F9FC',

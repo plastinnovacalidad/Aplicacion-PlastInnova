@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tablero de Garantías</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* Header: estructura viene de css/comun.css; el color/tamaño de esta
        página coincide con los valores por defecto, no hace falta variable. */
@@ -28,7 +26,7 @@
        trasladó por completo al módulo de Calidad (Public/calidad.html,
        pestaña "📋 Cargar Garantías") — así que ya no vive en este archivo.
        Acá solo queda el Tablero Analítico, sin pestañas. */
-    .dashboard-iframe-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: calc(100vh - 140px); }
+    .dashboard-iframe-container { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); overflow: hidden; flex: 1; display: flex; flex-direction: column; min-height: calc(100vh - 140px); }
     .dashboard-iframe-container iframe { width: 100%; height: 100%; border: none; flex: 1; }
   </style>
 </head>
@@ -36,8 +34,8 @@
 
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>📊 Tablero de Garantías</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-chart-column"></i> Tablero de Garantías</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -47,7 +45,7 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
         <h1>Tablero de Garantías</h1>
       </div>

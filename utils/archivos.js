@@ -79,11 +79,15 @@ function nombreBaseParaArchivo(codigoBase) {
 }
 
 function obtenerCarpetaDestino(req) {
-  if (req.body.ruta_personalizada?.trim()) {
-    const ruta = req.body.ruta_personalizada.trim();
-    if (fs.existsSync(ruta)) return ruta;
-    throw new Error('La ruta personalizada no existe: ' + ruta);
-  }
+  // Antes existía una opción "ruta_personalizada": si venía en el body, se
+  // usaba tal cual como carpeta destino con solo comprobar que existiera en
+  // disco — sin pasar por CARPETAS_FOTOS. Ninguna pantalla del sistema
+  // llegó a mandar ese campo (se buscó en todo Public/*.html y no aparece
+  // en ningún formulario), así que en la práctica era una puerta abierta de
+  // más: cualquiera con permiso para subir un plano/foto podía mandar esa
+  // ruta apuntando a Public/ (u otra carpeta cualquiera del servidor) y
+  // salirse de las carpetas permitidas. Se quita: solo queda la selección
+  // por carpeta_idx, que sí está limitada a CARPETAS_FOTOS.
   const idx = parseInt(req.body.carpeta_idx || '1', 10);
   const carpeta = CARPETAS_FOTOS[idx] || CARPETAS_FOTOS[1];
   if (!carpeta || !fs.existsSync(carpeta)) throw new Error('Carpeta destino no disponible');

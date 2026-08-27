@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cargar Garantías</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* Header: estructura viene de css/comun.css. */
     .header-left { display: flex; align-items: center; gap: 15px; }
@@ -27,20 +25,20 @@
        modales que existían antes en la pestaña "Gestión, Carga y Listado"
        de garantias.html, sin cambios de fondo — solo el molde de página. */
 
-    .controls-bar { background: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between; }
+    .controls-bar { background: white; padding: 15px 20px; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between; }
     .search-box { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px; }
     .search-box input, .search-box select { padding: 9px 14px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
-    .search-box input:focus, .search-box select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.15); }
+    .search-box input:focus, .search-box select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.15); }
     .search-box input { flex: 1; }
 
     .btn-primary { background: var(--brand-primary-gradient); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: opacity 0.2s; position: relative; z-index: 10; }
     .btn-primary:hover { opacity: 0.9; }
 
-    .table-container { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; flex: 1; display: flex; flex-direction: column; }
+    .table-container { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); overflow: hidden; flex: 1; display: flex; flex-direction: column; }
     .table-responsive { overflow-x: auto; flex: 1; max-height: calc(100vh - 200px); }
     .table-container table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; white-space: nowrap; }
     .table-container th { background: #f7fafc; color: #4a5568; font-weight: 600; padding: 12px 15px; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 10; }
-    .table-container td { padding: 10px 15px; border-bottom: 1px solid #edf2f7; color: #2d3748; }
+    .table-container td { padding: 10px 15px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .table-container tr:hover { background: #f8fafc; }
 
     .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; text-align: center; }
@@ -61,7 +59,7 @@
     .format-meta { display: flex; gap: 20px; align-items: center; }
     .meta-box { border: 2px solid #cbd5e0; border-radius: 8px; padding: 8px 15px; text-align: center; background: #f8fafc; }
     .meta-box label { display: block; font-size: 10px; font-weight: 700; color: #4a5568; text-transform: uppercase; }
-    .meta-box input { border: none; background: transparent; font-size: 16px; font-weight: 700; color: #e53e3e; text-align: center; width: 110px; outline: none; }
+    .meta-box input { border: none; background: transparent; font-size: 16px; font-weight: 700; color: #e53e3e; text-align: center; width: 110px; outline: none; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
 
     .modal-body { padding: 20px 25px; overflow: visible; display: flex; flex-direction: column; gap: 20px; background: #fff; }
 
@@ -70,7 +68,7 @@
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-group label { font-size: 11px; font-weight: 700; color: #4a5568; text-transform: uppercase; }
     .form-group input, .form-group select, .form-group textarea { padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; background: white; font-family: inherit; }
-    .form-group input:focus, .form-group select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.15); }
+    .form-group input:focus, .form-group select:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.15); }
     .form-group input[readonly] { background: #edf2f7; color: #4a5568; }
 
     /* Tabla de items estilo formato */
@@ -78,7 +76,7 @@
     .items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .items-table th { background: var(--brand-primary-dark); color: white; padding: 10px 12px; font-weight: 600; text-align: left; font-size: 12px; text-transform: uppercase; white-space: nowrap; }
     .items-table td { padding: 8px 10px; border-top: 1px solid #cbd5e0; vertical-align: middle; background: #fff; position: relative; }
-    .items-table input, .items-table select { width: 100%; padding: 7px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; }
+    .items-table input, .items-table select { width: 100%; padding: 7px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
 
     .btn-danger-sm { background: #fed7d7; color: #9b2c2c; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
     .btn-danger-sm:hover { background: #feb2b2; }
@@ -100,8 +98,8 @@
 
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>📋 Cargar Garantías</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-file-arrow-up"></i> Cargar Garantías</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -111,7 +109,7 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
         <h1>Cargar Garantías</h1>
       </div>
@@ -461,10 +459,10 @@
 
         let accionesHtml = '<div style="display: flex; gap: 4px;">';
         if (puedeEditar) {
-          accionesHtml += `<button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="abrirModalEditar(${g.id})" title="Editar">✏️</button>`;
+          accionesHtml += `<button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="abrirModalEditar(${g.id})" title="Editar"><i class="fa-solid fa-pen"></i></button>`;
         }
         if (puedeEliminar) {
-          accionesHtml += `<button type="button" class="btn-danger-sm" style="padding: 4px 8px; font-size: 12px;" onclick="eliminarGarantia(${g.id})" title="Eliminar">🗑️</button>`;
+          accionesHtml += `<button type="button" class="btn-danger-sm" style="padding: 4px 8px; font-size: 12px;" onclick="eliminarGarantia(${g.id})" title="Eliminar"><i class="fa-solid fa-trash"></i></button>`;
         }
         if (!puedeEditar && !puedeEliminar) {
           accionesHtml += '<span style="color:#a0aec0;font-size:12px;">Sin permisos</span>';

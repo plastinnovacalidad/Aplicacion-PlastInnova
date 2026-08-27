@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Roles y Usuarios - Circuitos SMD</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
 
     /* Header y pantalla de login: estructura y color institucional vienen
        de css/comun.css (--header-bg por defecto, igual en las 7 páginas). */
@@ -19,9 +17,9 @@
        ahora main-container apila en columna (pestañas, luego contenido)
        en vez de las dos columnas de antes. */
     .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; }
-    .content-area { flex: 1; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+    .content-area { flex: 1; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); padding: 25px; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
 
-    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; }
     .admin-table td { padding: 10px 12px; border-bottom: 1px solid #eee; color: #444; }
     .admin-table tr:hover td { background: #f9f9f9; }
@@ -35,12 +33,12 @@
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
     .modal-overlay.active { display: flex; }
-    .modal-box { background: white; padding: 30px; border-radius: 12px; width: 880px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .modal-box { background: white; padding: 30px; border-radius: 16px; width: 880px; max-width: 95vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(17,27,67,0.2); }
     .modal-box h3 { margin-bottom: 20px; color: #444; font-size: 18px; }
     .modal-field { margin-bottom: 14px; }
     .modal-field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
     .modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; outline: none; }
-    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+    .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
     .btn-cancel { background: #f0f0f0; color: #555; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
     .btn-cancel:hover { background: #e0e0e0; }
@@ -55,8 +53,8 @@
 <body>
   <div class="login-overlay" id="loginOverlay" style="display: none;">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>🔐 Gestión de Roles y Usuarios</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-lock"></i> Gestión de Roles y Usuarios</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -66,55 +64,55 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
-        <h1>⚙️ Gestión de Roles y Usuarios</h1>
+        <h1><i class="fa-solid fa-gear"></i> Gestión de Roles y Usuarios</h1>
         <p>Administración de accesos y seguridad</p>
       </div>
     </div>
     <div class="header-right">
       <span>Sesión activa: <strong id="userName">--</strong></span>
       <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
-      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+      <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
     </div>
   </div>
 
   <div class="main-container" id="appMain" style="display:none;">
     <div class="tabs">
-      <button class="tab-btn active" id="navRoles" onclick="switchSection('roles')">👥 Roles</button>
-      <button class="tab-btn" id="navUsuarios" onclick="switchSection('usuarios')">🧑‍💼 Usuarios</button>
-      <button class="tab-btn" id="navCatalogos" onclick="switchSection('catalogos')">📋 Catálogos</button>
-      <button class="tab-btn" id="navAuditoria" onclick="switchSection('auditoria')">📜 Registro de Cambios</button>
+      <button class="tab-btn active" id="navRoles" onclick="switchSection('roles')"><i class="fa-solid fa-users"></i> Roles</button>
+      <button class="tab-btn" id="navUsuarios" onclick="switchSection('usuarios')"><i class="fa-solid fa-user"></i> Usuarios</button>
+      <button class="tab-btn" id="navCatalogos" onclick="switchSection('catalogos')"><i class="fa-solid fa-clipboard-list"></i> Catálogos</button>
+      <button class="tab-btn" id="navAuditoria" onclick="switchSection('auditoria')"><i class="fa-solid fa-clock-rotate-left"></i> Registro de Cambios</button>
     </div>
 
     <div class="content-area" id="contentArea">
       <div id="secRoles">
-        <div class="content-title">👥 Administración de Roles</div>
+        <div class="content-title"><i class="fa-solid fa-users"></i> Administración de Roles</div>
         <div id="rolesContainer"><div class="rec-empty">Cargando roles...</div></div>
       </div>
 
       <div id="secUsuarios" style="display:none;">
-        <div class="content-title">🧑‍💼 Administración de Usuarios</div>
+        <div class="content-title"><i class="fa-solid fa-user"></i> Administración de Usuarios</div>
         <div id="usuariosContainer"><div class="rec-empty">Cargando usuarios...</div></div>
       </div>
 
       <div id="secCatalogos" style="display:none;">
-        <div class="content-title">📋 Administración de Catálogos</div>
+        <div class="content-title"><i class="fa-solid fa-clipboard-list"></i> Administración de Catálogos</div>
         <p style="color:#718096; font-size:13px; margin-top:-8px; margin-bottom:15px;">
           Edita aquí los catálogos de referencia que antes solo se podían corregir abriendo la base de datos directamente.
           Los códigos "Inactivo" no desaparecen (para no romper el historial que ya los usa), solo dejan de ofrecerse como opción nueva.
         </p>
         <div class="tabs" style="margin-bottom:15px;">
-          <button class="tab-btn active" id="navCatDefectos" onclick="switchCatalogo('defectos')">🧪 Defectos ISO 2859-1</button>
-          <button class="tab-btn" id="navCatProblemas" onclick="switchCatalogo('problemas')">📋 Causales de Garantías</button>
-          <button class="tab-btn" id="navCatAreas" onclick="switchCatalogo('areas')">📍 Áreas de Inspección</button>
-          <button class="tab-btn" id="navCatPlanes" onclick="switchCatalogo('planes')">📐 Planes de Muestreo</button>
+          <button class="tab-btn active" id="navCatDefectos" onclick="switchCatalogo('defectos')"><i class="fa-solid fa-flask"></i> Defectos ISO 2859-1</button>
+          <button class="tab-btn" id="navCatProblemas" onclick="switchCatalogo('problemas')"><i class="fa-solid fa-clipboard-list"></i> Causales de Garantías</button>
+          <button class="tab-btn" id="navCatAreas" onclick="switchCatalogo('areas')"><i class="fa-solid fa-location-dot"></i> Áreas de Inspección</button>
+          <button class="tab-btn" id="navCatPlanes" onclick="switchCatalogo('planes')"><i class="fa-solid fa-ruler-combined"></i> Planes de Muestreo</button>
         </div>
         <div id="catalogoContainer"><div class="rec-empty">Cargando...</div></div>
       </div>
 
       <div id="secAuditoria" style="display:none;">
-        <div class="content-title">📜 Registro de Cambios</div>
+        <div class="content-title"><i class="fa-solid fa-clock-rotate-left"></i> Registro de Cambios</div>
         <p style="color:#718096; font-size:13px; margin-top:-8px; margin-bottom:15px;">
           Una sola bitácora para todos los módulos: quién creó, editó o eliminó qué y cuándo (catálogos, roles, usuarios,
           garantías, referencias y planos). Úsala para filtrar por módulo, usuario o fecha en vez de tener que revisar
@@ -300,13 +298,13 @@
             <td>${escapeHtml(rol.descripcion || '')}</td>
             <td>
               <div style="display:flex; flex-wrap:wrap; gap:4px; font-size:11px;">
-                ${smd > 0 ? `<span style="background:#ebf8ff; color:#2b6cb0; padding:3px 8px; border-radius:12px; font-weight:600;">⚡ SMD (${smd})</span>` : ''}
-                ${garantias > 0 ? `<span style="background:#fffaf0; color:#dd6b20; padding:3px 8px; border-radius:12px; font-weight:600;">📋 Garantías (${garantias})</span>` : ''}
-                ${whatsapp > 0 ? `<span style="background:#f0fff4; color:#38a169; padding:3px 8px; border-radius:12px; font-weight:600;">💬 WhatsApp (${whatsapp})</span>` : ''}
-                ${metrologia > 0 ? `<span style="background:#ebf8ff; color:#3182ce; padding:3px 8px; border-radius:12px; font-weight:600;">📐 Metrología (${metrologia})</span>` : ''}
-                ${iso2859 > 0 ? `<span style="background:#e6fffa; color:#2c7a7b; padding:3px 8px; border-radius:12px; font-weight:600;">🧪 Muestreos ISO (${iso2859})</span>` : ''}
-                ${calidad > 0 ? `<span style="background:#fffaf0; color:#b7791f; padding:3px 8px; border-radius:12px; font-weight:600;">🏆 Calidad (${calidad})</span>` : ''}
-                ${admin > 0 ? `<span style="background:#fff5f5; color:#7b341e; padding:3px 8px; border-radius:12px; font-weight:600;">⚙️ Admin (${admin})</span>` : ''}
+                ${smd > 0 ? `<span style="background:#ebf8ff; color:#2b6cb0; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-bolt"></i> SMD (${smd})</span>` : ''}
+                ${garantias > 0 ? `<span style="background:#fffaf0; color:#dd6b20; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-clipboard-list"></i> Garantías (${garantias})</span>` : ''}
+                ${whatsapp > 0 ? `<span style="background:#f0fff4; color:#38a169; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-comment-dots"></i> WhatsApp (${whatsapp})</span>` : ''}
+                ${metrologia > 0 ? `<span style="background:#ebf8ff; color:#3182ce; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-ruler-combined"></i> Metrología (${metrologia})</span>` : ''}
+                ${iso2859 > 0 ? `<span style="background:#e6fffa; color:#2c7a7b; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-flask"></i> Muestreos ISO (${iso2859})</span>` : ''}
+                ${calidad > 0 ? `<span style="background:#fffaf0; color:#b7791f; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-award"></i> Calidad (${calidad})</span>` : ''}
+                ${admin > 0 ? `<span style="background:#fff5f5; color:#7b341e; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-gear"></i> Admin (${admin})</span>` : ''}
               </div>
             </td>
             <td>
@@ -329,9 +327,9 @@
       perms.forEach(p => {
         const checked = permisosSeleccionados.has(p.id) ? 'checked' : '';
         const card = document.createElement('label');
-        card.style.cssText = 'display: flex; align-items: flex-start; gap: 10px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.02);';
-        card.onmouseenter = () => { card.style.borderColor = 'var(--brand-primary)'; card.style.boxShadow = '0 4px 12px rgba(27,79,196,0.1)'; };
-        card.onmouseleave = () => { card.style.borderColor = '#e2e8f0'; card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)'; };
+        card.style.cssText = 'display: flex; align-items: flex-start; gap: 10px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(17,27,67,0.02);';
+        card.onmouseenter = () => { card.style.borderColor = 'var(--brand-primary)'; card.style.boxShadow = '0 4px 12px rgba(44,67,162,0.1)'; };
+        card.onmouseleave = () => { card.style.borderColor = '#e2e8f0'; card.style.boxShadow = '0 1px 3px rgba(17,27,67,0.02)'; };
         card.innerHTML = `
           <input type="checkbox" value="${p.id}" ${checked} style="margin-top: 2px; width: 16px; height: 16px; accent-color: var(--brand-primary); cursor: pointer;">
           <div style="display: flex; flex-direction: column; gap: 3px;">
@@ -438,31 +436,31 @@
       grid.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 15px;">
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('⚡ Circuitos SMD', '#2b6cb0', 'selAllSmd')}
+            ${boxHeader('<i class="fa-solid fa-bolt"></i> Circuitos SMD', '#2b6cb0', 'selAllSmd')}
             <div id="boxSmd" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('📋 Garantías', '#dd6b20', 'selAllGarantias')}
+            ${boxHeader('<i class="fa-solid fa-clipboard-list"></i> Garantías', '#dd6b20', 'selAllGarantias')}
             <div id="boxGarantias" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('💬 WhatsApp Bot', '#38a169', 'selAllWhatsapp')}
+            ${boxHeader('<i class="fa-solid fa-comment-dots"></i> WhatsApp Bot', '#38a169', 'selAllWhatsapp')}
             <div id="boxWhatsapp" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('📐 Metrología y Planos de Molde', '#3182ce', 'selAllMetrologia')}
+            ${boxHeader('<i class="fa-solid fa-ruler-combined"></i> Metrología y Planos de Molde', '#3182ce', 'selAllMetrologia')}
             <div id="boxMetrologia" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('🧪 Muestreos ISO 2859-1', '#2c7a7b', 'selAllIso2859')}
+            ${boxHeader('<i class="fa-solid fa-flask"></i> Muestreos ISO 2859-1', '#2c7a7b', 'selAllIso2859')}
             <div id="boxIso2859" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('🏆 Calidad General', '#b7791f', 'selAllCalidad')}
+            ${boxHeader('<i class="fa-solid fa-award"></i> Calidad General', '#b7791f', 'selAllCalidad')}
             <div id="boxCalidad" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('⚙️ Administración y Sistema', '#7b341e', 'selAllAdmin')}
+            ${boxHeader('<i class="fa-solid fa-gear"></i> Administración y Sistema', '#7b341e', 'selAllAdmin')}
             <div id="boxAdmin" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
           </div>
         </div>

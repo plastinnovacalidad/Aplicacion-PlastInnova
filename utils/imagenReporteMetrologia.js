@@ -124,19 +124,19 @@ function construirHtmlReporteInspeccion(codigo, inspeccion, medidas, planoRuta) 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; width: 620px; background: #ffffff; color: #1A202C; }
-  .header { background: #1B4FC4; color: #fff; padding: 12px 16px; }
+  .header { background: #2C43A2; color: #fff; padding: 12px 16px; }
   .header h1 { margin: 0; font-size: 15px; font-weight: 700; }
-  .header .fecha { font-size: 9px; color: #D7E3FB; margin-top: 2px; }
+  .header .fecha { font-size: 9px; color: #D8DEF3; margin-top: 2px; }
   .panel { padding: 10px 16px 6px; }
   .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; font-size: 11px; }
   .panel-grid .label { color: #718096; font-weight: 700; }
   .resultado { display: inline-block; padding: 3px 10px; border-radius: 10px; font-weight: 700; font-size: 10px; margin-top: 6px; }
-  .seccion-titulo { font-size: 12px; font-weight: 700; margin: 8px 16px 4px; padding-left: 8px; border-left: 3px solid #1B4FC4; }
+  .seccion-titulo { font-size: 12px; font-weight: 700; margin: 8px 16px 4px; padding-left: 8px; border-left: 3px solid #2C43A2; }
   .plano-wrap { padding: 4px 16px 10px; text-align: center; }
   .plano-img { max-width: 100%; max-height: 260px; border: 1px solid #DCE3ED; border-radius: 4px; }
   .nota { font-size: 10px; color: #718096; padding: 0 16px 8px; }
   table { width: calc(100% - 32px); margin: 0 16px 10px; border-collapse: collapse; font-size: 10.5px; }
-  th { background: #1B4FC4; color: #fff; padding: 5px 6px; text-align: left; font-size: 9.5px; }
+  th { background: #2C43A2; color: #fff; padding: 5px 6px; text-align: left; font-size: 9.5px; }
   td { padding: 4px 6px; border-bottom: 1px solid #EDF1F7; }
   td.num { text-align: right; }
   .badge { padding: 2px 8px; border-radius: 8px; font-weight: 700; font-size: 9px; white-space: nowrap; }
