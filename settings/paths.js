@@ -106,9 +106,15 @@ const DIAS_INACTIVIDAD_CIERRE_LOTES_ISO = process.env.DIAS_INACTIVIDAD_CIERRE_LO
 
 // Antes existían dos copias del logo: una en config/ (para la marca de agua
 // de las fotos y para GET /api/logo) y otra en Public/img/ (para el logo que
-// se ve en el encabezado y el login de las 8 páginas). Ambos usos ahora
-// apuntan a este mismo archivo, así que solo hace falta mantener una copia.
-const LOGO_PATH = path.join(RAIZ_PROYECTO, 'Public', 'img', 'logo.png');
+// se ve en el encabezado y el login de las 8 páginas). Luego se unificaron
+// en una sola copia en Public/img/logo.png. Ahora Public/img/ ya no se usa
+// para nada (el logo del header y del login se sirven directo desde
+// "Plast Innova design system/assets" vía /marca — ver app_circuitos.js),
+// así que este PATH también apunta ahí: usa app-logo.png (el logo a color
+// compacto), porque tanto la marca de agua sobre fotos como el PDF de ISO
+// 2859 se dibujan sobre fondo blanco/claro, donde la versión "ng" (blanca)
+// del manual de marca no se vería.
+const LOGO_PATH = path.join(RAIZ_PROYECTO, 'Plast Innova design system', 'assets', 'app-logo.png');
 
 [OBSOLETAS_DIR, TMP_DIR, EVIDENCIAS_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

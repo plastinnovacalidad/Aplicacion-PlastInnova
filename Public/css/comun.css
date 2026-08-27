@@ -5,7 +5,19 @@
    misma estructura para las 7 páginas, pero cada una conserva su propio
    color/tamaño exacto de antes usando variables CSS — cero cambio visual,
    solo se dejó de repetir el esqueleto común.
+   Fase 3: manual de marca "Plast Innova design system" (carpeta del mismo
+   nombre en la raíz del proyecto) — Rubik para títulos/botones/etiquetas,
+   azul institucional #2C43A2 (antes #1B4FC4, ver comentario de --brand-
+   primary más abajo), sombras teñidas de azul en vez de negras, e íconos
+   FontAwesome en vez de emoji. Los detalles de cada regla están comentados
+   donde aplica.
    ======================================================================== */
+
+/* Tipografía de marca (Rubik) e íconos (FontAwesome 6.4.0) — se cargan acá,
+   una sola vez, para las 7+ páginas que enlazan este archivo, en vez de
+   repetir el <link>/@import en cada <head>. */
+@import url("https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap");
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
 
 /* Reset básico: idéntico carácter por carácter en las 7 páginas que cargan
    este archivo (dashboard_garantias.html no lo usa porque es una página
@@ -20,11 +32,18 @@
    activas— sale de estas mismas variables, así que para cambiar el tono en
    el futuro basta con tocarlo aquí una sola vez.
    No reemplaza los colores con significado propio (verde=éxito,
-   rojo=eliminar/peligro, gris=cancelar), esos se dejan igual. */
+   rojo=eliminar/peligro, gris=cancelar), esos se dejan igual.
+   Julio agregó la carpeta "Plast Innova design system" (manual de marca
+   hecho con publicidad de la empresa) y pidió que la app la cumpla. Ese
+   manual fija el azul institucional en #2C43A2 (tomado del isotipo del
+   logo) y marca el #1B4FC4/#1642AA que traía la app como obsoleto — por
+   eso cambian los tres valores de acá, y con eso el header, los botones
+   principales, la pantalla de login y las pestañas activas de TODAS las
+   páginas que usan este archivo se actualizan solos. */
 :root {
-  --brand-primary: #1B4FC4;
-  --brand-primary-dark: #1642AA;
-  --brand-primary-gradient: linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%);
+  --brand-primary: #2C43A2;
+  --brand-primary-dark: #233685;
+  --brand-primary-gradient: linear-gradient(135deg, #1046B1 0%, #2C43A2 100%);
 }
 
 .header-right {
@@ -61,27 +80,37 @@
   justify-content: space-between;
   align-items: center;
   color: white;
-  background: var(--header-bg, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%));
+  background: var(--header-bg, linear-gradient(135deg, #1046B1 0%, #2C43A2 100%));
   padding: var(--header-padding, 10px 30px);
-  box-shadow: var(--header-shadow, 0 2px 10px rgba(0,0,0,0.15));
+  /* Sombras teñidas de azul institucional en vez de negras (regla del
+     manual de marca) — antes era rgba(0,0,0,...), un gris neutro que no
+     tenía nada que ver con la paleta de la empresa. */
+  box-shadow: var(--header-shadow, 0 4px 12px rgba(17,27,67,.18));
   flex-shrink: var(--header-flex-shrink, 0);
 }
 
+/* Botones del header: Rubik (no Segoe, que se reserva para datos), forma de
+   píldora y mayúsculas con tracking — así los pide el manual de marca para
+   TODO botón/etiqueta de la interfaz, no solo los de acento. */
 .btn-logout {
   background: rgba(255,255,255,0.2);
   border: 1px solid rgba(255,255,255,0.4);
   color: white;
   padding: var(--btn-logout-padding, 8px 16px);
-  border-radius: 6px;
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
+  font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.14s cubic-bezier(.2,0,0,1);
 }
 .btn-logout:hover { background: rgba(255,255,255,0.35); }
 
 /* ---- Usadas solo en gestion.html, referencias.html y smd.html (título del
    header y botón "Volver al Portal" — idénticas en las 3) ---- */
-.header-left h1 { font-size: 18px; font-weight: 600; }
+.header-left h1 { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 18px; font-weight: 600; }
 .header-left p { font-size: 12px; opacity: 0.9; margin-top: 1px; }
 
 .btn-header {
@@ -89,10 +118,14 @@
   border: 1px solid rgba(255,255,255,0.4);
   color: white;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
+  font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.14s cubic-bezier(.2,0,0,1);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -101,12 +134,22 @@
 .btn-header:hover { background: rgba(255,255,255,0.35); }
 
 /* ---- Logo de la empresa: siempre presente en el header (junto al título)
-   y en la pantalla de login (arriba del formulario), en las 7 páginas.
-   El PNG ya tiene el fondo transparente, por eso se ve bien tanto sobre el
-   header de color como sobre la tarjeta blanca de login. ---- */
+   y en la pantalla de login (arriba del formulario), en todas las páginas.
+   Cada uno usa un archivo distinto del manual de marca, según el fondo
+   donde va: el header tiene fondo azul, así que usa el logo horizontal
+   "ng" (versión blanca/negativa, pensada para fondos de color); el
+   login-box tiene fondo blanco, así que usa el logo vertical a color
+   (isotipo arriba, nombre + eslogan abajo). Los dos vienen directo de la
+   carpeta "Plast Innova design system/assets" (servida en /marca), no de
+   Public/img — esa carpeta ya no se usa. La altura del header-logo (34px)
+   subió respecto a la de antes (26px) porque el lockup horizontal ng trae
+   la línea de eslogan ("LÁMPARAS LED · LUJOS · ACCESORIOS"), que al
+   tamaño viejo quedaba ilegible. El login-logo (150px) se pidió bien
+   grande a propósito, mucho más que el header — es la pantalla de
+   bienvenida, no hay problema de espacio ahí. ---- */
 .header-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.header-logo { height: 26px; flex-shrink: 0; display: block; }
-.login-logo { display: block; height: 40px; margin: 0 auto 18px; }
+.header-logo { height: 34px; flex-shrink: 0; display: block; }
+.login-logo { display: block; height: 150px; margin: 0 auto 18px; }
 /* Salvavidas: en pantallas angostas con un título largo y varios botones a
    la derecha (por ejemplo whatsapp_bot.html), el título ya no tiene tanto
    espacio como antes de agregar el logo. En vez de partirse en dos líneas
@@ -120,12 +163,12 @@
    cada una trae su propio tamaño (igual al de ".header-left") para que el
    encabezado se vea igual de chico en todas las pantallas, no solo en las
    3 que ya tenían ".header-left". */
-.header-brand h1 { font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-brand h1 { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .header-brand p { font-size: 12px; opacity: 0.9; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- Título de sección dentro de .content-area (gestion.html y
    referencias.html) ---- */
-.content-title { font-size: 20px; font-weight: 700; color: #444; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #eee; }
+.content-title { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 20px; font-weight: 700; color: #444; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #DFE3EA; }
 
 /* ---- Pantalla de login (usada por gestion.html, referencias.html, smd.html,
    garantias.html, metrologia.html y whatsapp_bot.html — index.html tiene la
@@ -135,7 +178,7 @@
 .login-overlay {
   position: fixed;
   inset: 0;
-  background: var(--header-bg, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%));
+  background: var(--header-bg, linear-gradient(135deg, #1046B1 0%, #2C43A2 100%));
   display: none;
   align-items: center;
   justify-content: center;
@@ -144,36 +187,42 @@
 .login-box {
   background: white;
   padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  /* 24px: el manual de marca reserva ese radio para modales/diálogos (las
+     tarjetas se quedan en 16px, los controles en 10px). */
+  border-radius: 24px;
+  box-shadow: 0 24px 56px rgba(17,27,67,.22);
   width: 360px;
 }
-.login-box h2 { text-align: center; margin-bottom: 25px; color: #444; font-size: 22px; }
+.login-box h2 { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-bottom: 25px; color: #22272F; font-size: 22px; font-weight: 700; }
 .login-box input {
   width: 100%;
   padding: 12px 15px;
   margin-bottom: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid #C6CCD8;
+  border-radius: 10px;
   font-size: 14px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.14s, box-shadow 0.14s;
 }
-.login-box input:focus { border-color: #1642AA; }
+.login-box input:focus { border-color: #2C43A2; box-shadow: 0 0 0 3px rgba(44,67,162,.28); }
 .login-box button {
   width: 100%;
   padding: 12px;
-  background: var(--header-bg, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%));
+  background: var(--header-bg, linear-gradient(135deg, #1046B1 0%, #2C43A2 100%));
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 15px;
+  border-radius: 999px;
+  font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(44,67,162,.28);
   transition: opacity 0.2s;
 }
 .login-box button:hover { opacity: 0.9; }
-.login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+.login-error { color: #DF0000; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
 
 /* ---- Pestañas para cambiar de sección dentro de un módulo (Fase A de
    unificación visual: antes garantias.html usaba "burbujas" y smd.html un
@@ -182,10 +231,15 @@
    igual que el header y la pantalla de login, así siempre coincide con el
    color propio del módulo). ---- */
 .tabs { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-.tab-btn { background: none; border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #718096; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+.tab-btn {
+  background: none; border: none; padding: 8px 16px;
+  font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px; font-weight: 600; color: #718096; cursor: pointer;
+  border-radius: 999px; transition: all 0.14s cubic-bezier(.2,0,0,1);
+}
 .tab-btn:hover { background: #f0f4f8; }
 .tab-btn.hidden { display: none; }
-.tab-btn.active { background: var(--header-bg, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%)); color: white; }
+.tab-btn.active { background: var(--header-bg, linear-gradient(135deg, #1046B1 0%, #2C43A2 100%)); color: white; }
 
 /* NOTA: ".main-container" y ".content-area" NO se comparten aquí a propósito:
    garantias.html tiene su propio ".main-container" y metrologia.html su

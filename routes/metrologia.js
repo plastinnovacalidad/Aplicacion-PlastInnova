@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
-const { TMP_DIR, EVIDENCIAS_DIR } = require('../settings/paths');
+const { TMP_DIR, EVIDENCIAS_DIR, CARPETAS_FOTOS } = require('../settings/paths');
 const { validarToken, requerirPermiso, requerirPermisoAlternativo, obtenerSesionActiva, tienePermiso, obtenerTokenDeCookie } = require('../middleware/auth');
 const { upload } = require('../utils/upload');
 const { sanitizeFilename, buscarArchivoRecursivo, moverArchivo } = require('../utils/archivos');
@@ -15,6 +15,17 @@ const metroData = require('../data/metrologia');
 const whatsappService = require('../whatsapp_bot_service');
 
 const router = express.Router();
+
+// Confirma que `objetivo` cae DENTRO de `base` (mismo directorio o
+// subcarpeta), no solo que su texto empiece igual — path.relative() da la
+// forma correcta de comprobarlo: si el resultado empieza con ".." o es una
+// ruta absoluta distinta, es porque `objetivo` se salió de `base` (por
+// ejemplo "/uploads/tmp-evil" con base "/uploads/tmp" pasaría un simple
+// startsWith() de texto, pero no está realmente adentro).
+function estaDentroDe(base, objetivo) {
+  const rel = path.relative(path.resolve(base), path.resolve(objetivo));
+  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+}
 
 // ======================== MÓDULO METROLOGÍA Y PLANOS DE MOLDE ========================
 
@@ -123,8 +134,22 @@ router.get('/moldes/ver-plano', (req, res) => {
   const ruta = req.query.ruta;
   if (!ruta) return res.status(400).json({ error: 'Ruta requerida' });
 
-  let filePath = path.resolve(ruta);
-  if (!fs.existsSync(filePath)) {
+  // Antes se hacía path.resolve(ruta) y, si ese archivo existía en disco, se
+  // servía tal cual — sin comprobar que estuviera dentro de una carpeta
+  // permitida. Eso dejaba leer CUALQUIER archivo del servidor al que el
+  // proceso de Node tuviera acceso (sesiones.json con los tokens de todos
+  // los usuarios, el .env, la base de datos) con solo mandar su ruta
+  // absoluta en ?ruta=... — cualquier rol con acceso a Metrología podía
+  // hacerlo. Ahora solo se sirve un archivo si cae dentro de una carpeta
+  // donde realmente pueden vivir planos: TMP_DIR (donde queda todo plano
+  // recién subido) o alguna de las CARPETAS_FOTOS (planos más viejos,
+  // importados desde antes de que existiera este sistema).
+  const carpetasPermitidas = [TMP_DIR, ...CARPETAS_FOTOS];
+  const resuelta = path.resolve(ruta);
+  let filePath = carpetasPermitidas.some(c => estaDentroDe(c, resuelta)) && fs.existsSync(resuelta)
+    ? resuelta
+    : null;
+  if (!filePath) {
     const basename = path.basename(ruta);
     const encontrada = buscarArchivoRecursivo(basename);
     if (encontrada && fs.existsSync(encontrada)) {
@@ -151,8 +176,12 @@ router.get('/moldes/ver-evidencia', (req, res) => {
   const ruta = req.query.ruta;
   if (!ruta) return res.status(400).json({ error: 'Ruta requerida' });
 
-  let filePath = path.resolve(ruta);
-  if (!fs.existsSync(filePath)) {
+  // Mismo problema y misma corrección que en /moldes/ver-plano de arriba:
+  // solo se sirve el archivo si cae dentro de EVIDENCIAS_DIR, que es la
+  // única carpeta donde este sistema guarda fotos de evidencia.
+  const resuelta = path.resolve(ruta);
+  let filePath = estaDentroDe(EVIDENCIAS_DIR, resuelta) && fs.existsSync(resuelta) ? resuelta : null;
+  if (!filePath) {
     const basename = path.basename(ruta);
     if (fs.existsSync(path.join(EVIDENCIAS_DIR, basename))) {
       filePath = path.join(EVIDENCIAS_DIR, basename);
@@ -476,6 +505,18 @@ router.delete('/moldes/cotas/:id', validarToken, requerirPermisoAlternativo(['me
 
   const cota = await metroData.buscarCotaPorId(cotaId);
   if (!cota) return res.status(404).json({ error: 'Cota no encontrada' });
+
+  // Julio pidió que esto se bloquee (no solo avisar) cuando la cota ya
+  // tiene mediciones guardadas en alguna inspección — si se deja borrar,
+  // esas mediciones no se pierden de la base de datos, pero desaparecen en
+  // silencio de cualquier reporte de inspección vieja que las use (el JOIN
+  // de listarMedidasDeInspeccion() con moldes_cotas ya no las encuentra).
+  const { total } = await metroData.contarMedidasDeCota(cotaId);
+  if (total > 0) {
+    return res.status(409).json({
+      error: `No se puede eliminar la cota "${cota.cota}": tiene ${total} medición(es) guardadas en inspecciones anteriores. Elimínela solo si esas inspecciones ya no importan, o modifíquela en vez de borrarla.`
+    });
+  }
 
   await metroData.eliminarCota(cotaId);
 

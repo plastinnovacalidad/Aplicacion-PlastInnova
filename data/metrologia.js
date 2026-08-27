@@ -300,6 +300,16 @@ function eliminarCota(cotaId) {
   return getDb().run('DELETE FROM moldes_cotas WHERE id = ?', [cotaId]);
 }
 
+// Julio pidió que borrar una cota NO pueda hacer desaparecer en silencio
+// las mediciones que ya se guardaron contra ella en inspecciones pasadas.
+// listarMedidasDeInspeccion() hace un JOIN con moldes_cotas — si la cota ya
+// no existe, esa fila deja de aparecer en el reporte de esa inspección
+// vieja, aunque el dato siga físicamente en moldes_medidas_detalle. Se usa
+// antes de eliminarCota() para bloquear el borrado cuando existan.
+function contarMedidasDeCota(cotaId) {
+  return getDb().get('SELECT COUNT(*) as total FROM moldes_medidas_detalle WHERE cota_id = ?', [cotaId]);
+}
+
 function buscarInspeccionConCreador(inspId) {
   return getDb().get('SELECT i.*, u.nombre as creado_por_nombre FROM moldes_inspecciones i LEFT JOIN usuarios u ON i.creado_por = u.id WHERE i.id = ?', [inspId]);
 }
@@ -339,6 +349,7 @@ module.exports = {
   crearMedidaDetalle,
   actualizarCota,
   eliminarCota,
+  contarMedidasDeCota,
   buscarInspeccionConCreador,
   listarMedidasDeInspeccion,
 };

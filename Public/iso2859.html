@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Muestreos ISO 2859-1 - Calidad & Circuitos SMD</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* Header: estructura y color institucional vienen de css/comun.css. */
     .header h1 { font-size: 22px; font-weight: 600; }
@@ -33,8 +31,8 @@
 
     /* Selector de módulo (Recepción / Producción) */
     .selector-modulo { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 800px; margin: 4rem auto; padding: 0 1rem; width: 100%; }
-    .card-modulo { background: white; border-radius: 16px; padding: 3rem 2rem; text-align: center; cursor: pointer; border: 3px solid #e2e8f0; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .card-modulo:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+    .card-modulo { background: white; border-radius: 16px; padding: 3rem 2rem; text-align: center; cursor: pointer; border: 3px solid #e2e8f0; transition: all 0.2s; box-shadow: 0 4px 12px rgba(17,27,67,0.05); }
+    .card-modulo:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(17,27,67,0.1); }
     .card-modulo.recepcion:hover { border-color: var(--iso-recepcion); }
     .card-modulo.produccion:hover { border-color: var(--iso-teal); }
     .card-modulo .icono { font-size: 3.5rem; margin-bottom: 1rem; }
@@ -42,7 +40,7 @@
     .card-modulo p { color: #718096; font-size: 0.9rem; }
 
     /* Sub-navegación dentro del módulo (Dashboard/Nuevo/Historial/Reportes) */
-    .iso-subnav { display: none; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 12px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .iso-subnav { display: none; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); padding: 12px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
     .iso-subnav.visible { display: flex; }
     .iso-subnav-titulo { font-weight: 700; font-size: 15px; color: #2d3748; display: flex; align-items: center; gap: 8px; }
     .iso-subnav-links { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -54,13 +52,13 @@
 
     #iso2859Content { display: flex; flex-direction: column; gap: 20px; }
 
-    .card { background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    .card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(17,27,67,0.08); border: 1px solid #e2e8f0; }
     .card h2, .card h3 { margin-bottom: 1rem; color: #2d3748; }
 
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
     .metric { text-align: center; }
     .metric h3 { font-size: 0.85rem; text-transform: uppercase; color: #718096; margin-bottom: 0.5rem; letter-spacing: 0.5px; }
-    .big-number { font-size: 2.3rem; font-weight: 700; color: var(--brand-primary); }
+    .big-number { font-size: 2.3rem; font-weight: 700; color: var(--brand-primary); font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .metric.alert .big-number { color: #c53030; }
     .metric.warning .big-number { color: #d69e2e; }
     .metric.info .big-number { color: var(--brand-primary); }
@@ -68,19 +66,22 @@
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.85rem; color: #4a5568; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.12); }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.12); }
     .form-group input[readonly] { background: #edf2f7; color: #4a5568; }
 
-    .btn-primary { background: var(--brand-primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-    .btn-danger { background: #c53030; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-    .btn-warning { background: #d69e2e; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-    .btn-success { background: #38a169; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-    .btn-secondary { background: #e2e8f0; color: #4a5568; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+    .btn-primary { background: var(--brand-primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 999px; cursor: pointer; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .btn-danger { background: #c53030; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 999px; cursor: pointer; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .btn-warning { background: #d69e2e; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 999px; cursor: pointer; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .btn-success { background: #38a169; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 999px; cursor: pointer; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .btn-secondary { background: #e2e8f0; color: #4a5568; border: none; padding: 0.6rem 1.2rem; border-radius: 999px; cursor: pointer; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
     button:hover { opacity: 0.92; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
     th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; }
     th { background: #edf2f7; font-weight: 600; color: #4a5568; }
+    /* Datos tabulares (lotes, cantidades, fechas): Segoe UI aunque el resto
+       de la página use Rubik, por legibilidad de cifras. */
+    td { font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
 
     .badge { padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
     .badge-pendiente { background: #bee3f8; color: #2b6cb0; }
@@ -116,7 +117,7 @@
     .alert-warning { background: #fffaf0; border-left: 4px solid #d69e2e; color: #c05621; }
 
     .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-    .card-item { border: 2px solid #e2e8f0; border-radius: 10px; padding: 1rem; background: white; cursor: pointer; transition: border-color 0.2s; }
+    .card-item { border: 2px solid #e2e8f0; border-radius: 16px; padding: 1rem; background: white; cursor: pointer; transition: border-color 0.2s; }
     .card-item:hover { border-color: var(--iso-teal); }
     .card-item h4 { margin-bottom: 0.3rem; }
     .card-item p { color: #718096; font-size: 0.85rem; margin-bottom: 0.3rem; }
@@ -139,10 +140,10 @@
       gap: 0.15rem; padding: 0.6rem 0.5rem; border-radius: 8px;
       background: #f7fafc; border: 1.5px solid #e2e8f0; transition: background 0.15s, border-color 0.15s;
     }
-    .resultado-tile .resultado-num { font-size: 1.4rem; font-weight: 700; color: #a0aec0; line-height: 1; }
+    .resultado-tile .resultado-num { font-size: 1.4rem; font-weight: 700; color: #a0aec0; line-height: 1; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .resultado-tile .resultado-label { font-size: 0.75rem; color: #718096; }
 
-    .autocomplete-list { border: 1px solid #e2e8f0; border-radius: 6px; max-height: 220px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 20; box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+    .autocomplete-list { border: 1px solid #e2e8f0; border-radius: 6px; max-height: 220px; overflow-y: auto; background: white; position: absolute; width: 100%; z-index: 20; box-shadow: 0 6px 20px rgba(17,27,67,0.15); }
     .autocomplete-item { padding: 0.6rem; cursor: pointer; border-bottom: 1px solid #edf2f7; font-size: 0.85rem; }
     .autocomplete-item:hover { background: #f7fafc; }
     .autocomplete-item small { color: #718096; }
@@ -165,8 +166,8 @@
 
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>🧪 Muestreos ISO 2859-1</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-flask"></i> Muestreos ISO 2859-1</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -176,9 +177,9 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div>
-        <h1>🧪 Muestreos ISO 2859-1</h1>
+        <h1><i class="fa-solid fa-flask"></i> Muestreos ISO 2859-1</h1>
         <p>Inspección por muestreo de Recepción y Producción</p>
       </div>
     </div>
@@ -198,12 +199,12 @@
       </div>
       <div class="selector-modulo">
         <div class="card-modulo recepcion" id="btnModuloRecepcion" onclick="Iso2859App.seleccionarModulo('Recepcion')">
-          <div class="icono">📦</div>
+          <div class="icono"><i class="fa-solid fa-box"></i></div>
           <h2>RECEPCIÓN</h2>
           <p>Materia prima entrante<br>Auditorías finales de proveedores</p>
         </div>
         <div class="card-modulo produccion" id="btnModuloProduccion" onclick="Iso2859App.seleccionarModulo('Produccion')">
-          <div class="icono">⚙️</div>
+          <div class="icono"><i class="fa-solid fa-gear"></i></div>
           <h2>PRODUCCIÓN</h2>
           <p>Primera pieza, En proceso<br>Auditoría final opcional</p>
         </div>
@@ -212,7 +213,7 @@
 
     <div class="content-area" id="moduloArea" style="display:none;">
       <div class="iso-subnav visible" id="isoSubnav">
-        <div class="iso-subnav-titulo" id="isoSubnavTitulo">📦 Recepción</div>
+        <div class="iso-subnav-titulo" id="isoSubnavTitulo"><i class="fa-solid fa-box"></i> Recepción</div>
         <div class="iso-subnav-links" id="isoSubnavLinks"></div>
       </div>
       <div id="iso2859Content"></div>

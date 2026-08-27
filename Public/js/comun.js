@@ -33,15 +33,18 @@ function escapeHtml(text) {
 
 // ========================================================================
 // Login/logout — segunda variante (idéntica carácter por carácter en
-// garantias.html, metrologia.html y whatsapp_bot.html, pero distinta de la
-// de auth-comun.js: aquí, al iniciar sesión, se llama a `init()` en vez de
-// `initApp()`, y `usuarioActual` lo termina llenando esa misma `init()`
-// -no doLogin- así que NO se puede compartir con auth-comun.js).
+// garantias.html, garantias_gestion.html, metrologia.html, iso2859.html y
+// whatsapp_bot.html, pero distinta de la de auth-comun.js).
 // index.html tiene su propia versión con diferencias reales (valida campos
-// vacíos antes de llamar al servidor, usa checkSession() en vez de init())
-// y no usa ninguna de las dos.
-// Requiere que la página ya haya declarado la variable global `token` y
-// la función `init()`.
+// vacíos antes de llamar al servidor) y no usa ninguna de las dos.
+// Requiere que la página ya haya declarado la variable global `token`.
+//
+// Julio pidió que, sin importar en qué módulo haya quedado la sesión al
+// cerrarse (ya sea por "Cerrar sesión" o porque expiró sola), al volver a
+// iniciar sesión SIEMPRE se llegue al panel central — nunca se debe quedar
+// en el módulo donde estaba. Por eso, en vez de llamar a la función local
+// de la página (init()/initApp(), que solo redibuja ese mismo módulo), se
+// redirige directo a index.html.
 // ========================================================================
 function mostrarLogin() {
   document.getElementById('loginOverlay').style.display = 'flex';
@@ -63,7 +66,7 @@ async function doLogin() {
     if (data.success) {
       token = data.token;
       localStorage.setItem('token', token);
-      await init();
+      location.href = 'index.html';
     } else {
       err.textContent = data.error || 'Error al iniciar sesión';
       err.style.display = 'block';

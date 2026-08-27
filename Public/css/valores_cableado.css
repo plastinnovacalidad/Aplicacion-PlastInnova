@@ -29,9 +29,9 @@
     --vc-border: #e0e0e0;
     --vc-text: #333333;
     --vc-text-muted: #888888;
-    --vc-accent: var(--brand-primary, #1B4FC4);
-    --vc-accent-dark: var(--brand-primary-dark, #1642AA);
-    --vc-accent-gradient: var(--brand-primary-gradient, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%));
+    --vc-accent: var(--brand-primary, #2C43A2);
+    --vc-accent-dark: var(--brand-primary-dark, #233685);
+    --vc-accent-gradient: var(--brand-primary-gradient, linear-gradient(135deg, #1046B1 0%, #2C43A2 100%));
     --vc-danger: #ef4444;
     --vc-success: #16a34a;
     --vc-warning: #f59e0b;
@@ -42,7 +42,7 @@
     display: flex;
     height: 100%;
     width: 100%;
-    font-family: var(--vc-font-ui);
+    font-family: 'Rubik', var(--vc-font-ui);
     background: var(--vc-bg);
     color: var(--vc-text);
     padding: 15px;
@@ -59,8 +59,8 @@
     width: 300px;
     min-width: 300px;
     background: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(17,27,67,0.08);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -105,7 +105,9 @@
     transition: border-color 0.2s;
     background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center;
     color: #333;
-    font-family: inherit;
+    /* Se escriben códigos de referencia acá — dato denso, no texto de
+       interfaz. */
+    font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
 }
 
 .vc-search-box input:focus { border-color: var(--vc-accent); }
@@ -138,9 +140,12 @@
     justify-content: space-between;
     align-items: center;
     user-select: none;
+    /* Códigos de referencia (ej. "SUP/0111/Am/Mul") son datos densos, no
+       texto de interfaz — se mantienen en Segoe UI en vez de Rubik. */
+    font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
 }
 .vc-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
-.vc-ref-item.active { background: var(--vc-accent-gradient); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }
+.vc-ref-item.active { background: var(--vc-accent-gradient); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(44,67,162,0.35); }
 /* Punto rojo cuando a la referencia le faltan valores — mismo patrón que
    ".prueba-dot" en Circuitos SMD (Public/smd.html), reemplaza al "N v."
    en vez de ir junto a él (ver construirSidebar en app.js). */
@@ -155,7 +160,7 @@
 .vc-empty-state {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     color: var(--vc-text-muted); text-align: center; padding: 2rem;
-    background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08);
 }
 .vc-empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.4; }
 .vc-empty-state h2 { color: var(--vc-text); margin-bottom: 0.5rem; }
@@ -163,7 +168,7 @@
 /* ========== FICHA ========== */
 .vc-ficha {
     display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;
-    background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08);
     /* Ancla la alerta flotante de valores faltantes (position:absolute) a
        este panel — mismo patrón que ".photos-section" en Circuitos SMD
        con su "⚠️ NECESITA PRUEBA". */
@@ -216,7 +221,7 @@
     background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 0.75rem;
     overflow: hidden; aspect-ratio: 16/10; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: border-color 0.2s, box-shadow 0.2s;
 }
-.vc-foto-box:hover { border-color: var(--vc-accent); box-shadow: 0 4px 14px rgba(27,79,196,0.15); }
+.vc-foto-box:hover { border-color: var(--vc-accent); box-shadow: 0 4px 14px rgba(44,67,162,0.15); }
 .vc-foto-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .vc-foto-content img { width: 100%; height: 100%; object-fit: cover; }
 .vc-foto-box .vc-foto-label { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: #fff; padding: 0.5rem; text-align: center; font-size: 0.8rem; font-weight: 600; pointer-events: none; }
@@ -274,12 +279,12 @@
 .vc-display-line .vc-val.vc-na { font-family: var(--vc-font-ui); font-size: 0.8rem; font-style: italic; font-weight: 600; color: #777; text-shadow: none; }
 
 /* ========== ESPECIFICACIONES DE CABLEADO ========== */
-.vc-specs-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex-shrink: 0; }
+.vc-specs-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 1rem; overflow: hidden; box-shadow: 0 2px 8px rgba(17,27,67,0.06); flex-shrink: 0; }
 .vc-specs-header { background: var(--vc-accent-gradient); color: #fff; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .vc-specs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--vc-border); }
 .vc-specs-grid .vc-cell { background: var(--vc-bg-card); padding: 0.75rem; text-align: center; }
 .vc-specs-grid .vc-cell label { display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--vc-text-muted); margin-bottom: 0.35rem; letter-spacing: 0.03em; }
-.vc-specs-grid .vc-cell .vc-val { font-size: 1rem; font-weight: 600; color: var(--vc-text); }
+.vc-specs-grid .vc-cell .vc-val { font-size: 1rem; font-weight: 600; color: var(--vc-text); font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
 
 .vc-val-no { color: #dc2626; background: #fef2f2; padding: 0.15rem 0.6rem; border-radius: 0.25rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; }
 .vc-val-no .vc-x-red { color: #dc2626; font-weight: 900; font-size: 1.1em; }
@@ -325,7 +330,7 @@
    estilo visual (tarjeta blanca, header con degradado) que
    ".vc-specs-card" de arriba, en vez de copiar el panel oscuro que tenía
    Circuitos SMD antes del rediseño. */
-.vc-obsrec-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex-shrink: 0; }
+.vc-obsrec-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 1rem; overflow: hidden; box-shadow: 0 2px 8px rgba(17,27,67,0.06); flex-shrink: 0; }
 .vc-obsrec-tabs { display: flex; border-bottom: 1px solid var(--vc-border); background: var(--vc-bg-light); }
 .vc-obsrec-tab { flex: 1; background: none; border: none; padding: 0.7rem 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--vc-text-muted); cursor: pointer; transition: all 0.15s; font-family: inherit; }
 .vc-obsrec-tab:hover { background: var(--vc-bg); color: var(--vc-text); }
@@ -334,7 +339,7 @@
 .vc-obsrec-content.active { display: flex; flex-direction: column; gap: 0.6rem; }
 
 .vc-obs-textarea { width: 100%; min-height: 90px; border: 1px solid var(--vc-border); border-radius: 0.5rem; padding: 0.6rem 0.75rem; font-family: inherit; font-size: 0.85rem; color: var(--vc-text); resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-.vc-obs-textarea:focus { border-color: var(--vc-accent); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+.vc-obs-textarea:focus { border-color: var(--vc-accent); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
 .vc-obs-textarea:read-only { background: var(--vc-bg); color: var(--vc-text-muted); }
 .vc-obs-meta { font-size: 0.7rem; color: var(--vc-text-muted); text-align: right; }
 .vc-obs-actions { display: flex; justify-content: flex-end; }
@@ -353,10 +358,10 @@
 
 .vc-rec-form { display: flex; flex-direction: column; gap: 0.6rem; border-top: 1px solid var(--vc-border); padding-top: 0.7rem; margin-top: 0.2rem; }
 .vc-rec-textarea { width: 100%; min-height: 55px; max-height: 90px; border: 1px solid var(--vc-border); border-radius: 0.5rem; padding: 0.55rem 0.7rem; font-family: inherit; font-size: 0.82rem; color: var(--vc-text); resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-.vc-rec-textarea:focus { border-color: var(--vc-accent); box-shadow: 0 0 0 3px rgba(27,79,196,0.1); }
+.vc-rec-textarea:focus { border-color: var(--vc-accent); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
 .vc-rec-actions { display: flex; justify-content: flex-end; }
 
-.vc-btn-enviar { background: var(--vc-accent-gradient); color: #fff; border: none; padding: 0.5rem 1.3rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: opacity 0.2s, transform 0.1s; }
+.vc-btn-enviar { background: var(--vc-accent-gradient); color: #fff; border: none; padding: 0.5rem 1.3rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: opacity 0.2s, transform 0.1s; }
 .vc-btn-enviar:hover { opacity: 0.9; }
 .vc-btn-enviar:active { transform: scale(0.97); }
 .vc-btn-enviar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }

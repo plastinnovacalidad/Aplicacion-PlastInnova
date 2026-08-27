@@ -4,19 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Metrología y Planos de Molde - Calidad & Circuitos SMD</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
     /* Header: estructura y color institucional vienen de css/comun.css;
        aquí solo la variable de sombra, que es distinta al valor por defecto. */
-    .header { --header-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .header { --header-shadow: 0 4px 15px rgba(17,27,67,0.15); }
     .header h1 { font-size: 22px; font-weight: 600; }
     .header p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-    .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-action { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
     .btn-action:hover { background: rgba(255,255,255,0.35); }
 
     /* padding/gap agregados para que la lista quede como una tarjeta
@@ -28,7 +26,7 @@
     /* Sidebar selector: ahora es una tarjeta blanca redondeada con sombra
        (como .lista-panel de circuitos SMD), en vez de un panel de bordes
        cuadrados pegado al header y al borde izquierdo. */
-    .sidebar { width: 340px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; flex-shrink: 0; height: 100%; overflow: hidden; }
+    .sidebar { width: 340px; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.12); display: flex; flex-direction: column; flex-shrink: 0; height: 100%; overflow: hidden; }
 
     /* Mismo encabezado azul + contador + buscador con lupa que usan
        Circuitos SMD (.ref-header/.ref-search) y Valores y Cableado
@@ -61,7 +59,7 @@
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
     }
     .ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
-    .ref-item.active { background: var(--brand-primary-gradient); border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }
+    .ref-item.active { background: var(--brand-primary-gradient); border-color: transparent; box-shadow: 0 2px 8px rgba(44,67,162,0.35); }
     .ref-item h4 { font-size: 13px; color: #2d3748; font-weight: 600; }
     .ref-item p { font-size: 11px; color: #718096; margin-top: 2px; }
     .ref-item.active h4, .ref-item.active p { color: #fff; }
@@ -71,11 +69,11 @@
     /* Content Area */
     .content-area { flex: 1; background: #eef2f7; height: 100%; overflow-y: auto; padding: 25px 40px; display: flex; flex-direction: column; gap: 20px; }
 
-    .welcome-card { background: white; padding: 50px; border-radius: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin: auto; max-width: 600px; width: 100%; }
+    .welcome-card { background: white; padding: 50px; border-radius: 16px; text-align: center; box-shadow: 0 4px 12px rgba(17,27,67,0.08); margin: auto; max-width: 600px; width: 100%; }
     .welcome-card h2 { font-size: 24px; color: #2d3748; margin-bottom: 10px; }
     .welcome-card p { font-size: 14px; color: #718096; }
 
-    .panel-card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; flex-direction: column; margin-bottom: 40px; }
+    .panel-card { background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(17,27,67,0.08); display: none; flex-direction: column; margin-bottom: 40px; }
     .panel-card.active { display: flex; }
     /* El propio ".panel-header" (fondo gris) redondea sus esquinas de
        arriba para que combinen con las de ".panel-card" que lo contiene,
@@ -85,7 +83,7 @@
        overflow:hidden dentro de un contenedor flex puede encogerse más
        chico que su contenido en vez de desbordarse para que se pueda
        hacer scroll. */
-    .panel-header { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .panel-header { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
     .panel-header h2 { font-size: 18px; color: #2d3748; font-weight: 600; }
     .panel-body { padding: 25px 30px; display: flex; flex-direction: column; gap: 25px; }
 
@@ -107,14 +105,14 @@
     .table-responsive { width: 100%; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
     th { background: #edf2f7; color: #4a5568; padding: 12px 16px; font-weight: 600; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 10; }
-    td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #2d3748; }
+    td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     tr:hover { background: #f8fafc; }
 
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 12px; font-weight: 600; color: #4a5568; }
     .form-group input, .form-group textarea, .form-group select { padding: 10px 14px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none; }
-    .form-group input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(27,79,196,0.15); }
+    .form-group input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.15); }
 
     .btn { padding: 10px 20px; background: var(--brand-primary); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
     .btn:hover { opacity: 0.9; }
@@ -136,7 +134,7 @@
     .badge-icono.conforme { background: #c6f6d5; color: #22543d; }
     .badge-icono.fuera { background: #fed7d7; color: #742a2a; }
 
-    .medida-input { width: 110px; padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: 600; text-align: center; font-size: 13px; }
+    .medida-input { width: 110px; padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: 600; text-align: center; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
 
     /* Botón compacto de "+" para agregar la foto de evidencia de una cota,
        en vez del selector de archivo ancho de siempre ("Choose File / No
@@ -163,8 +161,8 @@
 
   <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>📐 Metrología y Planos de Molde</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-ruler-combined"></i> Metrología y Planos de Molde</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -174,9 +172,9 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div>
-        <h1>📐 Módulo de Metrología y Planos de Molde</h1>
+        <h1><i class="fa-solid fa-ruler-combined"></i> Módulo de Metrología y Planos de Molde</h1>
         <p>Control de planos, cotas, tolerancias e inspección metrológica de moldes</p>
       </div>
     </div>
@@ -191,7 +189,7 @@
     <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <span>📐 Referencias</span>
+        <span><i class="fa-solid fa-ruler-combined"></i> Referencias</span>
         <span class="ref-count" id="refCount">0</span>
       </div>
       <div class="ref-search">
@@ -231,8 +229,8 @@
         </div>
         <div class="panel-body">
           <div class="tabs">
-            <button class="tab-btn active" id="tabBtnInspeccion" onclick="switchTab('tabInspeccion', this)">📋 Inspección & Cotas</button>
-            <button class="tab-btn" id="tabBtnHistorial" onclick="switchTab('tabHistorial', this)" style="display:none;">📊 Historial</button>
+            <button class="tab-btn active" id="tabBtnInspeccion" onclick="switchTab('tabInspeccion', this)"><i class="fa-solid fa-clipboard-list"></i> Inspección & Cotas</button>
+            <button class="tab-btn" id="tabBtnHistorial" onclick="switchTab('tabHistorial', this)" style="display:none;"><i class="fa-solid fa-chart-column"></i> Historial</button>
           </div>
 
           <!-- TAB 1: INSPECCIÓN & COTAS -->
@@ -244,7 +242,7 @@
                    quitaron por pedido de Julio, mismo motivo que arriba. -->
               <div style="display:none; justify-content:space-between; align-items:center;">
                 <h3 style="font-size: 15px; color: #2d3748;">Plano Activo (Altura de 700px)</h3>
-                <span style="font-size: 12px; color: #a0aec0;">🔍 Clic en el plano para ampliar</span>
+                <span style="font-size: 12px; color: #a0aec0;"><i class="fa-solid fa-magnifying-glass"></i> Clic en el plano para ampliar</span>
               </div>
               <div class="blueprint-viewer" id="blueprintViewerTop" onclick="abrirZoomPlano()" style="cursor: pointer;" title="Clic para ampliar el plano">
                 <div style="color: #a0aec0; text-align: center;">Cargando plano...</div>
@@ -310,7 +308,7 @@
                 </table>
               </div>
               <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                <button class="btn success" id="btnEnviarInspeccion" onclick="guardarInspeccion()" style="display:none;">💾 Enviar Registro de Inspección</button>
+                <button class="btn success" id="btnEnviarInspeccion" onclick="guardarInspeccion()" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> Enviar Registro de Inspección</button>
               </div>
             </div>
           </div>
@@ -366,8 +364,8 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; color:white;">
       <h3 style="font-size:18px;">Visualizador Ampliado de Plano</h3>
       <div style="display:flex; gap:10px; align-items:center;">
-        <span style="font-size: 12px; color: #a0aec0;">🔍 Rueda del mouse para hacer zoom · Arrastra para mover · Pellizca en tablet/trackpad</span>
-        <button class="btn sm" style="background:#e53e3e;" onclick="cerrarZoomPlano()">✕ Cerrar</button>
+        <span style="font-size: 12px; color: #a0aec0;"><i class="fa-solid fa-magnifying-glass"></i> Rueda del mouse para hacer zoom · Arrastra para mover · Pellizca en tablet/trackpad</span>
+        <button class="btn sm" style="background:#e53e3e;" onclick="cerrarZoomPlano()"><i class="fa-solid fa-xmark"></i> Cerrar</button>
       </div>
     </div>
     <div id="zoomScrollWrapper" style="flex:1; background:#1a202c; border-radius:10px; overflow:auto; display:flex; align-items:center; justify-content:center; position:relative; touch-action: pan-x pan-y;">
@@ -377,10 +375,10 @@
 
   <!-- Modal Detalle Inspección & Evidencia -->
   <div id="modalDetalleInspeccion" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000;">
-    <div style="background:white; padding:25px; border-radius:12px; width:700px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:15px;">
+    <div style="background:white; padding:25px; border-radius:16px; width:700px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:15px;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <h3 style="font-size:18px; color:#2d3748;" id="modalInspeccionTitulo">Detalle de Inspección</h3>
-        <button class="btn sm" style="background:#e53e3e; color:white;" onclick="cerrarModalDetalleInspeccion()">✕ Cerrar</button>
+        <button class="btn sm" style="background:#e53e3e; color:white;" onclick="cerrarModalDetalleInspeccion()"><i class="fa-solid fa-xmark"></i> Cerrar</button>
       </div>
       <div id="modalInspeccionInfo" style="font-size:13px; color:#4a5568; background:#f8fafc; padding:15px; border-radius:8px; display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;"></div>
       <div>
@@ -1100,7 +1098,7 @@
           <td>${escapeHtml(i.fecha || '')}</td>
           <td><strong>${escapeHtml(i.responsable || '')}</strong></td>
           <td>${escapeHtml(i.lote || '-')}</td>
-          <td><button class="btn sm" onclick="verDetalleInspeccion(${i.id})">🔍 Ver</button></td>
+          <td><button class="btn sm" onclick="verDetalleInspeccion(${i.id})"><i class="fa-solid fa-magnifying-glass"></i> Ver</button></td>
         </tr>
       `).join('');
     }

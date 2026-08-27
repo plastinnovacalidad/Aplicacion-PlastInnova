@@ -76,11 +76,13 @@ router.get('/me', validarToken, asyncHandler(async (req, res) => {
 }));
 
 // Antes buscaba cualquier imagen dentro de config/ (una copia aparte del
-// logo, solo para esto); ahora usa directamente el mismo logo.png que ya se
-// muestra en el encabezado de las páginas, para no mantener dos copias del
-// mismo archivo. Nota: ninguna página del frontend llama a este endpoint
-// actualmente (el logo del encabezado se carga directo con <img src="img/logo.png">),
-// se deja funcionando por si algo lo necesita más adelante.
+// logo, solo para esto); ahora usa el mismo LOGO_PATH (settings/paths.js)
+// que ya usan la marca de agua de fotos y el PDF de ISO 2859, para no
+// mantener copias sueltas del logo. Nota: ninguna página del frontend llama
+// a este endpoint actualmente (el logo del header y del login se cargan
+// directo desde /marca, servido por app_circuitos.js desde "Plast Innova
+// design system/assets"), se deja funcionando por si algo lo necesita más
+// adelante.
 router.get('/logo', validarToken, (req, res) => {
   try {
     if (!fs.existsSync(LOGO_PATH)) return res.json({ logo: null });

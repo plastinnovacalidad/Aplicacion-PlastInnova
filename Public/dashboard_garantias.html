@@ -4,34 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Informe Dinámico de Garantías - Control y Calidad</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Rubik (tipografía de marca Plast Innova) -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- escapeHtml (evita que texto de garantías se inserte como código en la página) -->
     <script src="js/comun.js"></script>
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .card-header { background-color: #fff; border-bottom: 1px solid #eee; font-weight: 600; border-radius: 10px 10px 0 0 !important; }
-        .kpi-card { border-left: 4px solid #0d6efd; }
-        .kpi-success { border-left-color: #198754; }
-        .kpi-danger { border-left-color: #dc3545; }
-        .kpi-warning { border-left-color: #ffc107; }
+        /* ===== Marca Plast Innova: azul #2C43A2 / rojo #FF0000, Rubik para
+           texto de interfaz, Segoe UI para cifras y datos (manual de marca). ===== */
+        body { background-color: #F7F8FA; font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #363D4A; }
+        h2, h3, h6, .card-header span { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* Reemplaza los colores por defecto de Bootstrap por los acentos que
+           usa este ícono/texto en el resto de la app (solo azul y rojo de
+           marca, más los tonos semánticos del manual para éxito/alerta/info). */
+        .text-primary { color: #2C43A2 !important; }
+        .text-success { color: #009245 !important; }
+        .text-danger { color: #DF0000 !important; }
+        .text-warning { color: #F7931E !important; }
+        .btn-outline-primary { color: #2C43A2 !important; border-color: #2C43A2 !important; }
+        .btn-outline-primary:hover { background-color: #2C43A2 !important; color: #fff !important; }
+        .btn-outline-secondary { color: #4E5666 !important; border-color: #C6CCD8 !important; }
+        .btn-outline-secondary:hover { background-color: #363D4A !important; border-color: #363D4A !important; color: #fff !important; }
+
+        .card { border: 1px solid #DFE3EA; border-radius: 16px; box-shadow: 0 1px 3px rgba(17,27,67,.08), 0 1px 2px rgba(17,27,67,.05); margin-bottom: 20px; }
+        .card-header { background-color: #fff; border-bottom: 1px solid #EEF0F4; font-weight: 600; border-radius: 16px 16px 0 0 !important; }
+
+        /* KPI cards: el manual pide nunca usar bordes de color a un lado de
+           la tarjeta (regla de diseño explícita) — el tono ahora solo vive
+           en el ícono, y el valor siempre queda en el mismo azul oscuro. */
+        .kpi-icon-chip { width: 40px; height: 40px; border-radius: 10px; background: #EEF1FA; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex: none; }
+        .kpi-icon-chip.tone-brand { color: #2C43A2; }
+        .kpi-icon-chip.tone-success { color: #009245; }
+        .kpi-icon-chip.tone-accent { color: #FF0000; }
+        .kpi-icon-chip.tone-info { color: #0071BC; }
+        .kpi-label { font: 600 11px/1.2 'Rubik', sans-serif; letter-spacing: .04em; }
+        .kpi-value { font: 700 30px/1.1 'Segoe UI', Tahoma, Verdana, sans-serif; color: #111B43; margin: 0; }
+
         .table-container { max-height: 450px; overflow-y: auto; }
-        thead th { position: sticky; top: 0; background: #343a40; color: white; z-index: 1; font-size: 0.85rem; }
-        tbody td { font-size: 0.85rem; }
+        thead th { position: sticky; top: 0; background: #233685; color: white; z-index: 1; font-size: 0.85rem; }
+        tbody td { font-size: 0.85rem; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
         .chart-container { cursor: pointer; }
         /* Slicer Sidebar Style */
         .slicer-list { height: 850px; max-height: 850px; overflow-y: auto; }
-        .slicer-item { cursor: pointer; padding: 6px 10px; margin-bottom: 3px; border-radius: 4px; background: #f8f9fa; border: 1px solid #dee2e6; font-size: 0.82rem; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
-        .slicer-item:hover { background: #e9ecef; }
-        .slicer-item.active { background: #e7f1ff; color: #0d6efd; border-color: #b6d4fe; font-weight: 600; }
+        .slicer-item { cursor: pointer; padding: 6px 10px; margin-bottom: 3px; border-radius: 6px; background: #F7F8FA; border: 1px solid #DFE3EA; font-size: 0.82rem; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
+        .slicer-item:hover { background: #EEF0F4; }
+        .slicer-item.active { background: #EEF1FA; color: #2C43A2; border-color: #B0BCE6; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -57,49 +81,49 @@
                 <div class="card kpi-card p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-muted text-uppercase fs-7 mb-1">Total Solicitudes</h6>
-                            <h3 id="kpiTotal" class="fw-bold mb-0">0</h3>
+                            <h6 class="kpi-label text-muted text-uppercase mb-1">Total Solicitudes</h6>
+                            <h3 id="kpiTotal" class="kpi-value">0</h3>
                         </div>
-                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary fs-4">
+                        <div class="kpi-icon-chip tone-brand">
                             <i class="fa-solid fa-file-invoice"></i>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card kpi-card kpi-success p-3">
+                <div class="card kpi-card p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-muted text-uppercase fs-7 mb-1">Aprobadas</h6>
-                            <h3 id="kpiAprobadas" class="fw-bold text-success mb-0">0</h3>
+                            <h6 class="kpi-label text-muted text-uppercase mb-1">Aprobadas</h6>
+                            <h3 id="kpiAprobadas" class="kpi-value">0</h3>
                         </div>
-                        <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success fs-4">
+                        <div class="kpi-icon-chip tone-success">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card kpi-card kpi-danger p-3">
+                <div class="card kpi-card p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-muted text-uppercase fs-7 mb-1">Rechazadas</h6>
-                            <h3 id="kpiRechazadas" class="fw-bold text-danger mb-0">0</h3>
+                            <h6 class="kpi-label text-muted text-uppercase mb-1">Rechazadas</h6>
+                            <h3 id="kpiRechazadas" class="kpi-value">0</h3>
                         </div>
-                        <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger fs-4">
+                        <div class="kpi-icon-chip tone-accent">
                             <i class="fa-solid fa-circle-xmark"></i>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card kpi-card kpi-warning p-3">
+                <div class="card kpi-card p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="text-muted text-uppercase fs-7 mb-1">% Aprobación</h6>
-                            <h3 id="kpiTasa" class="fw-bold text-warning mb-0">0%</h3>
+                            <h6 class="kpi-label text-muted text-uppercase mb-1">% Aprobación</h6>
+                            <h3 id="kpiTasa" class="kpi-value">0%</h3>
                         </div>
-                        <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning fs-4">
+                        <div class="kpi-icon-chip tone-info">
                             <i class="fa-solid fa-percent"></i>
                         </div>
                     </div>
@@ -491,8 +515,8 @@
                     datasets: [{
                         label: 'Cantidad',
                         data: mesesValues,
-                        backgroundColor: 'rgba(13, 110, 253, 0.7)',
-                        borderColor: 'rgba(13, 110, 253, 1)',
+                        backgroundColor: 'rgba(44, 67, 162, 0.75)',
+                        borderColor: 'rgba(44, 67, 162, 1)',
                         borderWidth: 1,
                         borderRadius: 4
                     }]
@@ -529,8 +553,8 @@
                     datasets: [{
                         label: 'Cantidad',
                         data: refValues,
-                        backgroundColor: 'rgba(25, 135, 84, 0.7)',
-                        borderColor: 'rgba(25, 135, 84, 1)',
+                        backgroundColor: 'rgba(0, 113, 188, 0.75)',
+                        borderColor: 'rgba(0, 113, 188, 1)',
                         borderWidth: 1,
                         borderRadius: 4
                     }]
@@ -570,8 +594,8 @@
                     datasets: [{
                         label: 'Cantidad',
                         data: probValues,
-                        backgroundColor: 'rgba(255, 193, 7, 0.7)',
-                        borderColor: 'rgba(255, 193, 7, 1)',
+                        backgroundColor: 'rgba(247, 147, 30, 0.75)',
+                        borderColor: 'rgba(247, 147, 30, 1)',
                         borderWidth: 1,
                         borderRadius: 4
                     }]
@@ -608,7 +632,7 @@
                     labels: solLabels.map((l, idx) => `${l} (${solPercentages[idx]}%)`),
                     datasets: [{
                         data: solPercentages,
-                        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d']
+                        backgroundColor: ['#2C43A2', '#FF0000', '#009245', '#F7931E', '#0071BC']
                     }]
                 },
                 options: {

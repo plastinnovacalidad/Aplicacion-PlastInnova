@@ -4,19 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calidad General - Circuitos SMD</title>
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
     .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; overflow-y: auto; }
-    .content-area { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 25px; }
+    .content-area { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); padding: 25px; }
 
     .kpis { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
     .kpi-tile { flex: 1; min-width: 180px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
-    .kpi-tile .kpi-num { font-size: 26px; font-weight: 800; color: #2d3748; }
+    .kpi-tile .kpi-num { font-size: 26px; font-weight: 800; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .kpi-tile .kpi-label { font-size: 12px; color: #718096; font-weight: 600; margin-top: 2px; }
     .kpi-tile.danger .kpi-num { color: #c53030; }
     .kpi-tile.warning .kpi-num { color: #b7791f; }
@@ -34,7 +32,7 @@
     .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; cursor: pointer; user-select: none; }
     .admin-table th:hover { color: var(--brand-primary); }
-    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; }
+    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .admin-table tr:hover td { background: #f9f9f9; }
     .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
     .pill-danger { background: #fff5f5; color: #c53030; }
@@ -47,7 +45,7 @@
     .panel-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; display: flex; align-items: center; justify-content: space-between; }
     .mini-kpis { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
     .mini-kpi { flex: 1; min-width: 100px; background: #f8fafc; border: 1px solid #edf2f7; border-radius: 8px; padding: 8px 10px; text-align: center; }
-    .mini-kpi .num { font-size: 18px; font-weight: 800; color: #2d3748; }
+    .mini-kpi .num { font-size: 18px; font-weight: 800; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .mini-kpi .num.danger { color: #c53030; }
     .mini-kpi .lbl { font-size: 10.5px; color: #718096; font-weight: 600; }
     .mini-list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
@@ -75,8 +73,8 @@
 <body>
   <div class="login-overlay" id="loginOverlay" style="display: none;">
     <div class="login-box">
-      <img src="img/logo.png" alt="Plast Innova" class="login-logo">
-      <h2>🏆 Calidad General</h2>
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-award"></i> Calidad General</h2>
       <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
       <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
       <button onclick="doLogin()">Iniciar Sesión</button>
@@ -86,23 +84,23 @@
 
   <div class="header" id="appHeader" style="display:none;">
     <div class="header-brand">
-      <img src="img/logo.png" alt="Plast Innova" class="header-logo">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
       <div class="header-left">
-        <h1>🏆 Calidad General</h1>
+        <h1><i class="fa-solid fa-award"></i> Calidad General</h1>
         <p>Tablero de control: Garantías, Muestreos ISO 2859, Metrología, Circuitos SMD y WhatsApp Bot</p>
       </div>
     </div>
     <div class="header-right">
       <span>Sesión activa: <strong id="userName">--</strong></span>
       <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
-      <button class="btn-logout" onclick="doLogout()">↩ Cerrar sesión</button>
+      <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
     </div>
   </div>
 
   <div class="main-container" id="appMain" style="display:none;">
     <div class="content-area">
       <div class="aviso-datos">
-        ℹ️ Este es el tablero de control general de Calidad: cruza <strong>Garantías</strong> y <strong>Muestreos ISO 2859</strong> por producto terminado, y además reúne <strong>Medidas de Metrología</strong>, los <strong>últimos comentarios de Circuitos SMD</strong> y quién está <strong>activo en el bot de WhatsApp</strong> — todo en un solo lugar para revisar de un vistazo. Circuitos SMD no entra en el cruce de arriba porque maneja su propio catálogo de tarjetas/componentes, a otro nivel.
+        <i class="fa-solid fa-circle-info"></i> Este es el tablero de control general de Calidad: cruza <strong>Garantías</strong> y <strong>Muestreos ISO 2859</strong> por producto terminado, y además reúne <strong>Medidas de Metrología</strong>, los <strong>últimos comentarios de Circuitos SMD</strong> y quién está <strong>activo en el bot de WhatsApp</strong> — todo en un solo lugar para revisar de un vistazo. Circuitos SMD no entra en el cruce de arriba porque maneja su propio catálogo de tarjetas/componentes, a otro nivel.
       </div>
 
       <div class="kpis" id="kpisContainer"></div>
@@ -120,22 +118,22 @@
 
       <div class="panel-grid">
         <div class="panel-card">
-          <h4>🛠️ Medidas (Metrología)</h4>
+          <h4><i class="fa-solid fa-wrench"></i> Medidas (Metrología)</h4>
           <div id="metrologiaContenido"><div class="empty-hint">Cargando...</div></div>
         </div>
         <div class="panel-card">
-          <h4>📱 Activos en el bot de WhatsApp</h4>
+          <h4><i class="fa-brands fa-whatsapp"></i> Activos en el bot de WhatsApp</h4>
           <div id="whatsappContenido"><div class="empty-hint">Cargando...</div></div>
         </div>
       </div>
 
       <div class="feed-card">
-        <h4 style="margin:0 0 6px 0; font-size:14px; color:#4a5568;">🗨️ Últimos comentarios y recomendaciones — Circuitos SMD</h4>
+        <h4 style="margin:0 0 6px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-comment-dots"></i> Últimos comentarios y recomendaciones — Circuitos SMD</h4>
         <div id="comentariosContenido"><div class="empty-hint">Cargando...</div></div>
       </div>
 
       <div class="feed-card">
-        <h4 style="margin:0 0 6px 0; font-size:14px; color:#4a5568;">🔍 Últimos muestreos realizados (ISO 2859)</h4>
+        <h4 style="margin:0 0 6px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-magnifying-glass"></i> Últimos muestreos realizados (ISO 2859)</h4>
         <div style="overflow-x:auto;">
           <table class="admin-table">
             <thead>
@@ -152,7 +150,7 @@
       </div>
 
       <div class="prod-controls">
-        <div style="font-weight:700; color:#2d3748;">📦 Resumen por producto</div>
+        <div style="font-weight:700; color:#2d3748;"><i class="fa-solid fa-box"></i> Resumen por producto</div>
         <input type="text" id="buscarProducto" placeholder="Buscar por referencia..." oninput="renderizarTablaProductos()">
       </div>
       <div style="overflow-x:auto;">
@@ -261,7 +259,7 @@
         type: 'line',
         data: {
           labels: data.garantias_por_mes.map(x => x.mes),
-          datasets: [{ label: 'Garantías', data: data.garantias_por_mes.map(x => x.cantidad), borderColor: '#dd6b20', backgroundColor: 'rgba(221,107,32,0.1)', tension: 0.3, fill: true }]
+          datasets: [{ label: 'Garantías', data: data.garantias_por_mes.map(x => x.cantidad), borderColor: '#2C43A2', backgroundColor: 'rgba(44,67,162,0.1)', tension: 0.3, fill: true }]
         },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
       });
@@ -271,7 +269,7 @@
         data: {
           labels: data.lotes_por_mes.map(x => x.mes),
           datasets: [
-            { label: 'Muestreados', data: data.lotes_por_mes.map(x => x.total), backgroundColor: '#2c7a7b' },
+            { label: 'Muestreados', data: data.lotes_por_mes.map(x => x.total), backgroundColor: '#2C43A2' },
             { label: 'Rechazados', data: data.lotes_por_mes.map(x => x.rechazados), backgroundColor: '#c53030' }
           ]
         },
@@ -381,7 +379,7 @@
           : '<span class="badge-tipo badge-observacion">Observación</span>';
         const fechaTxt = c.fecha ? new Date(c.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
         return `<div class="feed-item">
-          <div class="feed-icon">${esRecomendacion ? '💡' : '📝'}</div>
+          <div class="feed-icon">${esRecomendacion ? '<i class="fa-solid fa-lightbulb"></i>' : '<i class="fa-solid fa-note-sticky"></i>'}</div>
           <div class="feed-body">
             ${badge}<strong>${escapeHtml(c.referencia || '')}</strong>
             <div>${escapeHtml(c.texto || '')}</div>
@@ -417,8 +415,8 @@
       }
       cont.innerHTML = data.sesiones.map(s => `
         <div class="wpp-item">
-          <span><span class="wpp-dot"></span><strong>${escapeHtml(s.nombre || s.telefono || '')}</strong> — 📍 ${escapeHtml(s.area_nombre || '')}</span>
-          <span style="color:#718096;">🕐 ${escapeHtml(s.entrada || '')}</span>
+          <span><span class="wpp-dot"></span><strong>${escapeHtml(s.nombre || s.telefono || '')}</strong> — <i class="fa-solid fa-location-dot"></i> ${escapeHtml(s.area_nombre || '')}</span>
+          <span style="color:#718096;"><i class="fa-solid fa-clock"></i> ${escapeHtml(s.entrada || '')}</span>
         </div>
       `).join('');
     }
@@ -476,7 +474,7 @@
       }
 
       tbody.innerHTML = filas.map(m => {
-        const moduloTxt = m.modulo === 'Produccion' ? '⚙️ Producción' : '📦 Recepción';
+        const moduloTxt = m.modulo === 'Produccion' ? '<i class="fa-solid fa-gear"></i> Producción' : '<i class="fa-solid fa-box"></i> Recepción';
         const tipoTxt = (m.tipo || '').replace(/_/g, ' ');
         return `<tr>
           <td>${escapeHtml(m.fecha_hora || '')}</td>

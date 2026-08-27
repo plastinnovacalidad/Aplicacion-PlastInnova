@@ -42,6 +42,15 @@ app.use(express.json());
 // funcione igual sin importar el sistema operativo.
 app.use(express.static(path.join(RAIZ_PROYECTO, 'Public')));
 
+// Assets de marca (logos, isotipo) servidos directo desde la carpeta que
+// entregó publicidad ("Plast Innova design system/assets"), en vez de
+// mantener una copia aparte en Public/img — así solo hay un lugar donde
+// vive el logo oficial, y si algún día lo actualizan ahí, se refleja en
+// toda la app sin tocar código. Se expone solo la subcarpeta "assets" (no
+// toda la carpeta del manual de marca), para no publicar por HTTP los
+// documentos internos de guía/tokens/componentes que trae esa carpeta.
+app.use('/marca', express.static(path.join(RAIZ_PROYECTO, 'Plast Innova design system', 'assets')));
+
 // ======================== RUTAS ========================
 // Cada módulo de negocio vive en su propio archivo bajo routes/ (y su
 // correspondiente data/*.js con las consultas SQL). Todas siguen montadas

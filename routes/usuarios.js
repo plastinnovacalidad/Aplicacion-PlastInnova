@@ -15,10 +15,6 @@ const router = express.Router();
 
 // ======================== USUARIOS ========================
 
-router.post('/admin/test-historial', validarToken, (req, res) => {
-  res.json({ success: true, message: 'Endpoint de prueba historial operativo' });
-});
-
 router.get('/usuarios', validarToken, requerirPermiso('usuarios.gestionar'), asyncHandler(async (req, res) => {
   const users = await usuariosData.listarUsuarios();
   res.json({ usuarios: users });
