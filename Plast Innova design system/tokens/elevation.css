@@ -1,0 +1,12 @@
+:root{
+--shadow-xs:0 1px 2px rgba(17,27,67,.06);
+--shadow-sm:0 1px 3px rgba(17,27,67,.08),0 1px 2px rgba(17,27,67,.05);
+--shadow-md:0 4px 12px rgba(17,27,67,.10);
+--shadow-lg:0 12px 28px rgba(17,27,67,.14);
+--shadow-xl:0 24px 56px rgba(17,27,67,.18);
+--shadow-brand:0 10px 24px rgba(44,67,162,.28);
+--shadow-accent:0 10px 24px rgba(255,0,0,.24);
+/* LED glow — the one effect unique to a lighting brand. Use sparingly. */
+--glow-led:0 0 0 1px rgba(255,255,255,.6),0 0 24px rgba(255,255,255,.55); /* @kind shadow */
+--shadow-inset-sunken:inset 0 1px 2px rgba(17,27,67,.08);
+}

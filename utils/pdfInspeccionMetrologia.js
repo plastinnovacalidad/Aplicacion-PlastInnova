@@ -20,6 +20,7 @@ const path = require('path');
 const os = require('os');
 const PDFDocument = require('pdfkit');
 const pdf = require('./pdfIso2859');
+const { sanitizeFilename } = require('./archivos');
 
 const EXTENSIONES_IMAGEN = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
 
@@ -47,22 +48,37 @@ function formatearNumero(n) {
 // dos) — PDFKit no puede insertar la página de OTRO pdf como si fuera una
 // imagen, así que en ese caso se deja una nota en texto en vez de intentar
 // embeberlo (y fallar o verse cortado).
+//
+// Julio pidió compactar el reporte: la primera versión siempre reservaba
+// 270px para el plano sin importar su tamaño real (para "caber" en el peor
+// caso), lo que dejaba un hueco en blanco grande cuando el plano quedaba
+// más corto que eso (planos horizontales, por ejemplo). Ahora se mide el
+// tamaño real con el que PDFKit lo va a dibujar (doc.openImage da el ancho/
+// alto real del archivo) y se avanza "y" exactamente esa altura, no una
+// reservada de más — igual de nítido, pero sin espacio desperdiciado.
+const ALTO_MAX_PLANO = 220;
+
 function dibujarPlano(doc, y, tituloReporte, planoRuta) {
   y = pdf.dibujarTituloSeccion(doc, y, 'Plano de Referencia');
 
   if (planoRuta && esArchivoImagen(planoRuta) && fs.existsSync(planoRuta)) {
-    y = pdf.saltoPaginaSiNecesario(doc, y, 230, (doc2) => {
+    y = pdf.saltoPaginaSiNecesario(doc, y, ALTO_MAX_PLANO + 20, (doc2) => {
       let yy = pdf.dibujarEncabezado(doc2, `${tituloReporte} (continuación)`);
       return pdf.dibujarTituloSeccion(doc2, yy, 'Plano de Referencia (continuación)');
     });
     try {
       const anchoMax = pdf.anchoUtil(doc);
-      doc.image(planoRuta, pdf.MARGEN, y, { fit: [anchoMax, 260], align: 'center' });
-      y += 270;
+      const img = doc.openImage(planoRuta);
+      const escala = Math.min(anchoMax / img.width, ALTO_MAX_PLANO / img.height);
+      const anchoFinal = img.width * escala;
+      const altoFinal = img.height * escala;
+      const xCentrado = pdf.MARGEN + (anchoMax - anchoFinal) / 2;
+      doc.image(img, xCentrado, y, { width: anchoFinal, height: altoFinal });
+      y += altoFinal + 8;
     } catch (e) {
       doc.font('Helvetica').fontSize(9).fillColor(pdf.COLORES.gris)
         .text('No se pudo insertar la imagen del plano en el reporte.', pdf.MARGEN, y, { width: pdf.anchoUtil(doc) });
-      y += 22;
+      y += 16;
     }
   } else {
     const mensaje = !planoRuta
@@ -72,17 +88,24 @@ function dibujarPlano(doc, y, tituloReporte, planoRuta) {
         : 'El plano de esta referencia está en formato PDF — consúltelo directamente en el módulo de Metrología del sistema.');
     doc.font('Helvetica').fontSize(9).fillColor(pdf.COLORES.gris)
       .text(mensaje, pdf.MARGEN, y, { width: pdf.anchoUtil(doc) });
-    y += 22;
+    y += 16;
   }
 
-  return y + 10;
+  return y + 6;
 }
 
 function generarPdfInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta) {
   return new Promise((resolve, reject) => {
     let rutaArchivo;
     try {
-      const nombreArchivo = `inspeccion-metrologia-${Date.now()}-${Math.round(Math.random() * 1e6)}.pdf`;
+      // whatsapp-web.js usa el nombre de ESTE archivo temporal como nombre
+      // del adjunto que le llega a quien lo recibe (MessageMedia.fromFilePath
+      // lee path.basename(...) — ver whatsapp_bot_service.js) — por eso, a
+      // pedido de Julio, ya no es un nombre interno cualquiera sino
+      // "ReporteInspeccion-<id de la inspección>-<referencia>.pdf".
+      const idInspeccion = inspeccion && inspeccion.id ? inspeccion.id : Date.now();
+      const referenciaArchivo = sanitizeFilename(codigo || 'SinReferencia');
+      const nombreArchivo = `ReporteInspeccion-${idInspeccion}-${referenciaArchivo}.pdf`;
       rutaArchivo = path.join(os.tmpdir(), nombreArchivo);
 
       const doc = new PDFDocument({ margin: pdf.MARGEN, size: 'A4', bufferPages: true });
@@ -101,13 +124,15 @@ function generarPdfInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta) 
       const todasConformes = medidas.length > 0 && medidas.every(m => (m.estado || '').toUpperCase() === 'CONFORME');
       const resultadoGeneral = medidas.length === 0 ? 'SIN MEDIDAS' : (todasConformes ? 'CONFORME' : 'FUERA DE TOLERANCIA');
 
+      // Julio pidió quitar "Registrado por": con "Responsable" ya presente
+      // en el mismo panel, le pareció información repetida (en la práctica
+      // ambos suelen ser la misma persona).
       y = pdf.dibujarPanelInfo(doc, y, [
-        { label: 'Referencia / Molde', value: codigo },
-        { label: 'Fecha de inspección', value: inspeccion.fecha },
-        { label: 'Responsable', value: inspeccion.responsable },
-        { label: 'Lote', value: inspeccion.lote || '-' },
-        { label: 'Registrado por', value: inspeccion.creado_por_nombre || '-' },
-        { label: 'Resultado general', value: resultadoGeneral, badge: true },
+        { label: 'Referencia / Molde', value: codigo, alturaExtra: 18 },
+        { label: 'Fecha de inspección', value: inspeccion.fecha, alturaExtra: 18 },
+        { label: 'Responsable', value: inspeccion.responsable, alturaExtra: 18 },
+        { label: 'Lote', value: inspeccion.lote || '-', alturaExtra: 18 },
+        { label: 'Resultado general', value: resultadoGeneral, badge: true, alturaExtra: 18 },
       ]);
 
       y = dibujarPlano(doc, y, titulo, planoRuta);
@@ -148,9 +173,9 @@ function generarPdfInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta) 
         y = pdf.saltoPaginaSiNecesario(doc, y, 60, (doc2) => pdf.dibujarEncabezado(doc2, `${titulo} (continuación)`));
         y = pdf.dibujarTituloSeccion(doc, y, `Fotos de evidencia (${conFoto.length})`);
 
-        const anchoFoto = 160;
-        const altoFoto = 160;
-        const espacio = 15;
+        const anchoFoto = 110;
+        const altoFoto = 110;
+        const espacio = 12;
         const porFila = Math.max(1, Math.floor((pdf.anchoUtil(doc) + espacio) / (anchoFoto + espacio)));
         let col = 0;
         let xInicioFila = pdf.MARGEN;
@@ -171,7 +196,7 @@ function generarPdfInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta) 
           col++;
           if (col >= porFila) {
             col = 0;
-            y += altoFoto + 28;
+            y += altoFoto + 20;
           }
         });
         if (col !== 0) y += altoFoto + 28;

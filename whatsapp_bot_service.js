@@ -3,6 +3,8 @@
 // ============================================
 
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const config = require('./settings/config_whatsapp');
@@ -10,6 +12,15 @@ const whatsappAlertas = require('./data/whatsappAlertas');
 const calidadData = require('./data/calidad');
 const { generarPdfResumenCalidad } = require('./utils/pdfResumenCalidad');
 const { generarPdfReporteGarantias } = require('./utils/pdfReporteGarantias');
+const { construirHtmlReporteInspeccion } = require('./utils/imagenReporteMetrologia');
+// Julio quiere comparar: volvió a mandar el reporte de inspección como PDF
+// (en vez de la imagen compacta) para ver cómo se ve ahora que cambió dos
+// planos de PDF a PNG (Iny_Ap0111 e Iny_Bas_0111) — antes esos dos siempre
+// caían en la nota de texto "el plano está en PDF, consúltelo en el
+// sistema" porque PDFKit no puede insertar la página de otro PDF como
+// imagen. Ver enviarReporteInspeccionMetrologia más abajo: por ahora usa
+// generarPdfInspeccionMetrologia otra vez en vez de generarImagenInspeccion
+// (que se deja intacta, lista para volver a activarla).
 const { generarPdfInspeccionMetrologia } = require('./utils/pdfInspeccionMetrologia');
 
 const {
@@ -309,6 +320,48 @@ async function responderReporteGarantiasPDF(msg, etiquetaPeriodo, g) {
   }
 }
 
+// Genera el reporte de una inspección como UNA SOLA IMAGEN compacta (Julio
+// primero pidió PDF y luego cambió a esto: quería algo más compacto que un
+// PDF de varias páginas). Se arma el HTML en utils/imagenReporteMetrologia.js
+// y acá se convierte a PNG abriendo una pestaña nueva en el MISMO navegador
+// que whatsapp-web.js ya tiene corriendo para la sesión de WhatsApp
+// (client.pupBrowser) — así no hace falta agregar Puppeteer como
+// dependencia aparte ni descargar un Chrome adicional, solo se reutiliza el
+// que ya está abierto.
+async function generarImagenInspeccion(codigo, inspeccion, medidas, planoRuta) {
+  if (!client || !client.pupBrowser) {
+    throw new Error('El bot de WhatsApp no está conectado (no hay navegador disponible para generar la imagen).');
+  }
+  const html = construirHtmlReporteInspeccion(codigo, inspeccion, medidas, planoRuta);
+  const nombreArchivo = `inspeccion-metrologia-${Date.now()}-${Math.round(Math.random() * 1e6)}.png`;
+  const rutaArchivo = path.join(os.tmpdir(), nombreArchivo);
+
+  const ANCHO = 640;
+  const page = await client.pupBrowser.newPage();
+  try {
+    // El alto real del reporte varía según cuántas cotas/fotos tenga la
+    // inspección — un viewport de alto fijo (ej. 800px) deja una franja en
+    // blanco abajo cuando el contenido es más corto (justo lo que Julio no
+    // quería, "mucho más compacta"), y recortaría el reporte si es más
+    // largo. Por eso primero se renderiza con un alto cualquiera, se mide
+    // cuánto ocupó realmente el documento (scrollHeight) y se ajusta el
+    // viewport a ese alto exacto antes de la captura — así la imagen queda
+    // del tamaño justo del contenido, ni más ni menos.
+    await page.setViewport({ width: ANCHO, height: 800 });
+    await page.setContent(html, { waitUntil: 'load' });
+    // OJO: document.documentElement.scrollHeight queda "pisado" al alto del
+    // viewport cuando el contenido es más corto que la ventana (comprobado
+    // con capturas de prueba) — document.body.scrollHeight sí refleja el
+    // alto real del contenido en ambos casos (corto o largo).
+    const altoReal = await page.evaluate(() => document.body.scrollHeight);
+    await page.setViewport({ width: ANCHO, height: Math.max(1, altoReal) });
+    await page.screenshot({ path: rutaArchivo, type: 'png' });
+  } finally {
+    await page.close();
+  }
+  return rutaArchivo;
+}
+
 // Reporte de una inspección de Metrología (roadmap: separar Garantías/
 // Calidad — Julio pidió, aparte, que al guardar una inspección de un molde
 // se pueda mandar por WhatsApp un reporte con el plano, los datos
@@ -339,7 +392,9 @@ async function enviarReporteInspeccionMetrologia(codigo, inspeccion, medidas, pl
 
   try {
     const media = MessageMedia.fromFilePath(rutaArchivo);
-    const caption = `📐 *Reporte de Inspección — ${codigo}*\nFecha: ${inspeccion.fecha}  ·  Responsable: ${inspeccion.responsable}`;
+    // Julio pidió quitar todo el texto del mensaje y dejar solo la
+    // referencia (antes tenía emoji, título y fecha/responsable).
+    const caption = codigo;
     let algunoEnviado = false;
     for (const admin of admins) {
       try {

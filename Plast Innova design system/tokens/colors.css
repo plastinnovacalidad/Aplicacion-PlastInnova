@@ -1,0 +1,67 @@
+:root{
+/* ---- Brand base: Azul Plast Innova (isotipo, PANTONE 293 C reference) ---- */
+--pi-blue-50:#eef1fa;--pi-blue-100:#d8def3;--pi-blue-200:#b0bce6;--pi-blue-300:#8799da;
+--pi-blue-400:#5f76cd;--pi-blue-500:#3a56b4;--pi-blue-600:#2c43a2;--pi-blue-700:#233685;
+--pi-blue-800:#1a2864;--pi-blue-900:#111b43;
+/* Secondary blue sampled from the horizontal logo gradient */
+--pi-blue-bright:#1046b1;
+
+/* ---- Brand base: Rojo Plast Innova (wordmark, PANTONE 485 C reference) ---- */
+--pi-red-50:#ffecec;--pi-red-100:#ffd1d1;--pi-red-200:#ffa3a3;--pi-red-300:#ff7575;
+--pi-red-400:#ff4747;--pi-red-500:#ff1a1a;--pi-red-600:#ff0000;--pi-red-700:#df0000;
+--pi-red-800:#b00000;--pi-red-900:#7a0000;
+
+/* ---- Neutrals ---- */
+--pi-white:#ffffff;--pi-neutral-50:#f7f8fa;--pi-neutral-100:#eef0f4;--pi-neutral-200:#dfe3ea;
+--pi-neutral-300:#c6ccd8;--pi-neutral-400:#9aa3b2;--pi-neutral-500:#6e7787;
+--pi-neutral-600:#4e5666;--pi-neutral-700:#363d4a;--pi-neutral-800:#22272f;
+--pi-neutral-900:#12151a;--pi-black:#000000;
+
+/* ---- Semantic hues (taken from the brand document's own swatch library) ---- */
+--pi-green-600:#009245;--pi-green-100:#e0f2e8;
+--pi-amber-600:#f7931e;--pi-amber-100:#fdeedb;
+--pi-info-600:#0071bc;--pi-info-100:#e0eef8;
+
+/* ---- Brand gradients (as used in the logo artwork) ---- */
+--pi-gradient-blue:linear-gradient(135deg,#1046b1 0%,#2c43a2 100%); /* @kind color */
+--pi-gradient-red:linear-gradient(135deg,#ff0000 0%,#df0000 100%); /* @kind color */
+--pi-gradient-led:linear-gradient(90deg,#2c43a2 0%,#1046b1 45%,#ff0000 100%); /* @kind color */
+
+/* ================= Semantic aliases ================= */
+--surface-page:#ffffff;
+--surface-subtle:var(--pi-neutral-50);
+--surface-card:#ffffff;
+--surface-sunken:var(--pi-neutral-100);
+--surface-inverse:var(--pi-blue-900);
+--surface-brand:var(--pi-blue-600);
+--surface-brand-soft:var(--pi-blue-50);
+--surface-accent:var(--pi-red-600);
+--surface-accent-soft:var(--pi-red-50);
+
+--text-heading:var(--pi-blue-900);
+--text-body:var(--pi-neutral-700);
+--text-muted:var(--pi-neutral-500);
+--text-on-brand:#ffffff;
+--text-on-accent:#ffffff;
+--text-brand:var(--pi-blue-600);
+--text-accent:var(--pi-red-700);
+--text-link:var(--pi-blue-600);
+--text-link-hover:var(--pi-red-700);
+
+--border-subtle:var(--pi-neutral-200);
+--border-default:var(--pi-neutral-300);
+--border-strong:var(--pi-neutral-400);
+--border-brand:var(--pi-blue-600);
+
+--state-success:var(--pi-green-600);
+--state-success-soft:var(--pi-green-100);
+--state-warning:var(--pi-amber-600);
+--state-warning-soft:var(--pi-amber-100);
+--state-danger:var(--pi-red-700);
+--state-danger-soft:var(--pi-red-50);
+--state-info:var(--pi-info-600);
+--state-info-soft:var(--pi-info-100);
+
+--focus-ring:0 0 0 3px rgba(44,67,162,.35); /* @kind shadow */
+--focus-ring-accent:0 0 0 3px rgba(255,0,0,.28); /* @kind shadow */
+}

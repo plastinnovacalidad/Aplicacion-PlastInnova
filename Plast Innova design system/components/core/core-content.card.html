@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" viewport="700x458" name="Core — Badge, Tag & Card" -->
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Core</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:22px 24px;background:var(--surface-page)}.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.stack{display:flex;flex-direction:column;gap:18px}.lbl{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { Button, IconButton, Icon, Card, Badge, Tag, Input, Select, Checkbox, Radio, Switch, Tabs, Breadcrumb, Dialog, Toast, Tooltip } = window.PlastInnovaDesignSystem_ff345a;
+
+function Demo(){return (
+<div className="stack">
+  <div><div className="lbl">Badge</div><div className="row" style={{marginTop:8}}>
+    <Badge tone="accent" solid>-20%</Badge>
+    <Badge tone="brand">Nuevo</Badge>
+    <Badge tone="success" icon="check">En stock</Badge>
+    <Badge tone="warning">Últimas unidades</Badge>
+    <Badge tone="info">Importado</Badge>
+    <Badge tone="neutral">Ref. PI-LED-H4B</Badge>
+  </div></div>
+  <div><div className="lbl">Tag</div><div className="row" style={{marginTop:8}}>
+    <Tag selected>Luz fría 6000K</Tag>
+    <Tag onRemove={()=>{}}>H4</Tag>
+    <Tag onClick={()=>{}}>Exploradoras</Tag>
+    <Tag onRemove={()=>{}}>Desde $50.000</Tag>
+  </div></div>
+  <div><div className="lbl">Card</div><div className="row" style={{marginTop:8,alignItems:'stretch'}}>
+    <Card interactive style={{width:212}}><div style={{font:'var(--type-h3)',color:'var(--text-heading)'}}>Kit bi-LED H4</div><div style={{font:'var(--type-body-sm)',color:'var(--text-muted)',marginTop:6}}>12.000 lm · 6000K</div></Card>
+    <Card elevation="lg" style={{width:212}}><div style={{font:'var(--type-h3)',color:'var(--text-heading)'}}>Elevación lg</div><div style={{font:'var(--type-body-sm)',color:'var(--text-muted)',marginTop:6}}>Para paneles flotantes.</div></Card>
+    <Card elevation="none" bordered={false} style={{width:212,background:'var(--surface-subtle)'}}><div style={{font:'var(--type-h3)',color:'var(--text-heading)'}}>Sin borde</div><div style={{font:'var(--type-body-sm)',color:'var(--text-muted)',marginTop:6}}>Sobre fondo tenue.</div></Card>
+  </div></div>
+</div>)}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script></body></html>
