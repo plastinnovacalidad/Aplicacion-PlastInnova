@@ -1,0 +1,32 @@
+<!-- @dsCard group="Components" viewport="700x468" name="Feedback — Dialog, Toast, Tooltip" -->
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Feedback</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:22px 24px;background:var(--surface-page)}.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.stack{display:flex;flex-direction:column;gap:18px}.lbl{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { Button, IconButton, Icon, Card, Badge, Tag, Input, Select, Checkbox, Radio, Switch, Tabs, Breadcrumb, Dialog, Toast, Tooltip } = window.PlastInnovaDesignSystem_ff345a;
+
+function Demo(){
+  const [open,setOpen]=React.useState(true);
+  return (
+  <div className="stack">
+    <div className="row" style={{alignItems:'flex-start',gap:16}}>
+      <Toast tone="success" title="Cotización enviada" message="Te respondemos por WhatsApp en minutos." onClose={()=>{}}/>
+      <Toast tone="danger" title="No pudimos procesar el pago" message="Revisa los datos de tu tarjeta."/>
+    </div>
+    <div className="row" style={{gap:16}}>
+      <Tooltip content="Comparar productos"><IconButton icon="scale-balanced" label="Comparar" variant="outline"/></Tooltip>
+      <Tooltip content="Agregar a favoritos" placement="right"><IconButton icon="heart" label="Favoritos" variant="outline"/></Tooltip>
+      <Button variant="secondary" onClick={()=>setOpen(true)}>Abrir diálogo</Button>
+    </div>
+    <div style={{position:'relative',height:180,borderRadius:'var(--radius-lg)',background:'var(--surface-subtle)',overflow:'hidden'}}>
+      <Dialog open={open} title="Producto añadido" description="Kit bi-LED H4 ya está en tu carrito." onClose={()=>setOpen(false)}
+        footer={<><Button variant="ghost" onClick={()=>setOpen(false)}>Seguir viendo</Button><Button variant="accent">Ir al carrito</Button></>}/>
+    </div>
+  </div>)}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script></body></html>

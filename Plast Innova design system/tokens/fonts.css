@@ -1,0 +1,11 @@
+/* Rubik is the Plast Innova corporate typeface (declared in MANUAL DE MARCA PLAST INNOVA_2.pdf:
+   Rubik Light / Regular / Medium / SemiBold / Bold + italics, TrueType v2.102).
+   No .ttf binaries were supplied with the brand package, so the family is loaded from
+   Google Fonts (same foundry release). Drop real Rubik*.ttf/woff2 into assets/fonts/ and
+   replace this @import with @font-face rules if self-hosting is required. */
+@import url("https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap");
+
+/* FontAwesome 6.4.0 — the icon set already in production in
+   app-circuitos-smd-v2 (dashboard_garantias.html). The Icon component
+   renders `fa-solid fa-<name>`, so consumers get icons for free. */
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");

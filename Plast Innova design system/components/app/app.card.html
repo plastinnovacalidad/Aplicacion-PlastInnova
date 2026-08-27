@@ -1,0 +1,54 @@
+<!-- @dsCard group="Components" viewport="700x600" name="App — ModuleTile, KpiCard, DataTable, ChartPanel" -->
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:22px 24px;background:var(--surface-page)}.lbl{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { ModuleTile, KpiCard, DataTable, ChartPanel, CHART_COLORS, Badge, Button, Select, Tabs, Icon } = window.PlastInnovaDesignSystem_ff345a;
+
+const rows=[
+ {ref:'0111-Am-Mul-V4',lote:'20260824',aql:'1,0',estado:'Aceptado'},
+ {ref:'TAR-1001P-AB-Mul',lote:'20260825',aql:'2,5',estado:'Rechazado'},
+ {ref:'Cir-1005-V4',lote:'20260826',aql:'1,0',estado:'Aceptado'},
+];
+const cols=[
+ {key:'ref',label:'Referencia'},
+ {key:'lote',label:'Lote'},
+ {key:'aql',label:'AQL',align:'right',width:80},
+ {key:'estado',label:'Resultado',render:v=><Badge tone={v==='Aceptado'?'success':'accent'} solid={v!=='Aceptado'}>{v}</Badge>},
+];
+function Demo(){return (
+<div style={{display:'flex',flexDirection:'column',gap:22}}>
+  <div><div className="lbl">ModuleTile</div>
+    <div style={{display:'flex',gap:14,marginTop:8}}>
+      <ModuleTile icon="bolt" label="Circuitos SMD" size={128}/>
+      <ModuleTile icon="clipboard-list" label="Tablero de Garantías" size={128} tone="var(--pi-gradient-red)"/>
+      <ModuleTile icon="ruler-combined" label="Metrología y Planos" size={128} tone="linear-gradient(135deg,#0071bc 0%,#005e9c 100%)"/>
+      <ModuleTile icon="flask" label="Muestreos ISO 2859-1" size={128} tone="linear-gradient(135deg,#009245 0%,#00742f 100%)"/>
+    </div>
+  </div>
+  <div><div className="lbl">KpiCard</div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginTop:8}}>
+      <KpiCard label="Solicitudes" value="1.284" icon="clipboard-list" delta={12} deltaLabel="vs. mes ant."/>
+      <KpiCard label="Aceptadas" value="1.096" icon="circle-check" tone="success" delta={4}/>
+      <KpiCard label="Rechazadas" value="188" icon="circle-xmark" tone="accent" delta={-7}/>
+      <KpiCard label="Nivel AQL" value="1,0" unit="%" icon="gauge-high" tone="info"/>
+    </div>
+  </div>
+  <div><div className="lbl">DataTable</div><div style={{marginTop:8}}><DataTable columns={cols} rows={rows}/></div></div>
+  <div><div className="lbl">ChartPanel</div>
+    <div style={{marginTop:8}}>
+      <ChartPanel title="Garantías por mes" subtitle="Últimos 6 meses" height={150} action={<Select options={['2026','2025']} size="sm" wrapperStyle={{width:110}}/>}>
+        <div style={{display:'flex',alignItems:'flex-end',gap:14,height:'100%',padding:'0 4px'}}>
+          {[62,48,80,55,92,70].map((h,i)=><div key={i} style={{flex:1,height:h+'%',background:CHART_COLORS[i%CHART_COLORS.length],borderRadius:'4px 4px 0 0'}}/>)}
+        </div>
+      </ChartPanel>
+    </div>
+  </div>
+</div>)}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script></body></html>

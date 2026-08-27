@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-27T12:00:00.000Z",
+  "title": "Design System: Plast-Innova — Sistema de Calidad y Control",
+  "extensions": {
+    "colorMeta": {
+      "azul-institucional": {
+        "role": "primary",
+        "displayName": "Azul Institucional",
+        "canonical": "#1B4FC4",
+        "tonalRamp": ["oklch(15% 0.05 263)", "oklch(25% 0.10 263)", "oklch(35% 0.15 263)", "oklch(45% 0.19 263)", "oklch(55% 0.18 263)", "oklch(67% 0.14 263)", "oklch(80% 0.08 263)", "oklch(94% 0.03 263)"]
+      },
+      "azul-institucional-profundo": {
+        "role": "primary",
+        "displayName": "Azul Institucional Profundo",
+        "canonical": "#1642AA",
+        "tonalRamp": ["oklch(13% 0.04 263)", "oklch(22% 0.09 263)", "oklch(32% 0.14 263)", "oklch(40% 0.17 263)", "oklch(50% 0.16 263)", "oklch(62% 0.13 263)", "oklch(76% 0.07 263)", "oklch(92% 0.03 263)"]
+      },
+      "gris-planta": {
+        "role": "neutral",
+        "displayName": "Gris Planta",
+        "canonical": "#EEF2F7",
+        "tonalRamp": ["oklch(18% 0.01 250)", "oklch(30% 0.01 250)", "oklch(42% 0.01 250)", "oklch(55% 0.01 250)", "oklch(68% 0.01 250)", "oklch(80% 0.008 250)", "oklch(89% 0.008 250)", "oklch(95% 0.008 250)"]
+      },
+      "superficie": {
+        "role": "neutral",
+        "displayName": "Superficie",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["oklch(15% 0.005 250)", "oklch(28% 0.005 250)", "oklch(42% 0.005 250)", "oklch(56% 0.005 250)", "oklch(70% 0.005 250)", "oklch(82% 0.004 250)", "oklch(92% 0.004 250)", "oklch(100% 0 0)"]
+      },
+      "superficie-suave": {
+        "role": "neutral",
+        "displayName": "Superficie Suave",
+        "canonical": "#F7FAFC",
+        "tonalRamp": ["oklch(20% 0.008 250)", "oklch(32% 0.008 250)", "oklch(45% 0.008 250)", "oklch(58% 0.008 250)", "oklch(70% 0.007 250)", "oklch(81% 0.007 250)", "oklch(90% 0.006 250)", "oklch(97% 0.006 250)"]
+      },
+      "tinte-marca": {
+        "role": "neutral",
+        "displayName": "Tinte de Marca",
+        "canonical": "#F0F3FF",
+        "tonalRamp": ["oklch(25% 0.04 263)", "oklch(35% 0.05 263)", "oklch(48% 0.05 263)", "oklch(60% 0.045 263)", "oklch(72% 0.04 263)", "oklch(83% 0.03 263)", "oklch(90% 0.025 263)", "oklch(96% 0.02 263)"]
+      },
+      "tinte-marca-borde": {
+        "role": "neutral",
+        "displayName": "Tinte de Marca Borde",
+        "canonical": "#D0D8FF",
+        "tonalRamp": ["oklch(20% 0.04 263)", "oklch(32% 0.05 263)", "oklch(45% 0.055 263)", "oklch(58% 0.05 263)", "oklch(70% 0.045 263)", "oklch(80% 0.04 263)", "oklch(88% 0.035 263)", "oklch(95% 0.02 263)"]
+      },
+      "texto-principal": {
+        "role": "neutral",
+        "displayName": "Texto Principal",
+        "canonical": "#2D3748",
+        "tonalRamp": ["oklch(12% 0.02 255)", "oklch(22% 0.025 255)", "oklch(35% 0.03 255)", "oklch(48% 0.025 255)", "oklch(62% 0.02 255)", "oklch(75% 0.015 255)", "oklch(87% 0.01 255)", "oklch(95% 0.008 255)"]
+      },
+      "texto-secundario": {
+        "role": "neutral",
+        "displayName": "Texto Secundario",
+        "canonical": "#4A5568",
+        "tonalRamp": ["oklch(15% 0.02 255)", "oklch(28% 0.025 255)", "oklch(42% 0.028 255)", "oklch(55% 0.024 255)", "oklch(67% 0.02 255)", "oklch(78% 0.015 255)", "oklch(88% 0.01 255)", "oklch(95% 0.008 255)"]
+      },
+      "texto-tenue": {
+        "role": "neutral",
+        "displayName": "Texto Tenue",
+        "canonical": "#718096",
+        "tonalRamp": ["oklch(18% 0.02 255)", "oklch(32% 0.025 255)", "oklch(45% 0.026 255)", "oklch(58% 0.023 255)", "oklch(70% 0.018 255)", "oklch(80% 0.014 255)", "oklch(89% 0.01 255)", "oklch(95% 0.008 255)"]
+      },
+      "texto-fantasma": {
+        "role": "neutral",
+        "displayName": "Texto Fantasma",
+        "canonical": "#A0AEC0",
+        "tonalRamp": ["oklch(22% 0.02 255)", "oklch(35% 0.024 255)", "oklch(48% 0.024 255)", "oklch(60% 0.022 255)", "oklch(72% 0.018 255)", "oklch(82% 0.014 255)", "oklch(90% 0.01 255)", "oklch(96% 0.008 255)"]
+      },
+      "borde-sutil": {
+        "role": "neutral",
+        "displayName": "Borde Sutil",
+        "canonical": "#E2E8F0",
+        "tonalRamp": ["oklch(25% 0.012 250)", "oklch(38% 0.012 250)", "oklch(50% 0.012 250)", "oklch(62% 0.011 250)", "oklch(73% 0.01 250)", "oklch(83% 0.009 250)", "oklch(90% 0.008 250)", "oklch(96% 0.006 250)"]
+      },
+      "borde-campo": {
+        "role": "neutral",
+        "displayName": "Borde de Campo",
+        "canonical": "#CBD5E0",
+        "tonalRamp": ["oklch(22% 0.014 250)", "oklch(35% 0.014 250)", "oklch(48% 0.014 250)", "oklch(60% 0.013 250)", "oklch(71% 0.012 250)", "oklch(81% 0.01 250)", "oklch(89% 0.009 250)", "oklch(95% 0.007 250)"]
+      },
+      "exito-fondo": {
+        "role": "secondary",
+        "displayName": "Éxito Fondo",
+        "canonical": "#C6F6D5",
+        "tonalRamp": ["oklch(20% 0.04 155)", "oklch(32% 0.05 155)", "oklch(45% 0.055 155)", "oklch(58% 0.055 155)", "oklch(70% 0.05 155)", "oklch(80% 0.05 155)", "oklch(89% 0.05 155)", "oklch(95% 0.04 155)"]
+      },
+      "exito-texto": {
+        "role": "secondary",
+        "displayName": "Éxito Texto",
+        "canonical": "#276749",
+        "tonalRamp": ["oklch(15% 0.04 155)", "oklch(25% 0.07 155)", "oklch(38% 0.09 155)", "oklch(50% 0.09 155)", "oklch(62% 0.08 155)", "oklch(74% 0.06 155)", "oklch(85% 0.05 155)", "oklch(94% 0.03 155)"]
+      },
+      "exito-solido": {
+        "role": "secondary",
+        "displayName": "Éxito Sólido",
+        "canonical": "#38A169",
+        "tonalRamp": ["oklch(16% 0.04 152)", "oklch(28% 0.08 152)", "oklch(40% 0.11 152)", "oklch(55% 0.12 152)", "oklch(66% 0.11 152)", "oklch(77% 0.08 152)", "oklch(87% 0.05 152)", "oklch(95% 0.03 152)"]
+      },
+      "peligro-fondo": {
+        "role": "tertiary",
+        "displayName": "Peligro Fondo",
+        "canonical": "#FED7D7",
+        "tonalRamp": ["oklch(22% 0.04 25)", "oklch(34% 0.05 25)", "oklch(46% 0.05 25)", "oklch(58% 0.05 25)", "oklch(70% 0.05 25)", "oklch(80% 0.05 25)", "oklch(89% 0.045 25)", "oklch(95% 0.035 25)"]
+      },
+      "peligro-texto": {
+        "role": "tertiary",
+        "displayName": "Peligro Texto",
+        "canonical": "#C53030",
+        "tonalRamp": ["oklch(15% 0.05 27)", "oklch(27% 0.10 27)", "oklch(38% 0.14 27)", "oklch(50% 0.16 27)", "oklch(61% 0.14 27)", "oklch(73% 0.09 27)", "oklch(84% 0.06 27)", "oklch(94% 0.03 27)"]
+      },
+      "alerta-viva": {
+        "role": "tertiary",
+        "displayName": "Alerta Viva",
+        "canonical": "#FF4757",
+        "tonalRamp": ["oklch(16% 0.06 20)", "oklch(30% 0.13 20)", "oklch(44% 0.19 20)", "oklch(60% 0.22 20)", "oklch(70% 0.19 20)", "oklch(79% 0.13 20)", "oklch(88% 0.07 20)", "oklch(95% 0.03 20)"]
+      },
+      "aviso-fondo": {
+        "role": "tertiary",
+        "displayName": "Aviso Fondo",
+        "canonical": "#FEEBC8",
+        "tonalRamp": ["oklch(24% 0.05 60)", "oklch(36% 0.06 60)", "oklch(48% 0.06 60)", "oklch(60% 0.06 60)", "oklch(72% 0.06 60)", "oklch(82% 0.06 60)", "oklch(90% 0.055 60)", "oklch(96% 0.04 60)"]
+      },
+      "aviso-texto": {
+        "role": "tertiary",
+        "displayName": "Aviso Texto",
+        "canonical": "#C05621",
+        "tonalRamp": ["oklch(15% 0.04 45)", "oklch(27% 0.08 45)", "oklch(40% 0.12 45)", "oklch(52% 0.13 45)", "oklch(64% 0.12 45)", "oklch(76% 0.08 45)", "oklch(86% 0.05 45)", "oklch(95% 0.03 45)"]
+      },
+      "aviso-solido": {
+        "role": "tertiary",
+        "displayName": "Aviso Sólido",
+        "canonical": "#D69E2E",
+        "tonalRamp": ["oklch(16% 0.04 75)", "oklch(30% 0.08 75)", "oklch(45% 0.12 75)", "oklch(62% 0.14 75)", "oklch(72% 0.13 75)", "oklch(81% 0.10 75)", "oklch(89% 0.06 75)", "oklch(96% 0.03 75)"]
+      },
+      "info-fondo": {
+        "role": "secondary",
+        "displayName": "Info Fondo",
+        "canonical": "#BEE3F8",
+        "tonalRamp": ["oklch(22% 0.04 240)", "oklch(34% 0.05 240)", "oklch(46% 0.05 240)", "oklch(58% 0.05 240)", "oklch(70% 0.05 240)", "oklch(80% 0.045 240)", "oklch(89% 0.04 240)", "oklch(95% 0.03 240)"]
+      },
+      "info-texto": {
+        "role": "secondary",
+        "displayName": "Info Texto",
+        "canonical": "#2B6CB0",
+        "tonalRamp": ["oklch(15% 0.04 245)", "oklch(27% 0.08 245)", "oklch(40% 0.11 245)", "oklch(52% 0.11 245)", "oklch(64% 0.10 245)", "oklch(76% 0.07 245)", "oklch(86% 0.05 245)", "oklch(95% 0.03 245)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Título del visor de fotos en Circuitos SMD; el único texto grande del sistema." },
+      "headline": { "displayName": "Headline", "purpose": "Títulos de sección dentro de un módulo, con regla inferior de 2px; login a 22px." },
+      "title": { "displayName": "Title", "purpose": "Título del módulo en el encabezado compacto, con subtítulo de 12px." },
+      "body": { "displayName": "Body", "purpose": "Texto de trabajo: burbujas, formularios, descripciones; tablas densas a 13px." },
+      "label": { "displayName": "Label", "purpose": "Botones, pestañas y badges; peso 600 obligatorio (La Regla del 600)." }
+    },
+    "shadows": [
+      { "name": "panel-reposo", "value": "0 2px 8px rgba(0,0,0,0.08)", "purpose": "Base permanente de tarjetas, paneles y contenedores de tabla." },
+      { "name": "encabezado", "value": "0 2px 10px rgba(0,0,0,0.15)", "purpose": "Separa la barra de título del tablero." },
+      { "name": "brillo-seleccion", "value": "0 2px 8px rgba(27,79,196,0.35)", "purpose": "Ítem activo de lista y chip activo; sombra teñida de marca (La Regla del Brillo Azul)." },
+      { "name": "hover-ficha", "value": "0 10px 22px rgba(27,79,196,0.2)", "purpose": "Elevación de hover en fichas del portal (con translateY(-4px))." },
+      { "name": "capa-modal", "value": "0 25px 60px rgba(0,0,0,0.3)", "purpose": "Login y modales; la máxima profundidad del sistema." },
+      { "name": "anillo-foco", "value": "0 0 0 3px rgba(27,79,196,0.1)", "purpose": "Foco de campos: anillo, no sombra (La Regla del Anillo de Foco)." },
+      { "name": "alerta-pulsante", "value": "0 4px 15px rgba(255,71,87,0.4)", "purpose": "Solo el badge NECESITA PRUEBA, animada en ciclo de 2s." }
+    ],
+    "motion": [
+      { "name": "transicion-estandar", "value": "all 0.2s", "purpose": "Transición universal de hover y cambios de estado." },
+      { "name": "transicion-rapida", "value": "all 0.15s", "purpose": "Chips e ítems de lista maestra." },
+      { "name": "hundir-activo", "value": "transform: scale(0.97)", "purpose": "Los botones se hunden al presionar, como controles físicos." },
+      { "name": "pulso-alerta", "value": "pulseBadge 2s infinite (scale 1→1.03, sombra roja 0.4→0.6)", "purpose": "Único elemento animado en reposo: la condición que detiene el trabajo." }
+    ],
+    "breakpoints": [
+      { "name": "tablero-tactil", "value": "1024px", "purpose": "Único corte: apila columnas y agranda botones (14px 28px), fuentes (16px) y textareas (100px) para uso táctil." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "btn-primario",
+      "description": "Acción principal de cada formulario; gradiente institucional que se hunde al presionar.",
+      "html": "<button class=\"ds-btn-primario\">Guardar cambios</button>",
+      "css": ".ds-btn-primario { background: var(--brand-primary-gradient, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%)); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: opacity 0.2s, transform 0.1s; } .ds-btn-primario:hover { opacity: 0.9; } .ds-btn-primario:active { transform: scale(0.97); } .ds-btn-primario:disabled { opacity: 0.5; cursor: not-allowed; transform: none; } .ds-btn-primario:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(27,79,196,0.25); }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "btn-secundario",
+      "description": "Cancelar y acciones neutras; gris, sin gradiente.",
+      "html": "<button class=\"ds-btn-secundario\">Cancelar</button>",
+      "css": ".ds-btn-secundario { background: #e2e8f0; color: #4a5568; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.1s; } .ds-btn-secundario:hover { opacity: 0.85; } .ds-btn-secundario:active { transform: scale(0.97); } .ds-btn-secundario:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(27,79,196,0.15); }"
+    },
+    {
+      "name": "Botón fantasma de encabezado",
+      "kind": "button",
+      "refersTo": "btn-fantasma-header",
+      "description": "Único botón permitido sobre fondo institucional: vidrio blanco (Volver al Portal, Cerrar Sesión).",
+      "html": "<a class=\"ds-btn-fantasma\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z\"/></svg> Volver al Portal</a>",
+      "css": ".ds-btn-fantasma { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; } .ds-btn-fantasma:hover { background: rgba(255,255,255,0.35); } .ds-btn-fantasma:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,0.4); }"
+    },
+    {
+      "name": "Pestañas de módulo",
+      "kind": "nav",
+      "refersTo": "badge-estado",
+      "description": "Cambio de sección dentro de un módulo; la activa es una pastilla sólida en gradiente institucional.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab-btn active\">Observaciones</button><button class=\"ds-tab-btn\">Recomendaciones</button></div>",
+      "css": ".ds-tabs { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; } .ds-tab-btn { background: none; border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #718096; cursor: pointer; border-radius: 6px; transition: all 0.2s; } .ds-tab-btn:hover { background: #f0f4f8; } .ds-tab-btn.active { background: var(--brand-primary-gradient, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%)); color: #fff; } .ds-tab-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(27,79,196,0.2); }"
+    },
+    {
+      "name": "Badge de estado",
+      "kind": "chip",
+      "refersTo": "badge-estado",
+      "description": "Lectura permanente del semáforo: fondo suave + texto oscuro del mismo matiz, sin estado interactivo.",
+      "html": "<span class=\"ds-badge ds-badge-exito\">Aprobado</span> <span class=\"ds-badge ds-badge-peligro\">Rechazado</span> <span class=\"ds-badge ds-badge-aviso\">Con observaciones</span>",
+      "css": ".ds-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-align: center; } .ds-badge-exito { background: #c6f6d5; color: #276749; } .ds-badge-peligro { background: #fed7d7; color: #c53030; } .ds-badge-aviso { background: #feebc8; color: #c05621; }"
+    },
+    {
+      "name": "Chip de versión",
+      "kind": "chip",
+      "refersTo": "chip-version",
+      "description": "Selector de versión de foto; activo en gradiente con brillo azul, obsoleta con borde punteado.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip active\">V3</button><button class=\"ds-chip\">V2</button><button class=\"ds-chip ds-chip-obsoleta\">V1</button></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; flex-wrap: wrap; } .ds-chip { padding: 6px 16px; border-radius: 16px; border: 1px solid #ddd; background: #f8f9fa; color: #666; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; } .ds-chip:hover { border-color: var(--brand-primary, #1B4FC4); color: var(--brand-primary, #1B4FC4); } .ds-chip.active { background: var(--brand-primary-gradient, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%)); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.3); } .ds-chip-obsoleta:not(.active) { border-style: dashed; color: #999; } .ds-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(27,79,196,0.2); }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "campo-texto",
+      "description": "Input base del sistema; foco con borde azul y anillo de 3px (La Regla del Anillo de Foco).",
+      "html": "<input class=\"ds-campo\" type=\"text\" placeholder=\"Buscar referencia...\">",
+      "css": ".ds-campo { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; color: #2d3748; outline: none; transition: border-color 0.2s, box-shadow 0.2s; } .ds-campo:focus { border-color: var(--brand-primary, #1B4FC4); box-shadow: 0 0 0 3px rgba(27,79,196,0.15); } .ds-campo:read-only { background: #edf2f7; color: #4a5568; }"
+    },
+    {
+      "name": "Panel de trabajo",
+      "kind": "card",
+      "refersTo": "tarjeta-panel",
+      "description": "La unidad básica del tablero: blanco, radio 10px, elevación permanente en reposo.",
+      "html": "<div class=\"ds-panel\"><h3 class=\"ds-panel-titulo\">Inspección dimensional</h3><p class=\"ds-panel-texto\">Cota 12 · Medida estándar 45.000 · Tolerancia ±0.050</p></div>",
+      "css": ".ds-panel { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; padding: 20px; } .ds-panel-titulo { font-size: 18px; font-weight: 600; color: #2d3748; margin: 0 0 8px; } .ds-panel-texto { font-size: 13px; color: #718096; margin: 0; }"
+    },
+    {
+      "name": "Ítem de lista maestra",
+      "kind": "custom",
+      "refersTo": "tarjeta-panel",
+      "description": "Referencia/plano seleccionable; hover en Tinte de Marca, activo en gradiente con brillo azul.",
+      "html": "<div class=\"ds-lista\"><div class=\"ds-ref-item\">CAF-1002 Tapón dosificador</div><div class=\"ds-ref-item active\">CAF-1045 Carcasa sensor</div><div class=\"ds-ref-item\">CAF-1051 Base conector</div></div>",
+      "css": ".ds-lista { display: flex; flex-direction: column; gap: 6px; } .ds-ref-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #444; border: 1px solid transparent; transition: all 0.15s; } .ds-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; } .ds-ref-item.active { background: var(--brand-primary-gradient, linear-gradient(135deg, #1B4FC4 0%, #1642AA 100%)); color: #fff; border-color: transparent; box-shadow: 0 2px 8px rgba(27,79,196,0.35); }"
+    },
+    {
+      "name": "Burbuja de recomendación",
+      "kind": "custom",
+      "refersTo": "tarjeta-panel",
+      "description": "Componente firma: chat técnico con borde izquierdo institucional y radio asimétrico; el borrado solo aparece al hover.",
+      "html": "<div class=\"ds-burbuja\"><div class=\"ds-burbuja-header\"><span class=\"ds-burbuja-autor\">inspector</span><span class=\"ds-burbuja-fecha\">27/08/2026 09:41</span></div><div class=\"ds-burbuja-texto\">Verificar en la próxima corrida que el estañado del conector J2 cubra toda la almohadilla.</div><button class=\"ds-burbuja-borrar\" aria-label=\"Eliminar recomendación\">×</button></div>",
+      "css": ".ds-burbuja { background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); border-left: 4px solid var(--brand-primary, #1B4FC4); border-radius: 0 10px 10px 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; color: #444; position: relative; max-width: 420px; } .ds-burbuja-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; } .ds-burbuja-autor { font-size: 12px; font-weight: 700; color: var(--brand-primary, #1B4FC4); } .ds-burbuja-fecha { font-size: 11px; color: #aaa; } .ds-burbuja-borrar { position: absolute; top: 8px; right: 8px; background: #ff4757; color: #fff; border: none; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; } .ds-burbuja:hover .ds-burbuja-borrar { opacity: 1; } .ds-burbuja-borrar:hover { background: #e04040; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El Tablero de Planta",
+    "overview": "El sistema es la consola de control del piso de fábrica de Plast-Innova: una herramienta de trabajo, no una vitrina. El inspector de calidad y el operario la usan en turno, con la foto del circuito, el plano del molde o la tabla de garantías ocupando el centro; la interfaz es el banco alrededor: densa, a la mano, sin adornos que estorben. Todo lo que tiene estado lo grita en color semántico de semáforo antes de que el usuario lea una sola palabra, y todo lo que es de la empresa lleva exactamente un azul: el institucional.\n\nLa densidad es deliberada y confirmada: base tipográfica de 13-14px, encabezado compacto (~52px, achicado a pedido expreso del equipo), paneles que llenan el viewport completo en vez de flotar en una página con scroll. La elevación es permanente: las tarjetas y paneles tienen peso visible en reposo, como controles de máquina, y la interacción añade un brillo azul de marca encima de esa base.",
+    "keyCharacteristics": [
+      "Un solo azul de marca, definido una sola vez (--brand-primary en comun.css); todo lo institucional sale de ahí.",
+      "Estados de semáforo permanentes: verde = éxito/aprobado, rojo = peligro/rechazado, ámbar = advertencia, azul claro = información/pendiente.",
+      "Elevación permanente con brillo azul de marca como respuesta a estado.",
+      "Densidad de tablero: 13-14px base, paneles a viewport completo, encabezado de 52px.",
+      "Español en cada píxel; tipografía del sistema operativo, cero fuentes externas."
+    ],
+    "rules": [
+      { "name": "La Regla del Azul Único", "body": "Todo lo institucional sale de --brand-primary / --brand-primary-gradient en comun.css. Prohibido escribir un azul nuevo a mano; si el tono de la empresa cambia, cambia en un solo lugar.", "section": "colors" },
+      { "name": "La Regla del Semáforo Permanente", "body": "El estado se lee por color antes que por etiqueta, en reposo y a distancia. Los colores semánticos no se reasignan jamás (verde nunca es información, rojo nunca es advertencia).", "section": "colors" },
+      { "name": "La Regla de la Familia Única", "body": "Segoe UI y nada más. Ninguna fuente web, ningún display serif, ninguna excepción: la app corre en el computador de la planta y debe verse igual sin internet.", "section": "typography" },
+      { "name": "La Regla del 600", "body": "La interfaz no usa pesos intermedios ni ligeros: 400 para leer, 600 para actuar, 700 para titular. Un botón jamás va en 400.", "section": "typography" },
+      { "name": "La Regla del Brillo Azul", "body": "La selección y el hover elevan con sombra teñida de marca (rgba(27,79,196,...)), nunca con sombra negra más pesada. El negro profundo se reserva a la capa modal.", "section": "elevation" },
+      { "name": "La Regla del Anillo de Foco", "body": "El foco de un campo no es una sombra: es un anillo de 3px en azul institucional al 10-15% más borde azul. No mezclar con elevación.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do toma el azul y el gradiente de --brand-primary / --brand-primary-gradient; cambios de tono, en comun.css y solo ahí.",
+      "Do mantén el encabezado compacto (~52px) y el viewport completo; el scroll vive dentro de los paneles, no en la página.",
+      "Do comunica estado con el par fondo-suave/texto-oscuro del semáforo, en reposo y sin interacción.",
+      "Do da peso permanente a paneles y tarjetas; la interacción añade brillo azul de marca encima.",
+      "Do usa botones fantasma (vidrio blanco) como única acción sobre fondo institucional.",
+      "Do escribe todo en español, con la tipografía del sistema operativo."
+    ],
+    "donts": [
+      "Don't uses el morado heredado #667eea/#764ba2 ni ningún matiz fuera del azul institucional para acciones de marca; el código lo declara anti-referencia.",
+      "Don't inventes azules nuevos ni segundas familias tipográficas: un azul, una familia, pesos 400/600/700.",
+      "Don't pongas sombras negras pesadas en el tablero base; la profundidad máxima pertenece a login y modales.",
+      "Don't reasignes colores del semáforo ni uses Alerta Viva (#FF4757) para algo que no detenga el trabajo.",
+      "Don't agrande el encabezado ni conviertas los módulos en páginas con scroll global: es un tablero, no un documento.",
+      "Don't agregues fuentes externas, inglés en la interfaz, ni claims de marketing: app interna de planta."
+    ]
+  }
+}
