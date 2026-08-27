@@ -41,6 +41,19 @@
     .table-container td { padding: 10px 15px; border-bottom: 1px solid #edf2f7; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
     .table-container tr:hover { background: #f8fafc; }
 
+    /* Paginación de la tabla (Hoja de Ruta, punto 3: "Paginación en
+       listados grandes") — antes se pintaban las 3.400+ filas de golpe en
+       el DOM en cada búsqueda/carga, lo cual ya empezaba a sentirse lento.
+       Ahora solo se insertan las filas de la página actual; garantiasData
+       sigue trayendo el set completo (lo necesita el buscador y el
+       dashboard de garantías, que usa este mismo endpoint). */
+    .paginacion-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid #edf2f7; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; font-size: 13px; color: #4a5568; }
+    .paginacion-botones { display: flex; align-items: center; gap: 10px; }
+    .btn-paginacion { background: white; border: 1px solid #cbd5e0; color: #2d3748; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+    .btn-paginacion:hover:not(:disabled) { border-color: var(--brand-primary); color: var(--brand-primary); }
+    .btn-paginacion:disabled { opacity: 0.4; cursor: not-allowed; }
+    .paginacion-pagina { font-weight: 600; color: #2d3748; }
+
     .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; text-align: center; }
     .badge.aprobada { background: #c6f6d5; color: #22543d; }
     .badge.rechazada { background: #fed7d7; color: #742a2a; }
@@ -162,6 +175,9 @@
             <!-- Dinámico -->
           </tbody>
         </table>
+      </div>
+      <div class="paginacion-bar" id="garantiasPaginacion">
+        <!-- Dinámico -->
       </div>
     </div>
   </div>
@@ -353,6 +369,13 @@
     let usuarioActual = null;
     let permisosUsuario = [];
     let garantiasData = [];
+    // Paginación de la tabla (Hoja de Ruta, punto 3). garantiasFiltradas
+    // guarda el último set visible (todo el listado, o el resultado del
+    // buscador/filtro de estado) — es lo que se pagina. garantiasData
+    // sigue siendo siempre el listado completo tal como llega del backend.
+    let garantiasFiltradas = [];
+    let paginaGarantiasActual = 1;
+    const GARANTIAS_POR_PAGINA = 50;
     let clienteSelectedIndex = -1;
     let refSelectedIndex = -1;
     let problemaSelectedIndex = -1;
@@ -443,16 +466,25 @@
     }
 
     function renderizarGarantias(data) {
+      garantiasFiltradas = data;
+      const totalPaginas = Math.max(1, Math.ceil(data.length / GARANTIAS_POR_PAGINA));
+      if (paginaGarantiasActual > totalPaginas) paginaGarantiasActual = totalPaginas;
+      if (paginaGarantiasActual < 1) paginaGarantiasActual = 1;
+
       const tbody = document.getElementById('tablaGarantiasBody');
       tbody.innerHTML = '';
       if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; color: #a0aec0; padding: 20px;">No se encontraron registros de devoluciones.</td></tr>`;
+        renderizarPaginacionGarantias();
         return;
       }
+      const inicio = (paginaGarantiasActual - 1) * GARANTIAS_POR_PAGINA;
+      const datosPagina = data.slice(inicio, inicio + GARANTIAS_POR_PAGINA);
+
       const puedeEditar = tienePermiso('garantias.editar');
       const puedeEliminar = tienePermiso('garantias.eliminar');
 
-      for (const g of data) {
+      for (const g of datosPagina) {
         const estadoLower = (g.estado || '').toLowerCase();
         let badgeClass = 'aprobada';
         if (estadoLower.includes('rechaz')) badgeClass = 'rechazada';
@@ -489,6 +521,29 @@
         `;
         tbody.appendChild(tr);
       }
+      renderizarPaginacionGarantias();
+    }
+
+    function renderizarPaginacionGarantias() {
+      const cont = document.getElementById('garantiasPaginacion');
+      if (!cont) return;
+      const total = garantiasFiltradas.length;
+      const totalPaginas = Math.max(1, Math.ceil(total / GARANTIAS_POR_PAGINA));
+      const inicio = total === 0 ? 0 : (paginaGarantiasActual - 1) * GARANTIAS_POR_PAGINA + 1;
+      const fin = Math.min(paginaGarantiasActual * GARANTIAS_POR_PAGINA, total);
+      cont.innerHTML = `
+        <span>Mostrando ${inicio}–${fin} de ${total}</span>
+        <div class="paginacion-botones">
+          <button type="button" class="btn-paginacion" ${paginaGarantiasActual <= 1 ? 'disabled' : ''} onclick="irAPaginaGarantias(paginaGarantiasActual - 1)">&laquo; Anterior</button>
+          <span class="paginacion-pagina">Página ${paginaGarantiasActual} de ${totalPaginas}</span>
+          <button type="button" class="btn-paginacion" ${paginaGarantiasActual >= totalPaginas ? 'disabled' : ''} onclick="irAPaginaGarantias(paginaGarantiasActual + 1)">Siguiente &raquo;</button>
+        </div>
+      `;
+    }
+
+    function irAPaginaGarantias(pagina) {
+      paginaGarantiasActual = pagina;
+      renderizarGarantias(garantiasFiltradas);
     }
 
     function filtrarGarantias() {
@@ -509,6 +564,10 @@
         return matchQuery && matchEstado;
       });
 
+      // Cualquier cambio en la búsqueda/filtro vuelve a la página 1 — si no,
+      // alguien podía quedar "atrapado" en la página 4 de un resultado que
+      // ahora solo tiene 2 páginas.
+      paginaGarantiasActual = 1;
       renderizarGarantias(filtradas);
     }
 

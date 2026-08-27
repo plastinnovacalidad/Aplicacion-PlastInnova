@@ -48,6 +48,46 @@ let reconectando = false;
 // middleware/auth.js para los roles.
 let numerosCache = new Map(); // telefono -> { nombre, es_admin, permisos: Set<string> }
 
+// ======================== MODO CONSULTA (Roadmap Bot WhatsApp, puntos 3-4) ========================
+// Mapa en memoria con los números que están, ahora mismo, "dentro" del modo
+// consulta → timestamp (ms) de su última actividad — mismo patrón en memoria
+// que numerosCache de arriba, pero con el dato extra del reloj de
+// inactividad que pide el punto 7 del roadmap ("diseñar el almacenamiento
+// con expiración"). Implementado hasta ahora: activación (punto 3) y cierre
+// automático a los 5 minutos de inactividad (punto 4, este cambio). A
+// propósito todavía NO hace nada más — el cierre manual con "salir" (punto 5,
+// que primero necesita resolver el choque con el "salir" que ya usa el
+// registro de entrada/salida — punto 6, marcado Crítico y sin decidir
+// todavía) y la interpretación de la pregunta (puntos 8 en adelante) quedan
+// pendientes como sus propios puntos del roadmap. Mientras tanto, entrar en
+// modo consulta no bloquea ni cambia el comportamiento de ningún otro
+// comando — es solo un interruptor guardado, con su reloj de inactividad,
+// pero sin efecto sobre las respuestas todavía.
+let numerosEnModoConsulta = new Map(); // telefono -> timestamp (ms) de la última actividad en modo consulta
+const MODO_CONSULTA_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos (Roadmap Bot WhatsApp, punto 4)
+
+function activarModoConsulta(telefono) {
+  numerosEnModoConsulta.set(telefono, Date.now());
+}
+
+// Cierre automático del modo consulta por inactividad (punto 4). Se revisa
+// desde revisarCron() cada 60s (ver más abajo) en vez de tener un
+// temporizador aparte por número — con un timeout de 5 minutos, un margen de
+// hasta 60s para detectarlo no se nota, y así se reutiliza el mismo cron que
+// ya corre para recordatorios y resumen diario, en vez de sumar otro
+// setInterval más al proceso.
+async function revisarModoConsultaExpirado() {
+  const ahoraMs = Date.now();
+  for (const [telefono, ultimaActividad] of numerosEnModoConsulta) {
+    if (ahoraMs - ultimaActividad > MODO_CONSULTA_TIMEOUT_MS) {
+      numerosEnModoConsulta.delete(telefono);
+      try {
+        await client.sendMessage(telefono, '🔒 Tu *modo consulta* se cerró automáticamente por 5 minutos de inactividad.\n\nEscribe *consulta* cuando quieras volver a activarlo.');
+      } catch {}
+    }
+  }
+}
+
 async function recargarNumerosWhatsApp() {
   try {
     const numeros = await whatsappAlertas.listarNumerosActivos();
@@ -863,6 +903,7 @@ async function revisarCron() {
   }
 
   await revisarAlertasCalidadPeriodicas();
+  await revisarModoConsultaExpirado();
 }
 
 async function iniciarBotWhatsApp(db) {
@@ -931,6 +972,17 @@ async function iniciarBotWhatsApp(db) {
       console.log(`[WhatsApp ${h}] ${ok ? '✅' : '❌'} ${nombreDe(tel)} (${tel}) → "${txtOrig}"`);
       if (!ok) return;
 
+      // Cualquier mensaje de alguien que ya esté en modo consulta cuenta
+      // como actividad y le renueva los 5 minutos (Roadmap Bot WhatsApp,
+      // punto 4) — no importa si el mensaje es "consulta" otra vez, un
+      // comando distinto, o (más adelante) una pregunta real; lo único que
+      // cierra el modo por inactividad es no escribir nada en 5 minutos.
+      // El cierre en sí se decide aparte, cada 60s, en
+      // revisarModoConsultaExpirado() — aquí solo se refresca el reloj.
+      if (numerosEnModoConsulta.has(tel)) {
+        numerosEnModoConsulta.set(tel, Date.now());
+      }
+
       const sinPermiso = async () => { await msg.reply('⚠️ No tienes permiso para esa función. Escribe *ayuda* para ver qué puedes hacer.'); };
 
       // Admin commands
@@ -972,6 +1024,20 @@ async function iniciarBotWhatsApp(db) {
           console.error(`⚠️ Error procesando comando "${txtOrig}":`, e.message);
           await msg.reply('⚠️ No se pudo generar ese reporte. Revisa el formato del comando (escribe *ayuda* para ver la lista).');
         }
+        return;
+      }
+
+      // Modo consulta — activación (Roadmap Bot WhatsApp, punto 3). Palabra
+      // exacta "consulta", sin variantes ("consultar", "quiero consultar",
+      // etc. NO activan el modo) — así quedó definido en la planeación.
+      // Todavía no pide el permiso nuevo del punto 13 (ese permiso no existe
+      // en el catálogo todavía, es su propio punto del roadmap); por ahora
+      // alcanza con estar autorizado en el bot, igual que para "ayuda". La
+      // sesión que arranca aquí se cierra sola a los 5 minutos de
+      // inactividad (punto 4, ver revisarModoConsultaExpirado).
+      if (txt === 'consulta') {
+        activarModoConsulta(tel);
+        await msg.reply('🔍 *Modo consulta activado.*\n\nSe cierra solo si pasan 5 minutos sin actividad. Esta función todavía está en construcción — por ahora solo queda guardada la activación, no responde preguntas todavía. Cuando esté lista, vas a poder preguntar por garantías directamente aquí.');
         return;
       }
 
