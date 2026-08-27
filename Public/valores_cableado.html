@@ -161,7 +161,10 @@
         if (res.ok && data.success) {
           token = data.token;
           localStorage.setItem('token', token);
-          await init();
+          // Julio pidió que, sin importar en qué módulo haya quedado la
+          // sesión cerrada, al volver a iniciar sesión siempre se llegue
+          // al panel central — nunca se debe quedar en este módulo.
+          location.href = 'index.html';
         } else {
           err.textContent = data.error || 'Credenciales inválidas';
           err.style.display = 'block';
