@@ -129,6 +129,40 @@ if (!fs.existsSync(CARPETA_FOTOS_CABLEADO)) {
 
 const PORT = process.env.PORT || 3000;
 
+// Modo consulta del bot de WhatsApp (Roadmap Bot WhatsApp, punto 8 —
+// revisado): Julio pidió que el bot entienda preguntas parecidas, no solo
+// frases exactas, "más como una IA que como un bot". Eso requiere un modelo
+// de lenguaje real, que necesita una cuenta/llave de API propia de
+// Plast-Innova. Decisión de Julio: empezar con el plan GRATIS de Gemini
+// (Google) — con la salvedad, ya conversada, de que en el plan gratis
+// Google puede usar las preguntas para mejorar sus modelos y no se le debe
+// mandar nada sensible; si más adelante hace falta ser más estrictos con
+// los datos, pasar a la versión paga de Gemini es solo activar facturación
+// en la misma cuenta de Google — no requiere cambiar nada de este código.
+//
+// GEMINI_API_KEY se deja SIN valor de respaldo (null si no está en el
+// .env), a propósito: es una llave secreta, nunca debe quedar escrita en el
+// código. Si no está configurada, el bot sigue funcionando solo con las
+// reglas/palabras clave de siempre (whatsapp_bot_service.js cae de vuelta a
+// eso automáticamente) — no se cae ni dejan de funcionar los comandos fijos
+// ("últimas garantías ingresadas", etc.) ni las preguntas por referencia que
+// ya reconocían las reglas.
+//
+// Para activarlo, Julio debe:
+//   1. Crear una llave de API gratis en Google AI Studio (aistudio.google.com/apikey).
+//   2. Agregar esa llave a su propio archivo .env (nunca compartirla en el
+//      chat) como: GEMINI_API_KEY=AIza...
+//   3. Correr "npm install" una vez, para instalar el paquete @google/genai.
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || null;
+
+// Modelo usado solo para interpretar la pregunta del modo consulta (no para
+// nada más del sistema) — Flash-Lite porque es el modelo más rápido y
+// barato de Gemini (con plan gratis disponible), más que suficiente para
+// esta tarea de "entender qué está pidiendo la persona", sin necesidad del
+// modelo más grande/caro. Configurable en .env (MODELO_IA_MODO_CONSULTA)
+// por si en el futuro conviene cambiarlo.
+const MODELO_IA_MODO_CONSULTA = process.env.MODELO_IA_MODO_CONSULTA || 'gemini-3.5-flash-lite';
+
 module.exports = {
   RAIZ_PROYECTO,
   SESSIONS_FILE,
@@ -149,4 +183,6 @@ module.exports = {
   WHATSAPP_NUMEROS,
   WHATSAPP_ADMIN_NUMERO,
   WHATSAPP_MENSAJE_SALIDA,
+  GEMINI_API_KEY,
+  MODELO_IA_MODO_CONSULTA,
 };
