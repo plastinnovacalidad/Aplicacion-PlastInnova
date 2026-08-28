@@ -445,6 +445,35 @@ function obtenerLotesPorReferencia(referencia) {
   return getDb().all(`SELECT * FROM iso_lotes WHERE referencia = ? ORDER BY fecha_creacion DESC`, [referencia]);
 }
 
+// ======================== MODO CONSULTA — COMANDOS FIJOS (Roadmap Bot WhatsApp) ========================
+// Julio pidió comandos simples sin tener que escribir una referencia
+// ("ultimos muestreos realizados", "ultimos muestreos rechazados") —
+// mismo join que dashboardBitacora (arriba), pero sin restringir al módulo
+// Producción y con el límite como parámetro. "Rechazado" es la decisión del
+// MUESTREO (m.decision), no el estado_final del lote — ver iso_muestreos:
+// decision puede ser 'Aceptado', 'Rechazado' o 'Alerta' (esta última solo
+// aplica a muestreos "En_Proceso", ver contarAlertasEnProceso).
+// "orden" (Roadmap Bot WhatsApp, punto 8 — hallazgo real con Julio, 28/08):
+// por defecto trae los N muestreos MÁS RECIENTES (DESC). Julio preguntó
+// "cuál fue el PRIMER muestreo que se hizo" y el bot le devolvió el más
+// reciente igual — porque antes no existía forma de pedir "los más
+// antiguos primero". orden='antiguo' invierte a ASC para cubrir justo ese
+// caso ("primero", "más antiguo"); cualquier otro valor (o ninguno) se
+// queda con el comportamiento de siempre (DESC).
+function consultarUltimosMuestreos(n, { soloRechazados, orden } = {}) {
+  const filtroDecision = soloRechazados ? "AND m.decision = 'Rechazado'" : '';
+  const direccion = orden === 'antiguo' ? 'ASC' : 'DESC';
+  return getDb().all(
+    `SELECT m.fecha_hora, m.tipo, m.analista, m.decision, m.cantidad_muestreada, m.observaciones,
+            l.id_lote, l.referencia, l.modulo
+     FROM iso_muestreos m
+     JOIN iso_lotes l ON m.id_lote = l.id_lote
+     WHERE 1=1 ${filtroDecision}
+     ORDER BY m.fecha_hora ${direccion} LIMIT ?`,
+    [n]
+  );
+}
+
 module.exports = {
   listarAreas,
   buscarReferencias,
@@ -474,6 +503,7 @@ module.exports = {
   obtenerMuestreoConLote,
   obtenerDefectosDeMuestreo,
   obtenerLotesPorReferencia,
+  consultarUltimosMuestreos,
   listarDefectosCatalogo,
   crearDefectoCatalogo,
   actualizarDefectoCatalogo,
