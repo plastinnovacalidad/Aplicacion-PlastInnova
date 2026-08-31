@@ -27,6 +27,12 @@ const SALT_ROUNDS = 10;
 // Estas carpetas se definen en el archivo .env (variable CARPETAS_FOTOS,
 // rutas separadas por "|"). Si no existe el .env o la variable, se usan estos
 // mismos valores de siempre como respaldo, para que nada se rompa.
+
+//rutas en la NAS
+//    'E:\',
+//    'P:\27. CircuitosSMD\27.2 Imagen_Circuito',
+//    'P:\30. Inyeccion\30.14 Planos de producto
+
 const CARPETAS_FOTOS = process.env.CARPETAS_FOTOS
   ? process.env.CARPETAS_FOTOS.split('|').map(p => p.trim()).filter(Boolean)
   : [
@@ -41,8 +47,18 @@ const CARPETAS_FOTOS = process.env.CARPETAS_FOTOS
 // tenía en el catálogo — ej. "1017.jpg"). Configurable en .env
 // (CARPETA_FOTOS_CABLEADO); si no existe, se usa esta ruta real como
 // respaldo, igual que las demás carpetas de arriba.
+
+//ruta en la NAS
+//'P:\1. Equipo Produccion\15.3 Calidad\FOTOS Formas de cablear'
+
 const CARPETA_FOTOS_CABLEADO = process.env.CARPETA_FOTOS_CABLEADO
   || 'C:\\Users\\produ\\OneDrive\\Escritorio\\FOTOS Formas de cablear';
+
+
+
+//rutas en la NAS
+// 'P:\1. Equipo Produccion\15.3 Calidad\Csv\Rutas.csv '
+// 'P:\1. Equipo Produccion\15.3 Calidad\Csv\cotas.csv'
 
 // Rutas de los CSV de importación inicial de metrología (configurables en .env)
 const RUTAS_CSV_PATH = process.env.RUTAS_CSV_PATH || 'C:\\Users\\produ\\OneDrive\\Escritorio\\Rutas.csv';
@@ -130,38 +146,34 @@ if (!fs.existsSync(CARPETA_FOTOS_CABLEADO)) {
 const PORT = process.env.PORT || 3000;
 
 // Modo consulta del bot de WhatsApp (Roadmap Bot WhatsApp, punto 8 —
-// revisado): Julio pidió que el bot entienda preguntas parecidas, no solo
-// frases exactas, "más como una IA que como un bot". Eso requiere un modelo
-// de lenguaje real, que necesita una cuenta/llave de API propia de
-// Plast-Innova. Decisión de Julio: empezar con el plan GRATIS de Gemini
-// (Google) — con la salvedad, ya conversada, de que en el plan gratis
-// Google puede usar las preguntas para mejorar sus modelos y no se le debe
-// mandar nada sensible; si más adelante hace falta ser más estrictos con
-// los datos, pasar a la versión paga de Gemini es solo activar facturación
-// en la misma cuenta de Google — no requiere cambiar nada de este código.
+// TERCERA revisión, 28/08): esta rama es una PRUEBA — Julio instaló Ollama
+// y está corriendo Qwen2.5:7b en su propia máquina, y quiere medir qué tan
+// rápido responde un modelo local corriendo en su propio equipo/red,
+// comparado con Gemini (en la nube, rama anterior). Si el resultado le
+// convence, esta rama se puede quedar; si no, vuelve a la rama de Gemini —
+// por eso el swap se hizo completo (como el de Claude -> Gemini antes), no
+// como un simple "toggle" entre proveedores.
 //
-// GEMINI_API_KEY se deja SIN valor de respaldo (null si no está en el
-// .env), a propósito: es una llave secreta, nunca debe quedar escrita en el
-// código. Si no está configurada, el bot sigue funcionando solo con las
-// reglas/palabras clave de siempre (whatsapp_bot_service.js cae de vuelta a
-// eso automáticamente) — no se cae ni dejan de funcionar los comandos fijos
-// ("últimas garantías ingresadas", etc.) ni las preguntas por referencia que
-// ya reconocían las reglas.
-//
-// Para activarlo, Julio debe:
-//   1. Crear una llave de API gratis en Google AI Studio (aistudio.google.com/apikey).
-//   2. Agregar esa llave a su propio archivo .env (nunca compartirla en el
-//      chat) como: GEMINI_API_KEY=AIza...
-//   3. Correr "npm install" una vez, para instalar el paquete @google/genai.
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || null;
+// A diferencia de Gemini, Ollama NO necesita ninguna llave/API key — corre
+// en la red local (o en el mismo equipo), así que no hay ningún secreto que
+// proteger acá. OLLAMA_BASE_URL sí tiene un valor de respaldo (a diferencia
+// de como se manejaba GEMINI_API_KEY, que era secreta y sin respaldo):
+// apunta a "http://localhost:11434", la dirección por defecto de Ollama
+// cuando corre en el mismo equipo donde corre este servidor — si Julio
+// termina montando Ollama en un computador aparte ("un servidor" dedicado,
+// como comentó que estaba pensando), solo hace falta cambiar
+// OLLAMA_BASE_URL en el .env a la IP de esa máquina (ej.
+// http://192.168.1.50:11434), sin tocar nada más de este código.
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 
 // Modelo usado solo para interpretar la pregunta del modo consulta (no para
-// nada más del sistema) — Flash-Lite porque es el modelo más rápido y
-// barato de Gemini (con plan gratis disponible), más que suficiente para
-// esta tarea de "entender qué está pidiendo la persona", sin necesidad del
-// modelo más grande/caro. Configurable en .env (MODELO_IA_MODO_CONSULTA)
-// por si en el futuro conviene cambiarlo.
-const MODELO_IA_MODO_CONSULTA = process.env.MODELO_IA_MODO_CONSULTA || 'gemini-3.5-flash-lite';
+// nada más del sistema). Por defecto "qwen2.5:7b" — el modelo que Julio ya
+// tiene descargado en su Ollama para esta prueba. Debe coincidir EXACTO con
+// el nombre que aparece en "ollama list" en su máquina (incluye el tag,
+// ej. ":7b") — si no coincide, Ollama responde que el modelo no existe.
+// Configurable en .env (MODELO_IA_MODO_CONSULTA) por si prueba con otro
+// tamaño (ej. qwen2.5:14b) más adelante.
+const MODELO_IA_MODO_CONSULTA = process.env.MODELO_IA_MODO_CONSULTA || 'qwen2.5:7b';
 
 module.exports = {
   RAIZ_PROYECTO,
@@ -183,6 +195,6 @@ module.exports = {
   WHATSAPP_NUMEROS,
   WHATSAPP_ADMIN_NUMERO,
   WHATSAPP_MENSAJE_SALIDA,
-  GEMINI_API_KEY,
+  OLLAMA_BASE_URL,
   MODELO_IA_MODO_CONSULTA,
 };
