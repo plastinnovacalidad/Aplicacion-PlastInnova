@@ -14,6 +14,7 @@ const { getDb } = require('./db/connection');
 const { manejadorDeErrores } = require('./middleware/errores');
 const { limpiarObsoletas } = require('./utils/archivos');
 const { cerrarLotesInactivos } = require('./data/iso2859');
+const { sincronizarProduccion } = require('./scripts/sincronizar_produccion');
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.use('/api', require('./routes/iso2859'));
 app.use('/api', require('./routes/auditoria'));
 app.use('/api', require('./routes/calidad'));
 app.use('/api', require('./routes/valoresCableado'));
+app.use('/api', require('./routes/produccion'));
 
 // Cualquier /api/... que no coincidió con ninguna ruta de arriba (ej. una URL
 // mal escrita) responde con JSON en vez de la página HTML de error por
@@ -124,4 +126,20 @@ inicializarBaseDatos().then(() => {
   };
   ejecutarCierreLotesInactivosIso();
   setInterval(ejecutarCierreLotesInactivosIso, 24 * 60 * 60 * 1000);
+
+  // Producción por Fábrica (rechazos + lotes): refresca Calidad.xlsx y
+  // Lotes.xlsx en Excel (Power Query hacia la NAS) y sincroniza el resultado
+  // hacia rechazos_produccion / lotes_produccion — una vez al arrancar y
+  // luego cada 6 horas. Un fallo en un ciclo (Excel no abrió, no había
+  // sesión de Windows iniciada, etc.) queda en el log y se reintenta solo en
+  // el siguiente ciclo, sin tumbar el servidor (ver scripts/sincronizar_produccion.js).
+  const ejecutarSincronizacionProduccion = async () => {
+    try {
+      await sincronizarProduccion();
+    } catch (e) {
+      console.error('⚠️ Error en la sincronización de Producción (rechazos/lotes):', e.message);
+    }
+  };
+  ejecutarSincronizacionProduccion();
+  setInterval(ejecutarSincronizacionProduccion, 6 * 60 * 60 * 1000);
 });

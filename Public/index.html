@@ -268,6 +268,16 @@
               <h3>Muestreos ISO 2859-1</h3>
             </div>
           </a>
+
+          <!-- Rechazos y lotes de producción sincronizados desde Calidad.xlsx
+               / Lotes.xlsx (cada 6 horas). Usa 'calidad.ver' igual que las
+               otras tarjetas de esta sección: no es un permiso nuevo. -->
+          <a href="produccion.html" class="portal-card" id="cardProduccion" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #4c51bf 0%, #363795 100%);"><i class="fa-solid fa-industry"></i></div>
+            <div class="card-body">
+              <h3>Producción por Fábrica</h3>
+            </div>
+          </a>
         </div>
       </section>
 
@@ -378,6 +388,11 @@
           const cardIso = document.getElementById('cardIso2859');
           if (cardIso) {
             cardIso.style.display = (tienePermiso('iso2859.ver') || tienePermiso('iso2859.gestion')) ? 'flex' : 'none';
+          }
+
+          const cardProduccion = document.getElementById('cardProduccion');
+          if (cardProduccion) {
+            cardProduccion.style.display = tienePermiso('calidad.ver') ? 'flex' : 'none';
           }
 
           // Secciones como "Piezas Plásticas" o "Calidad" solo tienen

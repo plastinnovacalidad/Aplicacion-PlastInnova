@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Producción por Fábrica - Circuitos SMD</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
+    .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; overflow-y: auto; }
+    .content-area { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); padding: 25px; }
+
+    .kpis { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+    .kpi-tile { flex: 1; min-width: 200px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
+    .kpi-tile .kpi-num { font-size: 26px; font-weight: 800; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .kpi-tile .kpi-label { font-size: 12px; color: #718096; font-weight: 600; margin-top: 2px; }
+    .kpi-tile .kpi-sub { font-size: 11px; color: #a0aec0; margin-top: 6px; }
+    .kpi-tile .kpi-cmp { font-size: 11px; margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .kpi-tile .kpi-cmp span { font-weight: 700; }
+    .kpi-tile.danger .kpi-num { color: #c53030; }
+    .kpi-tile.ok .kpi-num { color: #38a169; }
+    .kpi-tile.warning .kpi-num { color: #b7791f; }
+    .cmp-up { color: #c53030; }
+    .cmp-down { color: #38a169; }
+    .cmp-flat { color: #718096; }
+
+    .tabs-nav { display: flex; gap: 6px; margin-bottom: 18px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
+    .tab-btn { background: none; border: none; padding: 10px 18px; font-size: 13.5px; font-weight: 700; color: #718096; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color .15s, border-color .15s; }
+    .tab-btn:hover { color: #2d3748; }
+    .tab-btn.activa { color: #2C43A2; border-bottom-color: #2C43A2; }
+    .tab-pane { display: none; }
+    .tab-pane.activa { display: block; }
+
+    .charts-row { display: flex; gap: 18px; margin-bottom: 25px; flex-wrap: wrap; }
+    .chart-box { flex: 1; min-width: 320px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
+    .chart-box.principal { min-width: 100%; }
+    .chart-box h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; }
+    .chart-box canvas { max-height: 320px; }
+
+    .aviso-datos { background: #ebf8ff; border: 1px solid #bee3f8; color: #2c5282; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; margin-bottom: 18px; }
+
+    .prod-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 12px; flex-wrap: wrap; }
+    .prod-controls .filtros { display: flex; gap: 10px; flex-wrap: wrap; }
+    .prod-controls select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; }
+
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; }
+    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .admin-table tr:hover td { background: #f9f9f9; }
+
+    .panel-grid { display: flex; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; align-items: stretch; }
+    .panel-card { flex: 1; min-width: 320px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
+    .panel-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; display: flex; align-items: center; justify-content: space-between; }
+    .mini-list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; max-height: 320px; overflow-y: auto; }
+    .mini-list li { padding: 6px 0; border-bottom: 1px dashed #edf2f7; display: flex; justify-content: space-between; gap: 8px; }
+    .mini-list li:last-child { border-bottom: none; }
+    .empty-hint { color: #a0aec0; text-align: center; padding: 14px 0; font-size: 12.5px; }
+    .feed-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 25px; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .pill-danger { background: #fff5f5; color: #c53030; }
+    .pill-warning { background: #fffaf0; color: #b7791f; }
+    .pill-ok { background: #f0fff4; color: #38a169; }
+    .pill-muted { background: #f0f0f0; color: #888; }
+    .buscar-lote-controls { margin-bottom: 12px; }
+    .buscar-lote-controls input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; width: 320px; max-width: 100%; }
+    .buscar-lote-hint { font-size: 11.5px; color: #a0aec0; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="login-overlay" id="loginOverlay" style="display: none;">
+    <div class="login-box">
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-industry"></i> Producción por Fábrica</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
+      <div class="header-left">
+        <h1><i class="fa-solid fa-industry"></i> Producción por Fábrica</h1>
+        <p>% de desperdicio por lote, cruzando Calidad.xlsx con Lotes.xlsx y Produccion.xlsx</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span>Sesión activa: <strong id="userName">--</strong></span>
+      <button class="btn-header" id="btnVolverPortal" onclick="window.location.href='index.html'">&larr; Volver al Portal</button>
+      <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="main-container" id="appMain" style="display:none;">
+    <div class="content-area">
+      <div class="aviso-datos">
+        <i class="fa-solid fa-circle-info"></i> El <strong>% de desperdicio</strong> se calcula cruzando, por número de lote, lo producido (Produccion.xlsx, operación "Calidad") contra lo rechazado (Calidad.xlsx). Cada fábrica tiene su propia pestaña con este cálculo real (ya no es un estimado de toda la planta). La meta de referencia es <strong>10%</strong>. Los datos se sincronizan automáticamente cada 6 horas.
+      </div>
+
+      <div class="prod-controls">
+        <div style="font-weight:700; color:#2d3748;"><i class="fa-solid fa-filter"></i> Ventana de tiempo (aplica a la pestaña activa)</div>
+        <div class="filtros">
+          <select id="filtroMeses" onchange="onCambioMeses()">
+            <option value="3">Últimos 3 meses</option>
+            <option value="6">Últimos 6 meses</option>
+            <option value="12" selected>Últimos 12 meses</option>
+            <option value="24">Últimos 24 meses</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="tabs-nav" id="tabsNav"></div>
+      <div id="tabsContent"></div>
+    </div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script src="js/auth-comun.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let usuarioActual = null;
+    let permisosUsuario = [];
+
+    const META_DESPERDICIO = 10; // %, fijo por ahora (confirmado con Julio 31/08)
+
+    // Estado de las pestañas: 'general' (sin filtro de fábrica, siempre
+    // presente) + una por cada fábrica que devuelva /produccion/resumen-fabricas
+    // (así que si mañana aparece una Fábrica 3, esta pantalla no necesita
+    // ningún cambio de código, solo que la fábrica exista en los datos).
+    let pestañas = [{ key: 'general', label: 'General', fabrica: null }];
+    let pestañaActiva = 'general';
+    let resumenFabricasCache = [];
+    let cacheDatos = {};       // key -> { desperdicio, buenoVsMalo, ranking, motivos, lineas, cargado }
+    let timeoutsBuscar = {};   // key -> timeout de debounce de su buscador de lote
+    let chartsInstancias = {}; // key -> instancia de Chart.js de su gráfica principal
+
+    function slug(texto) {
+      return String(texto || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+
+    // Nombres de f\u00e1brica/\u00e1rea ya vienen del Excel sin tildes (as\u00ed llegan
+    // normalizados desde sincronizar_produccion.js: "Fabrica 1", "Inyeccion").
+    // Este mapa solo corrige la tilde para MOSTRAR el nombre en pantalla \u2014
+    // el valor real usado en las llamadas a la API (?fabrica=...) sigue
+    // siendo el original sin tildes, porque as\u00ed est\u00e1 guardado en la base de
+    // datos. Una f\u00e1brica/\u00e1rea nueva que no est\u00e9 aqu\u00ed simplemente se muestra
+    // tal como llega, sin romper nada.
+    const NOMBRES_DISPLAY = {
+      'Fabrica 1': 'F\u00e1brica 1',
+      'Fabrica 2': 'F\u00e1brica 2',
+      'Fabrica 3': 'F\u00e1brica 3',
+      'Inyeccion': 'Inyecci\u00f3n',
+    };
+    function nombreDisplay(fabrica) {
+      return NOMBRES_DISPLAY[fabrica] || fabrica;
+    }
+
+    // Color de acento por pesta\u00f1a de f\u00e1brica/\u00e1rea (el borde de su primera
+    // tarjeta KPI): antes eran 2 colores fijos, uno por f\u00e1brica, a mano. Con
+    // una cantidad de f\u00e1bricas/\u00e1reas que puede seguir creciendo, se asigna
+    // por posici\u00f3n dentro de una paleta fija que se repite si hacen falta
+    // m\u00e1s de las que tiene \u2014 as\u00ed una f\u00e1brica/\u00e1rea nueva SIEMPRE recibe un
+    // color, sin tener que tocar este archivo cada vez que aparece una.
+    const PALETA_ACENTOS = ['#2C43A2', '#c53030', '#38a169', '#b7791f', '#805ad5', '#0987a0', '#d53f8c'];
+    function colorAcento(key) {
+      const idx = pesta\u00f1as.findIndex(p => p.key === key) - 1; // -1: 'general' no tiene color propio
+      if (idx < 0) return null;
+      return PALETA_ACENTOS[idx % PALETA_ACENTOS.length];
+    }
+
+    async function initApp() {
+      try {
+        const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+        document.getElementById('userName').textContent = me.usuario || 'Usuario';
+        usuarioActual = me;
+      } catch (e) {}
+      await cargarPermisosConUsuarioActual();
+
+      if (!tienePermiso('calidad.ver')) {
+        localStorage.removeItem('token');
+        const err = document.getElementById('loginError');
+        if (err) {
+          err.textContent = 'Acceso denegado: tu usuario no tiene permiso para ver el módulo de Calidad.';
+          err.style.display = 'block';
+        }
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('appHeader').style.display = 'none';
+        document.getElementById('appMain').style.display = 'none';
+        return;
+      }
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'flex';
+
+      const btnVolver = document.getElementById('btnVolverPortal');
+      if (btnVolver) btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+
+      await armarPestañas();
+    }
+
+    function checkSession() {
+      if (token) initApp();
+      else document.getElementById('loginOverlay').style.display = 'flex';
+    }
+    checkSession();
+
+    // ======================== ARMAR PESTAÑAS (dinámico según fábricas reales) ========================
+    async function armarPestañas() {
+      try {
+        const res = await fetch('/api/produccion/resumen-fabricas', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error('Respuesta inesperada: ' + JSON.stringify(data).slice(0, 200));
+        resumenFabricasCache = data;
+      } catch (e) {
+        console.error('Error cargando /api/produccion/resumen-fabricas:', e);
+        document.getElementById('tabsContent').innerHTML = '<div class="empty-hint" style="color:red;">Error cargando el resumen por fábrica. Si acabas de actualizar la app, reinicia el servidor.</div>';
+        return;
+      }
+
+      pestañas = [{ key: 'general', label: 'General', fabrica: null }];
+      resumenFabricasCache.forEach(f => {
+        pestañas.push({ key: slug(f.fabrica) || 'sin-fabrica', label: nombreDisplay(f.fabrica), fabrica: f.fabrica });
+      });
+
+      document.getElementById('tabsNav').innerHTML = pestañas.map(p => `
+        <button class="tab-btn ${p.key === pestañaActiva ? 'activa' : ''}" id="tabBtn-${p.key}" onclick="activarPestaña('${p.key}')">${escapeHtml(p.label)}</button>
+      `).join('');
+
+      document.getElementById('tabsContent').innerHTML = pestañas.map(p => renderizarPlantillaPestaña(p)).join('');
+
+      await activarPestaña(pestañaActiva, true);
+    }
+
+    function renderizarPlantillaPestaña(p) {
+      const k = p.key;
+      return `
+        <div class="tab-pane ${k === pestañaActiva ? 'activa' : ''}" id="tabPane-${k}">
+          <div class="kpis" id="kpis-${k}"><div class="empty-hint">Cargando...</div></div>
+
+          <div class="charts-row">
+            <div class="chart-box principal">
+              <h4><i class="fa-solid fa-chart-line"></i> % de desperdicio por mes — ${escapeHtml(p.label)} (buenas vs. malas por lote, meta ${META_DESPERDICIO}%)</h4>
+              <canvas id="chart-${k}"></canvas>
+            </div>
+          </div>
+
+          <div class="feed-card">
+            <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-ranking-star"></i> Referencias con mayor % de desperdicio — ${escapeHtml(p.label)}</h4>
+            <div style="overflow-x:auto;">
+              <table class="admin-table">
+                <thead>
+                  <tr><th>Referencia</th><th>Producido</th><th>Rechazado</th><th>% Desperdicio</th></tr>
+                </thead>
+                <tbody id="ranking-${k}"><tr><td colspan="4" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-card">
+              <h4><i class="fa-solid fa-triangle-exclamation"></i> Motivos de rechazo más frecuentes</h4>
+              <div id="motivos-${k}"><div class="empty-hint">Cargando...</div></div>
+            </div>
+            <div class="panel-card">
+              <h4><i class="fa-solid fa-diagram-project"></i> Líneas/procesos de origen con más rechazos</h4>
+              <div id="lineas-${k}"><div class="empty-hint">Cargando...</div></div>
+            </div>
+          </div>
+
+          <div class="feed-card">
+            <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-magnifying-glass"></i> Buscar lote — cruce producido vs. rechazado</h4>
+            <div class="buscar-lote-controls">
+              <input type="text" id="buscarInput-${k}" placeholder="Buscar por número de lote, referencia o código..." oninput="onCambioBuscarLote('${k}')">
+              <div class="buscar-lote-hint" id="buscarHint-${k}"></div>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="admin-table">
+                <thead>
+                  <tr><th>Lote</th><th>Fecha</th><th>Referencia</th><th>Código</th><th>Producido</th><th>Rechazado</th><th>% Desperdicio</th></tr>
+                </thead>
+                <tbody id="buscarBody-${k}"><tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ======================== NAVEGACIÓN ENTRE PESTAÑAS ========================
+    async function activarPestaña(key, forzarRecarga) {
+      pestañaActiva = key;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activa'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('activa'));
+      const btn = document.getElementById(`tabBtn-${key}`);
+      const pane = document.getElementById(`tabPane-${key}`);
+      if (btn) btn.classList.add('activa');
+      if (pane) pane.classList.add('activa');
+
+      const info = pestañas.find(p => p.key === key);
+      if (!info) return;
+
+      renderizarKpisHistoricos(info);
+
+      if (forzarRecarga || !cacheDatos[key] || cacheDatos[key].sucio) {
+        await cargarDatosPestaña(info);
+      }
+    }
+
+    // El botón de meses invalida el caché de TODAS las pestañas (para que al
+    // volver a una ya visitada se recargue con la ventana nueva) y recarga de
+    // una vez la que está activa ahora mismo.
+    function onCambioMeses() {
+      Object.keys(cacheDatos).forEach(k => { cacheDatos[k] = { ...cacheDatos[k], sucio: true }; });
+      const info = pestañas.find(p => p.key === pestañaActiva);
+      if (info) cargarDatosPestaña(info);
+    }
+
+    // ======================== KPIs HISTÓRICOS (no dependen de la ventana de meses) ========================
+    function renderizarKpisHistoricos(info) {
+      const cont = document.getElementById(`kpis-${info.key}`);
+      if (!cont) return;
+
+      let filas = resumenFabricasCache;
+      if (info.fabrica) filas = filas.filter(f => f.fabrica === info.fabrica);
+
+      const totalRechazos = filas.reduce((a, f) => a + f.total_rechazos, 0);
+      const unidadesRechazadas = filas.reduce((a, f) => a + f.unidades_rechazadas, 0);
+      const ultimos30 = filas.reduce((a, f) => a + f.rechazos_ultimos_30_dias, 0);
+      const color = colorAcento(info.key);
+      const estiloAcento = color ? `style="border-left:4px solid ${color};"` : '';
+
+      let html = `
+        <div class="kpi-tile" ${estiloAcento}>
+          <div class="kpi-num">${totalRechazos}</div>
+          <div class="kpi-label">Rechazos totales (histórico)</div>
+          <div class="kpi-sub">${unidadesRechazadas} unidades · ${ultimos30} en los últimos 30 días</div>
+        </div>
+        <div class="kpi-tile" id="kpiDesperdicio-${info.key}">
+          <div class="kpi-num">--</div>
+          <div class="kpi-label">% de desperdicio (ventana seleccionada)</div>
+          <div class="kpi-sub">Cargando...</div>
+        </div>
+        <div class="kpi-tile" id="kpiProducido-${info.key}">
+          <div class="kpi-num">--</div>
+          <div class="kpi-label">Unidades producidas (ventana)</div>
+        </div>
+        <div class="kpi-tile" id="kpiRechazado-${info.key}">
+          <div class="kpi-num">--</div>
+          <div class="kpi-label">Unidades rechazadas (ventana)</div>
+        </div>
+      `;
+      cont.innerHTML = html;
+    }
+
+    // ======================== CARGA DE DATOS DE UNA PESTAÑA ========================
+    async function cargarDatosPestaña(info) {
+      const meses = document.getElementById('filtroMeses').value;
+      const k = info.key;
+      const params = new URLSearchParams({ meses });
+      if (info.fabrica) params.set('fabrica', info.fabrica);
+
+      const [desperdicio, buenoVsMalo, ranking, motivos, lineas] = await Promise.all([
+        fetchJson(`/api/produccion/desperdicio?${params}`),
+        fetchJson(`/api/produccion/bueno-vs-malo?${params}`),
+        fetchJson(new URLSearchParams({ ...Object.fromEntries(params), limite: 10 }), '/api/produccion/lotes/desperdicio-por-referencia'),
+        fetchJson(new URLSearchParams({ ...Object.fromEntries(params), limite: 10 }), '/api/produccion/rechazos/motivos'),
+        fetchJson(new URLSearchParams({ ...Object.fromEntries(params), limite: 10 }), '/api/produccion/rechazos/lineas'),
+      ]);
+
+      cacheDatos[k] = { desperdicio, buenoVsMalo, ranking, motivos, lineas, sucio: false };
+
+      renderizarKpiDesperdicio(k, desperdicio, buenoVsMalo);
+      renderizarChartDesperdicio(k, buenoVsMalo, info.label);
+      renderizarRanking(k, ranking);
+      renderizarMotivos(k, motivos);
+      renderizarLineas(k, lineas);
+      await cargarLotesBuscar(k, info, document.getElementById(`buscarInput-${k}`)?.value || '', meses);
+    }
+
+    async function fetchJson(paramsOrUrl, base) {
+      const url = base ? `${base}?${paramsOrUrl}` : paramsOrUrl;
+      try {
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      } catch (e) {
+        console.error(`Error cargando ${url}:`, e);
+        return null;
+      }
+    }
+
+    // ======================== KPI DE % DE DESPERDICIO (con meta y comparación) ========================
+    function renderizarKpiDesperdicio(k, desperdicio, buenoVsMalo) {
+      const tile = document.getElementById(`kpiDesperdicio-${k}`);
+      const tileProd = document.getElementById(`kpiProducido-${k}`);
+      const tileRech = document.getElementById(`kpiRechazado-${k}`);
+      if (!tile) return;
+
+      if (!desperdicio) {
+        tile.querySelector('.kpi-num').textContent = '--';
+        tile.querySelector('.kpi-sub').textContent = 'Error cargando el dato.';
+        return;
+      }
+
+      const pct = desperdicio.pct_desperdicio;
+      tile.className = 'kpi-tile';
+      if (pct !== null) tile.classList.add(pct > META_DESPERDICIO ? 'danger' : 'ok');
+      tile.querySelector('.kpi-num').textContent = pct === null ? '--' : pct + '%';
+
+      // Comparación mes actual vs. mes anterior y vs. promedio histórico de la
+      // ventana (pedido por Julio: "mes actual vs. mes anterior o promedio
+      // histórico") -- se calculan los dos porque la respuesta no dejó claro
+      // cuál de las dos prefiere.
+      let cmpHtml = '';
+      if (Array.isArray(buenoVsMalo)) {
+        const conDato = buenoVsMalo.filter(m => m.pct_desperdicio !== null);
+        if (conDato.length >= 1) {
+          const actual = conDato[conDato.length - 1];
+          const anteriores = conDato.slice(0, -1);
+          if (anteriores.length > 0) {
+            const promHistorico = anteriores.reduce((a, m) => a + m.pct_desperdicio, 0) / anteriores.length;
+            cmpHtml += flechaComparacion('vs. promedio histórico', actual.pct_desperdicio - promHistorico);
+          }
+          if (conDato.length >= 2) {
+            const anterior = conDato[conDato.length - 2];
+            cmpHtml += flechaComparacion('vs. mes anterior', actual.pct_desperdicio - anterior.pct_desperdicio);
+          }
+        }
+      }
+      tile.querySelector('.kpi-sub').innerHTML = `Meta: ${META_DESPERDICIO}% · últimos ${desperdicio.meses} meses`;
+      let cmpDiv = tile.querySelector('.kpi-cmp');
+      if (!cmpDiv) {
+        cmpDiv = document.createElement('div');
+        cmpDiv.className = 'kpi-cmp';
+        tile.appendChild(cmpDiv);
+      }
+      cmpDiv.innerHTML = cmpHtml || '<span class="cmp-flat">Sin suficientes meses para comparar todavía.</span>';
+
+      if (tileProd) tileProd.querySelector('.kpi-num').textContent = desperdicio.unidades_producidas.toLocaleString('es-CO');
+      if (tileRech) tileRech.querySelector('.kpi-num').textContent = desperdicio.unidades_rechazadas.toLocaleString('es-CO');
+    }
+
+    function flechaComparacion(etiqueta, deltaPp) {
+      const redondeado = Math.round(deltaPp * 100) / 100;
+      let clase = 'cmp-flat', icono = '→';
+      if (redondeado > 0.05) { clase = 'cmp-up'; icono = '▲'; }
+      else if (redondeado < -0.05) { clase = 'cmp-down'; icono = '▼'; }
+      return `<span class="${clase}">${icono} ${redondeado > 0 ? '+' : ''}${redondeado} pp ${escapeHtml(etiqueta)}</span>`;
+    }
+
+    // ======================== GRÁFICA PRINCIPAL: BUENAS/MALAS + % DESPERDICIO + META ========================
+    function renderizarChartDesperdicio(k, data, etiquetaFabrica) {
+      const canvas = document.getElementById(`chart-${k}`);
+      if (!canvas || !Array.isArray(data)) return;
+      const ctx = canvas.getContext('2d');
+      if (chartsInstancias[k]) chartsInstancias[k].destroy();
+
+      chartsInstancias[k] = new Chart(ctx, {
+        data: {
+          labels: data.map(x => x.mes),
+          datasets: [
+            { type: 'bar', label: 'Buenas', data: data.map(x => x.bueno), backgroundColor: '#38a169', stack: 'unidades', yAxisID: 'y' },
+            { type: 'bar', label: 'Malas', data: data.map(x => x.rechazado), backgroundColor: '#c53030', stack: 'unidades', yAxisID: 'y' },
+            { type: 'line', label: '% Desperdicio', data: data.map(x => x.pct_desperdicio), borderColor: '#2C43A2', backgroundColor: 'rgba(44,67,162,0.1)', tension: 0.25, yAxisID: 'y1' },
+            { type: 'line', label: `Meta ${META_DESPERDICIO}%`, data: data.map(() => META_DESPERDICIO), borderColor: '#b7791f', borderDash: [6, 4], pointRadius: 0, yAxisID: 'y1' },
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: true } },
+          scales: {
+            x: { stacked: true },
+            y: { type: 'linear', position: 'left', stacked: true, beginAtZero: true, title: { display: true, text: 'Unidades' } },
+            y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: '% Desperdicio' } }
+          }
+        }
+      });
+    }
+
+    // ======================== RANKING DE REFERENCIAS POR % DE DESPERDICIO ========================
+    function renderizarRanking(k, data) {
+      const tbody = document.getElementById(`ranking-${k}`);
+      if (!tbody) return;
+      if (!Array.isArray(data)) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error cargando datos. Si acabas de actualizar la app, reinicia el servidor.</td></tr>';
+        return;
+      }
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin datos suficientes en este período.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.referencia)}</strong></td>
+          <td>${r.producido}</td>
+          <td>${r.rechazado}</td>
+          <td>${pctDesperdicioPill(r.pct_desperdicio)}</td>
+        </tr>`).join('');
+    }
+
+    // ======================== MOTIVOS Y LÍNEAS ========================
+    function renderizarMotivos(k, data) {
+      const cont = document.getElementById(`motivos-${k}`);
+      if (!cont) return;
+      if (!Array.isArray(data)) {
+        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error cargando motivos. Si acabas de actualizar la app, reinicia el servidor.</div>';
+        return;
+      }
+      if (data.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Sin rechazos registrados en este período.</div>';
+        return;
+      }
+      cont.innerHTML = '<ul class="mini-list">' +
+        data.map(m => `<li><span>${escapeHtml(m.motivo)}</span><strong>${m.cantidad} (${m.unidades} un.)</strong></li>`).join('') +
+        '</ul>';
+    }
+
+    function renderizarLineas(k, data) {
+      const cont = document.getElementById(`lineas-${k}`);
+      if (!cont) return;
+      if (!Array.isArray(data)) {
+        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error cargando líneas. Si acabas de actualizar la app, reinicia el servidor.</div>';
+        return;
+      }
+      if (data.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Sin rechazos registrados en este período.</div>';
+        return;
+      }
+      cont.innerHTML = '<ul class="mini-list">' +
+        data.map(l => `<li><span>${escapeHtml(l.linea)} · ${escapeHtml(l.proceso)}</span><strong>${l.cantidad} (${l.unidades} un.)</strong></li>`).join('') +
+        '</ul>';
+    }
+
+    // ======================== BUSCAR LOTE (por pestaña) ========================
+    function formatearFechaCorta(fecha) {
+      return fecha ? String(fecha).slice(0, 10) : '--';
+    }
+
+    function pctDesperdicioPill(pct) {
+      if (pct === null || pct === undefined) return '<span class="pill pill-muted">N/D</span>';
+      const clase = pct > META_DESPERDICIO ? 'pill-danger' : (pct > META_DESPERDICIO / 2 ? 'pill-warning' : 'pill-ok');
+      return `<span class="pill ${clase}">${pct}%</span>`;
+    }
+
+    // El campo de búsqueda no dispara una consulta por cada tecla: espera a
+    // que la persona deje de escribir un momento (con miles de lotes en la
+    // tabla, cada letra tecleada sería una consulta aparte).
+    function onCambioBuscarLote(k) {
+      clearTimeout(timeoutsBuscar[k]);
+      timeoutsBuscar[k] = setTimeout(() => {
+        const info = pestañas.find(p => p.key === k);
+        const meses = document.getElementById('filtroMeses').value;
+        cargarLotesBuscar(k, info, document.getElementById(`buscarInput-${k}`).value, meses);
+      }, 350);
+    }
+
+    async function cargarLotesBuscar(k, info, busqueda, meses) {
+      const tbody = document.getElementById(`buscarBody-${k}`);
+      const hint = document.getElementById(`buscarHint-${k}`);
+      if (!tbody) return;
+      const params = new URLSearchParams({ limite: 50 });
+      if (info.fabrica) params.set('fabrica', info.fabrica);
+      const q = (busqueda || '').trim();
+      if (q) params.set('q', q);
+      else params.set('meses', meses);
+
+      const data = await fetchJson(`/api/produccion/lotes/buscar?${params}`);
+      if (!Array.isArray(data)) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error cargando datos. Si acabas de actualizar la app, reinicia el servidor.</td></tr>';
+        return;
+      }
+
+      hint.textContent = q
+        ? `${data.length} lote(s) encontrados para "${q}".`
+        : `Mostrando los lotes con más unidades rechazadas en la ventana de tiempo seleccionada arriba.`;
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">Sin resultados.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(l => `
+        <tr>
+          <td><strong>${escapeHtml(l.no_lote)}</strong></td>
+          <td>${formatearFechaCorta(l.fecha_produccion)}</td>
+          <td>${escapeHtml(l.referencia || '--')}</td>
+          <td>${escapeHtml(l.codigo || '--')}</td>
+          <td>${l.producido}</td>
+          <td>${l.rechazado}</td>
+          <td>${pctDesperdicioPill(l.pct_desperdicio)}</td>
+        </tr>`).join('');
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>
