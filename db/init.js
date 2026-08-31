@@ -1182,6 +1182,154 @@ async function inicializarBaseDatos() {
     console.error('⚠️ Error verificando columna no_aplica_medias en elec_config_cableado:', e.message);
   }
 
+  // MIGRACIÓN #20: tablas del módulo "Producción por Fábrica" (rechazos +
+  // lotes). Se sincronizan desde Calidad.xlsx / Lotes.xlsx —consultas de
+  // Power Query hacia P:\3. Fabrica1\...\Calidad.xlsm, P:\4. Fabrica2\...\
+  // Calidad.xlsm y P:\3. Fabrica1\...\Rendimiento.xlsm— por
+  // scripts/sincronizar_produccion.js, enganchado a un ciclo de 6 horas en
+  // app_circuitos.js (ver ejecutarSincronizacionProduccion).
+  //
+  // rechazos_produccion sí tiene una llave natural confiable dentro de cada
+  // fábrica (fabrica + id_rechazo_origen, verificado sin duplicados contra
+  // los datos reales), de ahí el UNIQUE: permite upsert real (si un rechazo
+  // ya sincronizado cambia en el Excel —ej. se corrige el motivo—, se
+  // actualiza en vez de duplicarse).
+  //
+  // lotes_produccion NO tiene esa llave (No_Lote se repite en el origen), así
+  // que cada fila se identifica por el hash de su contenido completo
+  // (hash_fila): confirmado con Julio (31/08) que la hoja de Lotes no
+  // distingue Fábrica 1 de Fábrica 2 —la lista es la misma para ambas—, por
+  // eso esta tabla no tiene columna de fábrica.
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS rechazos_produccion (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fabrica TEXT NOT NULL,
+        id_rechazo_origen INTEGER NOT NULL,
+        fecha_rechazo TEXT,
+        linea_org TEXT,
+        proceso_org TEXT,
+        linea_rep TEXT,
+        proceso_rep TEXT,
+        lote_produccion TEXT,
+        lote TEXT,
+        referencia TEXT,
+        cantidad INTEGER,
+        motivo TEXT,
+        observaciones TEXT,
+        sincronizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(fabrica, id_rechazo_origen)
+      );
+      CREATE TABLE IF NOT EXISTS lotes_produccion (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fecha_produccion TEXT,
+        no_lote TEXT,
+        referencia TEXT,
+        color TEXT,
+        voltaje INTEGER,
+        codigo TEXT,
+        cantidad INTEGER,
+        hash_fila TEXT NOT NULL UNIQUE,
+        sincronizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_rechazos_fabrica_fecha ON rechazos_produccion(fabrica, fecha_rechazo);
+      CREATE INDEX IF NOT EXISTS idx_rechazos_motivo ON rechazos_produccion(motivo);
+      CREATE INDEX IF NOT EXISTS idx_lotes_fecha ON lotes_produccion(fecha_produccion);
+      CREATE INDEX IF NOT EXISTS idx_lotes_referencia ON lotes_produccion(referencia);
+    `);
+  } catch (e) {
+    console.error('⚠️ Error creando tablas de Producción por Fábrica:', e.message);
+  }
+
+  // MIGRACIÓN #21: índice para el cruce por lote (bueno vs. malo) entre
+  // rechazos_produccion y lotes_produccion — se buscan/agrupan por
+  // lote_produccion en cada carga del tablero (ver data/produccion.js,
+  // obtenerLotesConDetalle / obtenerBuenoVsMaloPorMes), y esa columna no
+  // tenía índice todavía.
+  try {
+    await db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_rechazos_lote_produccion ON rechazos_produccion(lote_produccion);
+    `);
+  } catch (e) {
+    console.error('⚠️ Error creando índice de cruce por lote:', e.message);
+  }
+
+  // MIGRACIÓN #22: Julio agregó un archivo nuevo, Produccion.xlsx, y
+  // simplificó Lotes.xlsx (01/09). El modelo de datos de producción cambió
+  // de fondo:
+  //   - Lotes.xlsx ya NO trae cantidad ni fecha — quedó como una tabla de
+  //     solo consulta (No_Lote -> Referencia/Color/Voltaje/Código), con
+  //     No_Lote ahora sí único de verdad (antes se repetía).
+  //   - Produccion.xlsx (consulta nueva de Power Query hacia TEntregas en
+  //     Rendimiento.xlsm de AMBAS fábricas) es la que de verdad trae
+  //     cantidades: una fila por cada "entrega" de un lote entre estaciones
+  //     del proceso (Preensamble/Ensamble/Resina/Calidad...), con su
+  //     fábrica (columna Area). Verificado contra los datos reales (01/09):
+  //     un mismo lote pasa por varias operaciones con la MISMA cantidad
+  //     repartida en lotes parciales -- la cantidad buena final de un lote
+  //     es la suma de sus filas en la operación "Calidad" (sin importar
+  //     mayúsculas: "Calidad"/"CALIDAD"), no la suma de todas sus filas.
+  //     Esto es clave porque MIENTRAS lotes_produccion no tenía fábrica,
+  //     entregas_produccion sí la tiene -- así que ahora el % de desperdicio
+  //     SÍ se puede calcular real por fábrica (ver data/produccion.js).
+  //
+  // Por eso lotes_produccion se reemplaza por dos tablas:
+  //   - lotes: la tabla de consulta (reemplaza lo que hacía lotes_produccion
+  //     antes, pero ahora no_lote es de verdad único, así que el upsert es
+  //     directo por no_lote en vez de por hash de fila completa).
+  //   - entregas_produccion: la tabla de hechos con las cantidades. Su llave
+  //     natural es (fabrica + id_entrega) -- igual que rechazos_produccion,
+  //     verificado 01/09 que Id_Entrega se numera por separado en cada
+  //     fábrica (se repite el mismo número entre Fabrica1 y Fabrica2, nunca
+  //     dentro de la misma). Un puñado de filas no traen Id_Entrega (dato
+  //     faltante en el origen): esas se identifican por el hash de su
+  //     contenido completo (hash_fila) en vez de romper el cruce -- ambas
+  //     columnas admiten varios NULL sin chocar entre sí en SQLite.
+  //
+  // Julio confirmó (01/09) que está bien borrar lotes_produccion y
+  // resincronizar todo desde cero: no se pierde información real, se
+  // reconstruye desde los mismos Excel.
+  try {
+    await db.exec(`DROP TABLE IF EXISTS lotes_produccion;`);
+  } catch (e) {
+    console.error('⚠️ Error eliminando la tabla anterior lotes_produccion:', e.message);
+  }
+
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS lotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        no_lote TEXT NOT NULL UNIQUE,
+        referencia TEXT,
+        color TEXT,
+        voltaje INTEGER,
+        codigo TEXT,
+        sincronizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS entregas_produccion (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fabrica TEXT NOT NULL,
+        id_entrega INTEGER,
+        fecha_entrega TEXT,
+        linea_entrega TEXT,
+        lote_entrega TEXT,
+        referencia_entrega TEXT,
+        operacion_entrega TEXT,
+        cantidad_buenas INTEGER,
+        hash_fila TEXT,
+        sincronizado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(fabrica, id_entrega),
+        UNIQUE(hash_fila)
+      );
+      CREATE INDEX IF NOT EXISTS idx_lotes_referencia ON lotes(referencia);
+      CREATE INDEX IF NOT EXISTS idx_entregas_lote ON entregas_produccion(lote_entrega);
+      CREATE INDEX IF NOT EXISTS idx_entregas_fabrica_fecha ON entregas_produccion(fabrica, fecha_entrega);
+      CREATE INDEX IF NOT EXISTS idx_entregas_referencia ON entregas_produccion(referencia_entrega);
+    `);
+  } catch (e) {
+    console.error('⚠️ Error creando tablas lotes / entregas_produccion:', e.message);
+  }
+
   // Usuarios por defecto si está vacío
   const count = await db.get('SELECT COUNT(*) as total FROM usuarios');
   if (count.total === 0) {
