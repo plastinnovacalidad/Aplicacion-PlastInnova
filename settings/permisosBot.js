@@ -27,6 +27,13 @@ const PERMISOS_BOT_DISPONIBLES = [
   // whatsapp_numero_permisos, pero si en el futuro se separa por módulo,
   // este es el permiso a dividir.
   { codigo: 'consulta_garantias_detalle', descripcion: 'Modo consulta: activar con "consulta" y preguntar por garantías y muestreos (últimas garantías, últimos/porcentaje por referencia, últimos muestreos realizados/rechazados)' },
+  // Roadmap Bot WhatsApp, punto 24 (nuevo, 31/08): comando "reportes" — menú
+  // por número (módulo → tipo → periodo) que entrega el PDF correspondiente.
+  // Un solo permiso para las 3 pantallas del menú (Garantías/Metrología/
+  // Muestreos), a diferencia de calidad_diario/quincenal/mensual/garantias
+  // que sí están separados por comando — decisión de Julio: más simple de
+  // administrar que separar por módulo dentro del menú.
+  { codigo: 'reportes', descripcion: 'Comando "reportes": menú por número para pedir el PDF de Garantías, Metrología o Muestreos (mensual, quincenal o histórico general)' },
 ];
 
 module.exports = { PERMISOS_BOT_DISPONIBLES };

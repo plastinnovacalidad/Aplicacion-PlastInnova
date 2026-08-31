@@ -447,6 +447,62 @@ async function obtenerGarantiasReportePeriodo({ desdeUTC, hastaUTC }) {
   };
 }
 
+// ======================== REPORTE APARTE DE METROLOGÍA (comando "reportes", 31/08) ========================
+// Mismo criterio que obtenerGarantiasReportePeriodo: un reporte dedicado
+// solo a Metrología para un periodo (mensual/quincenal/general), en vez de
+// la sección chiquita que ya trae el resumen general de calidad
+// (obtenerResumenPeriodo, arriba). Reusa la misma consulta de totales/top
+// que ya existía en obtenerResumenMetrologia() (histórico completo, sin
+// filtro — la usa el dashboard web), solo que aquí SÍ se filtra por
+// periodo, igual que fueraToleranciaDetallePeriodo ya hace más arriba.
+async function obtenerMetrologiaReportePeriodo({ desdeUTC, hastaUTC }) {
+  const db = getDb();
+
+  const totales = await db.get(`
+    SELECT
+      (SELECT COUNT(*) FROM moldes_inspecciones WHERE created_at >= ? AND created_at < ?) as total_inspecciones,
+      (SELECT COUNT(*) FROM moldes_medidas_detalle m JOIN moldes_inspecciones i ON m.inspeccion_id = i.id
+        WHERE i.created_at >= ? AND i.created_at < ?) as total_medidas,
+      (SELECT COUNT(*) FROM moldes_medidas_detalle m JOIN moldes_inspecciones i ON m.inspeccion_id = i.id
+        WHERE m.estado = 'CONFORME' AND i.created_at >= ? AND i.created_at < ?) as conformes,
+      (SELECT COUNT(*) FROM moldes_medidas_detalle m JOIN moldes_inspecciones i ON m.inspeccion_id = i.id
+        WHERE m.estado = 'FUERA DE TOLERANCIA' AND i.created_at >= ? AND i.created_at < ?) as fuera_tolerancia
+  `, [desdeUTC, hastaUTC, desdeUTC, hastaUTC, desdeUTC, hastaUTC, desdeUTC, hastaUTC]);
+
+  const pctFueraTolerancia = (totales && totales.total_medidas > 0)
+    ? Math.round((totales.fuera_tolerancia / totales.total_medidas) * 1000) / 10
+    : null;
+
+  // Mismo top que obtenerResumenMetrologia(), con el filtro de periodo
+  // agregado — qué referencias concentran más medidas fuera de tolerancia,
+  // no solo el conteo total.
+  const topReferenciasProblema = await db.all(`
+    SELECT r.codigo_base as referencia, COUNT(*) as medidas_fuera_tolerancia
+    FROM moldes_medidas_detalle m
+    JOIN moldes_inspecciones i ON m.inspeccion_id = i.id
+    JOIN moldes_referencias r ON i.referencia_id = r.id
+    WHERE m.estado = 'FUERA DE TOLERANCIA' AND i.created_at >= ? AND i.created_at < ?
+    GROUP BY r.codigo_base
+    ORDER BY medidas_fuera_tolerancia DESC
+    LIMIT 10
+  `, [desdeUTC, hastaUTC]);
+
+  // Detalle de cuáles medidas salieron fuera de tolerancia y por cuánto —
+  // función que ya existía (la usa también obtenerResumenPeriodo para la
+  // sección chiquita de Metrología del resumen general).
+  const detalle = await fueraToleranciaDetallePeriodo(desdeUTC, hastaUTC, 15);
+
+  return {
+    totalInspecciones: totales ? totales.total_inspecciones : 0,
+    totalMedidas: totales ? totales.total_medidas : 0,
+    conformes: totales ? totales.conformes : 0,
+    fueraTolerancia: totales ? totales.fuera_tolerancia : 0,
+    pctFueraTolerancia,
+    topReferenciasProblema,
+    detalle,
+  };
+}
+
 module.exports = {
   obtenerTendencias,
   obtenerResumenPorProducto,
@@ -456,4 +512,5 @@ module.exports = {
   obtenerPicoGarantias,
   obtenerResumenPeriodo,
   obtenerGarantiasReportePeriodo,
+  obtenerMetrologiaReportePeriodo,
 };

@@ -21,6 +21,11 @@ const isoData = require('./data/iso2859'); // modo consulta — "últimos muestr
 const consultaLibreIA = require('./data/consultaLibreIA');
 const { generarPdfResumenCalidad } = require('./utils/pdfResumenCalidad');
 const { generarPdfReporteGarantias } = require('./utils/pdfReporteGarantias');
+// Comando "reportes" (menú por número, 31/08): módulo de Metrología aparte
+// del resumen general — antes no existía ningún reporte periódico de
+// Metrología, solo el de una inspección individual (más abajo). Ver
+// utils/pdfReporteMetrologia.js y data/calidad.js#obtenerMetrologiaReportePeriodo.
+const { generarPdfReporteMetrologia } = require('./utils/pdfReporteMetrologia');
 const { construirHtmlReporteInspeccion } = require('./utils/imagenReporteMetrologia');
 // Julio quiere comparar: volvió a mandar el reporte de inspección como PDF
 // (en vez de la imagen compacta) para ver cómo se ve ahora que cambió dos
@@ -31,23 +36,17 @@ const { construirHtmlReporteInspeccion } = require('./utils/imagenReporteMetrolo
 // generarPdfInspeccionMetrologia otra vez en vez de generarImagenInspeccion
 // (que se deja intacta, lista para volver a activarla).
 const { generarPdfInspeccionMetrologia } = require('./utils/pdfInspeccionMetrologia');
-// Modo consulta con IA (Roadmap Bot WhatsApp, punto 8 — TERCERA revisión,
-// 28/08): Julio instaló Ollama y está corriendo Qwen2.5:7b en su propia
-// máquina, y quiere probar en esta rama qué tan rápido responde un modelo
-// local comparado con Gemini (en la nube) — el objetivo específico de este
-// cambio es medir latencia real, no necesariamente quedarse aquí para
-// siempre; por eso se dejaron logs de tiempo en interpretarConsultaConIA e
-// interpretarYEjecutarConsultaLibre más abajo, para que se vea en la
-// consola del servidor cuánto tarda cada llamada real mientras prueba por
-// WhatsApp. A diferencia de Gemini, Ollama corre en la red local de Julio
-// (o en su propio equipo) y no necesita ninguna llave/API key — por eso
-// "ollamaClient" siempre se instancia (no hay un "no configurado" que
-// revisar); si Ollama no está corriendo o el modelo no está descargado, la
-// llamada falla con un error normal de red/HTTP, que se atrapa igual que
-// cualquier otro error (ver más abajo) y el modo consulta cae de vuelta a
-// las reglas/"no entendí", nunca tumba el bot.
-const { Ollama } = require('ollama');
-const { OLLAMA_BASE_URL, MODELO_IA_MODO_CONSULTA } = require('./settings/paths');
+// Modo consulta con IA (Roadmap Bot WhatsApp, punto 8 — revisado): Julio
+// pidió que el bot entienda preguntas parecidas, no solo frases exactas.
+// Se usa Gemini (Google) — decisión de Julio, empezando con el plan
+// gratis — vía el SDK oficial @google/genai. El cliente solo se instancia
+// si hay una llave configurada (ver settings/paths.js) — si Julio todavía
+// no la puso, el require no falla (el paquete sí está instalado, vía
+// "npm install"), solo queda sin usarse y el modo consulta sigue
+// funcionando con las reglas de siempre, sin ningún cambio de
+// comportamiento.
+const { GoogleGenAI, FunctionCallingConfigMode, Type, ApiError } = require('@google/genai');
+const { GEMINI_API_KEY, MODELO_IA_MODO_CONSULTA } = require('./settings/paths');
 
 const {
   AREAS, TIMEZONE,
@@ -56,8 +55,13 @@ const {
   RESUMEN_CALIDAD_HORA, RESUMEN_CALIDAD_MINUTO,
 } = config;
 
-const ollamaClient = new Ollama({ host: OLLAMA_BASE_URL });
-console.log(`ℹ️ Modo consulta del bot: usando Ollama en ${OLLAMA_BASE_URL} con el modelo "${MODELO_IA_MODO_CONSULTA}" (prueba de latencia local, Roadmap Bot WhatsApp punto 8).`);
+// null si GEMINI_API_KEY no está configurada en el .env — todo el resto
+// del código revisa "if (geminiClient)" antes de usarlo, nunca asume que
+// existe.
+const geminiClient = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
+if (!geminiClient) {
+  console.log('ℹ️ Modo consulta del bot: GEMINI_API_KEY no configurada — usando solo reglas/palabras clave (sin IA).');
+}
 
 let dbInstance = null;
 let client = null;
@@ -114,6 +118,229 @@ async function revisarModoConsultaExpirado() {
         await client.sendMessage(telefono, '🔒 Tu *modo consulta* se cerró automáticamente por 5 minutos de inactividad.\n\nEscribe *consulta* cuando quieras volver a activarlo.');
       } catch {}
     }
+  }
+}
+
+// ======================== COMANDO "reportes" (menú por número, 31/08) ========================
+// Julio pidió un asistente de PDF por número, en vez de comandos de una
+// sola línea con argumentos: "reportes" -> elige módulo (Garantías/
+// Metrología/Muestreos) -> elige tipo (Mensual/Quincenal/General) -> si es
+// Mensual/Quincenal, elige el periodo (actual, o uno de una lista numerada
+// de los últimos anteriores) -> genera y manda el PDF. Reusa los reportes
+// que ya existían (Garantías: generarPdfReporteGarantias; Muestreos: se
+// reusa el Resumen de Calidad completo tal cual, decisión de Julio, aunque
+// también trae una sección de Garantías/Metrología) y agrega el de
+// Metrología, que no existía como reporte periódico.
+//
+// A diferencia de modo consulta (conversación libre, con cierre activo por
+// inactividad avisado cada 60s vía revisarModoConsultaExpirado), este es un
+// asistente corto de pocos pasos — se cierra "en silencio" si pasan 5
+// minutos sin responder (sin mandar un aviso aparte, a propósito, para no
+// sumar otro barrido periódico por algo tan corto): si alguien vuelve
+// después de expirado y escribe un número suelto, simplemente cae de
+// vuelta al comportamiento de siempre para ese número (ej. registro de
+// entrada/salida de área), que es el correcto.
+let numerosEnModoReportes = new Map(); // telefono -> { paso, modulo, tipo, ultimaActividad }
+const REPORTES_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos, mismo criterio que modo consulta
+
+const REPORTES_MODULOS = [
+  { clave: 'garantias', etiqueta: 'Garantías', emoji: '🛡️' },
+  { clave: 'metrologia', etiqueta: 'Metrología', emoji: '📏' },
+  { clave: 'muestreos', etiqueta: 'Muestreos', emoji: '🧪' },
+];
+const REPORTES_TIPOS = [
+  { clave: 'mensual', etiqueta: 'Mensual' },
+  { clave: 'quincenal', etiqueta: 'Quincenal' },
+  { clave: 'general', etiqueta: 'General (histórico completo)' },
+];
+// Cuántos meses/quincenas anteriores ofrecer en la lista numerada del
+// último paso — 6 es un primer valor razonable (medio año hacia atrás);
+// fácil de subir si Julio necesita ver más atrás.
+const REPORTES_CANTIDAD_ANTERIORES = 6;
+
+function menuReportesModulos() {
+  return '📊 *Reportes disponibles:*\n\n' +
+    REPORTES_MODULOS.map((m, i) => `${i + 1}. ${m.etiqueta}`).join('\n') +
+    '\n\n0. Cancelar\n\nResponde con el número.';
+}
+function menuReportesTipos(modulo) {
+  const m = REPORTES_MODULOS.find(x => x.clave === modulo);
+  return `${m.emoji} *${m.etiqueta} — ¿qué tipo de reporte?*\n\n` +
+    REPORTES_TIPOS.map((t, i) => `${i + 1}. ${t.etiqueta}`).join('\n') +
+    '\n\n0. Cancelar';
+}
+// tipo: 'mensual' o 'quincenal'. etiquetaActual ya viene armada (ej. "Agosto
+// 2026" o "16-fin de agosto 2026") para no repetir el cálculo de fechas acá.
+function menuReportesPeriodo(tipo, etiquetaActual) {
+  const sustantivo = tipo === 'mensual' ? 'mes' : 'quincena';
+  return `📅 *¿Cuál periodo?*\n\n` +
+    `1. ${sustantivo === 'mes' ? 'Mes actual' : 'Quincena actual'} (${etiquetaActual})\n` +
+    `2. ${sustantivo === 'mes' ? 'Meses anteriores' : 'Quincenas anteriores'}\n\n` +
+    '0. Cancelar';
+}
+function menuReportesAnteriores(opciones) {
+  return '📅 *¿Cuál de estos?*\n\n' +
+    opciones.map((o, i) => `${i + 1}. ${o.etiqueta}`).join('\n') +
+    '\n\n0. Cancelar';
+}
+
+// Últimos N meses YA CERRADOS (sin contar el actual), del más reciente al
+// más antiguo — para la lista numerada de "meses anteriores". Encadena
+// mesMasRecienteCerrado() hacia atrás en vez de repetir su lógica.
+function ultimosNMesesCerrados(ahora, n) {
+  const lista = [];
+  let cursor = mesMasRecienteCerrado(ahora);
+  for (let i = 0; i < n; i++) {
+    lista.push(cursor);
+    const anterior = new Date(cursor.anio, cursor.mes - 1, 1);
+    cursor = { anio: anterior.getFullYear(), mes: anterior.getMonth() };
+  }
+  return lista;
+}
+// Mismo criterio que ultimosNMesesCerrados pero para quincenas (cual: 1 =
+// 1-15, 2 = 16-fin de mes).
+function ultimasNQuincenasCerradas(ahora, n) {
+  const lista = [];
+  let cursor = quincenaMasRecienteCerrada(ahora);
+  for (let i = 0; i < n; i++) {
+    lista.push(cursor);
+    if (cursor.cual === 2) {
+      cursor = { anio: cursor.anio, mes: cursor.mes, cual: 1 };
+    } else {
+      const anterior = new Date(cursor.anio, cursor.mes - 1, 1);
+      cursor = { anio: anterior.getFullYear(), mes: anterior.getMonth(), cual: 2 };
+    }
+  }
+  return lista;
+}
+
+// Genera y manda (o cae a texto si el PDF falla) el reporte del módulo/tipo/
+// periodo ya resueltos — el punto de salida del asistente, sin importar por
+// cuál de los 3 módulos ni cuál periodo se llegó ahí.
+async function generarYResponderReporte(msg, modulo, etiquetaPeriodo, limites) {
+  if (modulo === 'garantias') {
+    const g = await calidadData.obtenerGarantiasReportePeriodo(limites);
+    await responderReporteGarantiasPDF(msg, etiquetaPeriodo, g);
+    return;
+  }
+  if (modulo === 'metrologia') {
+    const m = await calidadData.obtenerMetrologiaReportePeriodo(limites);
+    await responderReporteMetrologiaPDF(msg, etiquetaPeriodo, m);
+    return;
+  }
+  // 'muestreos' reusa el Resumen de Calidad completo tal cual (decisión de
+  // Julio) — sí trae también una sección de Garantías/Metrología, no es
+  // exclusivo de muestreos, pero evita duplicar un reporte nuevo solo para
+  // separar esas dos secciones que ya tienen su propio botón en el menú.
+  const r = await calidadData.obtenerResumenPeriodo(limites);
+  await responderResumenPDF(msg, etiquetaPeriodo, r);
+}
+
+// Maneja UN mensaje de alguien que ya está dentro del asistente "reportes"
+// (numerosEnModoReportes.has(tel) es true antes de llamar esto). Devuelve
+// siempre después de responder algo — el llamador (el manejador de
+// mensajes) hace `return` apenas esta función termina, para que ningún otro
+// bloque de abajo (modo consulta, comandos fijos, registro de área) llegue
+// a ver este mensaje.
+async function manejarPasoReportes(tel, txtOrig, msg) {
+  const estado = numerosEnModoReportes.get(tel);
+
+  if (normalizarTexto(txtOrig) === 'cancelar' || txtOrig.trim() === '0') {
+    numerosEnModoReportes.delete(tel);
+    await msg.reply('❌ Reporte cancelado.\n\nEscribe *reportes* cuando quieras volver a pedir uno.');
+    return;
+  }
+
+  const opcion = parseInt(txtOrig.trim(), 10);
+  const invalida = () => msg.reply('⚠️ No entendí. Responde solo con el número de la lista (o 0 para cancelar).');
+
+  if (estado.paso === 'modulo') {
+    if (isNaN(opcion) || opcion < 1 || opcion > REPORTES_MODULOS.length) { await invalida(); return; }
+    estado.modulo = REPORTES_MODULOS[opcion - 1].clave;
+    estado.paso = 'tipo';
+    estado.ultimaActividad = Date.now();
+    await msg.reply(menuReportesTipos(estado.modulo));
+    return;
+  }
+
+  if (estado.paso === 'tipo') {
+    if (isNaN(opcion) || opcion < 1 || opcion > REPORTES_TIPOS.length) { await invalida(); return; }
+    const tipo = REPORTES_TIPOS[opcion - 1].clave;
+    estado.ultimaActividad = Date.now();
+
+    // "General" no tiene periodo que elegir — genera directo (confirmado
+    // con Julio) y cierra el asistente.
+    if (tipo === 'general') {
+      numerosEnModoReportes.delete(tel);
+      await msg.reply('⏳ Generando el reporte, un momento…');
+      const limites = limitesPeriodo(new Date(2000, 0, 1), new Date());
+      await generarYResponderReporte(msg, estado.modulo, 'Histórico completo', limites);
+      return;
+    }
+
+    estado.tipo = tipo;
+    estado.paso = 'periodo';
+    const ahora = new Date();
+    const etiquetaActual = tipo === 'mensual'
+      ? etiquetaMes(ahora.getFullYear(), ahora.getMonth())
+      : (() => { const q = ahora.getDate() >= 16 ? 2 : 1; return etiquetaQuincena(ahora.getFullYear(), ahora.getMonth(), q); })();
+    await msg.reply(menuReportesPeriodo(tipo, etiquetaActual));
+    return;
+  }
+
+  if (estado.paso === 'periodo') {
+    if (isNaN(opcion) || opcion < 1 || opcion > 2) { await invalida(); return; }
+    estado.ultimaActividad = Date.now();
+
+    if (opcion === 1) {
+      // Periodo actual (mes o quincena en curso, todavía sin cerrar).
+      numerosEnModoReportes.delete(tel);
+      await msg.reply('⏳ Generando el reporte, un momento…');
+      const ahora = new Date();
+      let limites, etiqueta;
+      if (estado.tipo === 'mensual') {
+        limites = limitesPeriodo(new Date(ahora.getFullYear(), ahora.getMonth(), 1), ahora);
+        etiqueta = etiquetaMes(ahora.getFullYear(), ahora.getMonth());
+      } else {
+        const cual = ahora.getDate() >= 16 ? 2 : 1;
+        const { desde } = rangoQuincena(ahora.getFullYear(), ahora.getMonth(), cual);
+        limites = limitesPeriodo(desde, ahora);
+        etiqueta = etiquetaQuincena(ahora.getFullYear(), ahora.getMonth(), cual);
+      }
+      await generarYResponderReporte(msg, estado.modulo, etiqueta, limites);
+      return;
+    }
+
+    // Opción 2: "anteriores" — arma la lista numerada de los últimos
+    // REPORTES_CANTIDAD_ANTERIORES ya cerrados y pasa al último paso.
+    const ahora = new Date();
+    const opciones = estado.tipo === 'mensual'
+      ? ultimosNMesesCerrados(ahora, REPORTES_CANTIDAD_ANTERIORES).map(p => ({ ...p, etiqueta: etiquetaMes(p.anio, p.mes) }))
+      : ultimasNQuincenasCerradas(ahora, REPORTES_CANTIDAD_ANTERIORES).map(p => ({ ...p, etiqueta: etiquetaQuincena(p.anio, p.mes, p.cual) }));
+    estado.opcionesAnteriores = opciones;
+    estado.paso = 'cual_anterior';
+    await msg.reply(menuReportesAnteriores(opciones));
+    return;
+  }
+
+  if (estado.paso === 'cual_anterior') {
+    const opciones = estado.opcionesAnteriores || [];
+    if (isNaN(opcion) || opcion < 1 || opcion > opciones.length) { await invalida(); return; }
+    const elegido = opciones[opcion - 1];
+    numerosEnModoReportes.delete(tel);
+    await msg.reply('⏳ Generando el reporte, un momento…');
+    let limites, etiqueta;
+    if (estado.tipo === 'mensual') {
+      const { desde, hasta } = rangoMes(elegido.anio, elegido.mes);
+      limites = limitesPeriodo(desde, hasta);
+      etiqueta = etiquetaMes(elegido.anio, elegido.mes);
+    } else {
+      const { desde, hasta } = rangoQuincena(elegido.anio, elegido.mes, elegido.cual);
+      limites = limitesPeriodo(desde, hasta);
+      etiqueta = etiquetaQuincena(elegido.anio, elegido.mes, elegido.cual);
+    }
+    await generarYResponderReporte(msg, estado.modulo, etiqueta, limites);
+    return;
   }
 }
 
@@ -289,55 +516,46 @@ function extraerParametrosConsulta(fraseOriginal) {
 // ({ tipo, referencia, cantidad } o null), así que TODO lo que viene
 // después en el switch (las consultas a la base y los formateadores de
 // respuesta) no tuvo que cambiar ni una línea.
-// Esquema de la herramienta en formato Ollama/OpenAI (type: 'function', con
-// parameters en JSON Schema plano — "string"/"integer" en vez de los
-// Type.STRING/Type.INTEGER de Gemini). Mismo contenido/mismas descripciones
-// que la versión de Gemini (afinadas el mismo día tras el hallazgo real de
-// que la IA forzaba tipos que no calzaban — ver ACTUALIZACIÓN 9 del
-// roadmap), solo cambia la forma del objeto.
 const DECLARACION_EXTRAER_PARAMETROS_CONSULTA = {
-  type: 'function',
-  function: {
-    name: 'extraer_parametros_consulta',
-    description:
-      'Identifica qué está pidiendo la persona, a partir de su pregunta en lenguaje natural (escrita por WhatsApp, en español, puede tener errores de tipeo o forma coloquial), y en qué consulta de garantías o muestreos de calidad se traduce.',
-    parameters: {
-      type: 'object',
-      properties: {
-        tipo: {
-          type: 'string',
-          enum: ['ultimos', 'causal', 'garantias_recientes', 'top_referencias_garantias', 'muestreos_realizados', 'muestreos_rechazados', 'no_reconocido'],
-          description:
-            'IMPORTANTE, léelo antes de elegir: cada tipo de abajo cubre EXACTAMENTE lo que dice su descripción, ni una gota más — es una lista fija de consultas, SIN ningún filtro de fecha o periodo (nada de "esta semana", "el mes pasado", "en agosto", "ayer", "este año", "entre tal fecha y tal otra"), SIN contar/sumar/promediar/comparar, y SIN listar valores distintos de una columna (ej. "qué referencias..."). ' +
-            'Si la pregunta agrega CUALQUIERA de esas cosas, usa "no_reconocido" — AUNQUE la pregunta mencione palabras como "garantía" o "muestreo" que suenen parecidas a uno de los tipos de abajo. Es mucho mejor decir honestamente "no_reconocido" (hay otro sistema, más flexible, que sí puede responder preguntas así) que forzar uno de los tipos fijos cuando no calza exactamente — responder con el tipo equivocado es peor que admitir que no sabes, porque le da a la persona una respuesta que no tiene nada que ver con lo que preguntó. ' +
-            'Ejemplos que NO son ninguno de los tipos de abajo (usa "no_reconocido"): "qué referencias se les hizo muestreo la semana pasada" (filtra por periodo Y lista valores distintos), "cuántos muestreos se han hecho en agosto" (filtra por periodo Y cuenta), "cuántas garantías hay este mes" (filtra por periodo Y cuenta), "compara las garantías de esta semana con la pasada" (comparación). ' +
-            '"ultimos": últimos/top N registros de garantías de UNA referencia específica, SIN filtro de fecha (necesita "referencia"). ' +
-            '"causal": porcentaje de causales/motivos de garantía de UNA referencia específica, del histórico completo sin filtro de fecha (necesita "referencia"). ' +
-            '"garantias_recientes": últimas N garantías ingresadas, SIN filtrar por referencia NI por fecha/periodo (de todo el negocio, las más recientes nada más). ' +
-            '"top_referencias_garantias": las N referencias/productos con MÁS garantías en el histórico completo, contando TODAS las garantías agrupadas por referencia, SIN filtro de fecha (NO necesita "referencia" — es a través de todo el negocio). Usar esto para preguntas como "cuáles son las referencias con más garantías", "qué productos tienen más reclamos", "top 5 de garantías más frecuentes" (cuando se refiere a qué PRODUCTOS se repiten más, no a causales, y sin pedir un periodo específico). ' +
-            '"muestreos_realizados": los últimos N muestreos de control de calidad ISO 2859-1 realizados (cualquier resultado), SIN ningún filtro de fecha/periodo ni agrupación — es literalmente "los N más recientes, tal cual, de todos los tiempos". ' +
-            '"muestreos_rechazados": igual que "muestreos_realizados" pero solo los que salieron rechazados — mismas restricciones (sin fecha, sin agrupar). ' +
-            '"no_reconocido": la pregunta no encaja EXACTAMENTE en ninguna de las anteriores (incluye cualquier filtro de fecha/periodo, conteo, agrupación, comparación, o cualquier otra cosa no tiene que ver con garantías/muestreos de calidad).',
-        },
-        referencia: {
-          type: 'string',
-          description:
-            'Código de referencia del producto mencionado (ej. "SUP/1077/RS/MUL", "1017C/AMAM/MULTI"), tal como lo escribió la persona. Cadena vacía "" si el tipo no necesita referencia, o si no se mencionó ninguna.',
-        },
-        cantidad: {
-          type: 'integer',
-          description: 'Cantidad de registros pedida (ej. "últimos 5" -> 5, "top 20" -> 20). 0 si la persona no especificó ninguna cantidad (se usará un valor por defecto).',
-        },
-        orden: {
-          type: 'string',
-          enum: ['reciente', 'antiguo'],
-          description:
-            '"reciente" (usar esto por defecto) si pide los ÚLTIMOS / más recientes / lo más nuevo. ' +
-            '"antiguo" si pide el/los PRIMERO(S), lo más viejo/antiguo, o el inicio de una lista (ej. "cuál fue el primer muestreo que se hizo", "el más antiguo").',
-        },
+  name: 'extraer_parametros_consulta',
+  description:
+    'Identifica qué está pidiendo la persona, a partir de su pregunta en lenguaje natural (escrita por WhatsApp, en español, puede tener errores de tipeo o forma coloquial), y en qué consulta de garantías o muestreos de calidad se traduce.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      tipo: {
+        type: Type.STRING,
+        enum: ['ultimos', 'causal', 'garantias_recientes', 'top_referencias_garantias', 'muestreos_realizados', 'muestreos_rechazados', 'no_reconocido'],
+        description:
+          'IMPORTANTE, léelo antes de elegir: cada tipo de abajo cubre EXACTAMENTE lo que dice su descripción, ni una gota más — es una lista fija de consultas, SIN ningún filtro de fecha o periodo (nada de "esta semana", "el mes pasado", "en agosto", "ayer", "este año", "entre tal fecha y tal otra"), SIN contar/sumar/promediar/comparar, y SIN listar valores distintos de una columna (ej. "qué referencias..."). ' +
+          'Si la pregunta agrega CUALQUIERA de esas cosas, usa "no_reconocido" — AUNQUE la pregunta mencione palabras como "garantía" o "muestreo" que suenen parecidas a uno de los tipos de abajo. Es mucho mejor decir honestamente "no_reconocido" (hay otro sistema, más flexible, que sí puede responder preguntas así) que forzar uno de los tipos fijos cuando no calza exactamente — responder con el tipo equivocado es peor que admitir que no sabes, porque le da a la persona una respuesta que no tiene nada que ver con lo que preguntó. ' +
+          'Ejemplos que NO son ninguno de los tipos de abajo (usa "no_reconocido"): "qué referencias se les hizo muestreo la semana pasada" (filtra por periodo Y lista valores distintos), "cuántos muestreos se han hecho en agosto" (filtra por periodo Y cuenta), "cuántas garantías hay este mes" (filtra por periodo Y cuenta), "compara las garantías de esta semana con la pasada" (comparación). ' +
+          '"ultimos": últimos/top N registros de garantías de UNA referencia específica, SIN filtro de fecha (necesita "referencia"). ' +
+          '"causal": porcentaje de causales/motivos de garantía de UNA referencia específica, del histórico completo sin filtro de fecha (necesita "referencia"). ' +
+          '"garantias_recientes": últimas N garantías ingresadas, SIN filtrar por referencia NI por fecha/periodo (de todo el negocio, las más recientes nada más). ' +
+          '"top_referencias_garantias": las N referencias/productos con MÁS garantías en el histórico completo, contando TODAS las garantías agrupadas por referencia, SIN filtro de fecha (NO necesita "referencia" — es a través de todo el negocio). Usar esto para preguntas como "cuáles son las referencias con más garantías", "qué productos tienen más reclamos", "top 5 de garantías más frecuentes" (cuando se refiere a qué PRODUCTOS se repiten más, no a causales, y sin pedir un periodo específico). ' +
+          '"muestreos_realizados": los últimos N muestreos de control de calidad ISO 2859-1 realizados (cualquier resultado), SIN ningún filtro de fecha/periodo ni agrupación — es literalmente "los N más recientes, tal cual, de todos los tiempos". ' +
+          '"muestreos_rechazados": igual que "muestreos_realizados" pero solo los que salieron rechazados — mismas restricciones (sin fecha, sin agrupar). ' +
+          '"no_reconocido": la pregunta no encaja EXACTAMENTE en ninguna de las anteriores (incluye cualquier filtro de fecha/periodo, conteo, agrupación, comparación, o cualquier otra cosa no tiene que ver con garantías/muestreos de calidad).',
       },
-      required: ['tipo', 'referencia', 'cantidad', 'orden'],
+      referencia: {
+        type: Type.STRING,
+        description:
+          'Código de referencia del producto mencionado (ej. "SUP/1077/RS/MUL", "1017C/AMAM/MULTI"), tal como lo escribió la persona. Cadena vacía "" si el tipo no necesita referencia, o si no se mencionó ninguna.',
+      },
+      cantidad: {
+        type: Type.INTEGER,
+        description: 'Cantidad de registros pedida (ej. "últimos 5" -> 5, "top 20" -> 20). 0 si la persona no especificó ninguna cantidad (se usará un valor por defecto).',
+      },
+      orden: {
+        type: Type.STRING,
+        enum: ['reciente', 'antiguo'],
+        description:
+          '"reciente" (usar esto por defecto) si pide los ÚLTIMOS / más recientes / lo más nuevo. ' +
+          '"antiguo" si pide el/los PRIMERO(S), lo más viejo/antiguo, o el inicio de una lista (ej. "cuál fue el primer muestreo que se hizo", "el más antiguo").',
+      },
     },
+    required: ['tipo', 'referencia', 'cantidad', 'orden'],
   },
 };
 
@@ -349,44 +567,49 @@ const INSTRUCCION_SISTEMA_MODO_CONSULTA =
   'Sé estricto al elegir el tipo: los tipos fijos son una lista corta y cerrada de consultas simples, sin filtros de fecha/periodo, sin conteos ni agrupaciones. ' +
   'Ante la duda, o si la pregunta se parece a un tipo pero le agrega cualquier condición extra (una fecha, un periodo, un conteo, un promedio, una comparación, un listado de valores distintos), usa "no_reconocido" — hay otro sistema más flexible, con acceso directo a la base de datos, que se encarga de esas preguntas después. Nunca fuerces el tipo que más se parezca solo porque comparte alguna palabra con la pregunta.';
 
-// Ollama recibe el system prompt y la pregunta como una lista de mensajes
-// (role/content), a diferencia de Gemini (que separaba systemInstruction de
-// contents) — se arma acá para no repetirlo en cada llamada.
-function llamarOllamaExtraerParametros(fraseOriginal) {
-  return ollamaClient.chat({
+function llamarGeminiExtraerParametros(fraseOriginal) {
+  return geminiClient.models.generateContent({
     model: MODELO_IA_MODO_CONSULTA,
-    messages: [
-      { role: 'system', content: INSTRUCCION_SISTEMA_MODO_CONSULTA },
-      { role: 'user', content: fraseOriginal },
-    ],
-    tools: [DECLARACION_EXTRAER_PARAMETROS_CONSULTA],
-    stream: false,
+    contents: fraseOriginal,
+    config: {
+      systemInstruction: INSTRUCCION_SISTEMA_MODO_CONSULTA,
+      tools: [{ functionDeclarations: [DECLARACION_EXTRAER_PARAMETROS_CONSULTA] }],
+      toolConfig: {
+        functionCallingConfig: {
+          mode: FunctionCallingConfigMode.ANY,
+          allowedFunctionNames: ['extraer_parametros_consulta'],
+        },
+      },
+    },
   });
 }
 
 async function interpretarConsultaConIA(fraseOriginal) {
-  if (!ollamaClient) return null;
-  const inicioMs = Date.now();
+  if (!geminiClient) return null;
   try {
-    // OJO, diferencia real con Gemini: Ollama no tiene un modo "forzado" de
-    // llamar a la función como el functionCallingConfig.mode=ANY de Gemini
-    // — el modelo decide si llama a la herramienta o simplemente contesta
-    // en texto. Si no la llama, "tool_calls" viene vacío/indefinido y esta
-    // función devuelve null (mismo comportamiento que cualquier otra falla
-    // de interpretación) — es un punto a observar durante la prueba de
-    // velocidad, puede afectar qué tan seguido esto funciona comparado con
-    // Gemini. Tampoco hay un reintento por "servidor con mucha demanda"
-    // como el de Gemini (503) — Ollama es un servidor dedicado de Julio, no
-    // compartido con otros usuarios, así que no aplica ese escenario; un
-    // solo intento es suficiente y no complica la medición de tiempo.
-    const respuesta = await llamarOllamaExtraerParametros(fraseOriginal);
-    const duracionMs = Date.now() - inicioMs;
-    console.log(`⏱️ Ollama (tipos fijos) tardó ${duracionMs}ms — modelo "${MODELO_IA_MODO_CONSULTA}"${respuesta.total_duration ? ` (Ollama reporta: total=${Math.round(respuesta.total_duration / 1e6)}ms, carga=${Math.round((respuesta.load_duration || 0) / 1e6)}ms)` : ''}`);
-
-    const llamada = respuesta.message && respuesta.message.tool_calls && respuesta.message.tool_calls[0];
-    if (!llamada || !llamada.function || !llamada.function.arguments) return null;
-    const args = typeof llamada.function.arguments === 'string' ? JSON.parse(llamada.function.arguments) : llamada.function.arguments;
-    const { tipo, referencia, cantidad, orden } = args;
+    let respuesta;
+    try {
+      respuesta = await llamarGeminiExtraerParametros(fraseOriginal);
+    } catch (e) {
+      // Caso real visto en producción: Gemini (sobre todo en el plan
+      // gratis, en horas de mucha demanda) a veces responde 503
+      // "UNAVAILABLE" ("This model is currently experiencing high
+      // demand..."). Es transitorio — Google mismo dice que la solución es
+      // reintentar — así que se reintenta UNA sola vez después de una
+      // pausa corta antes de rendirse. Cualquier otro error (llave
+      // inválida, red caída, límite de uso agotado, etc.) NO se reintenta,
+      // pasa directo al catch de afuera.
+      if (e instanceof ApiError && e.status >= 500) {
+        console.warn('⚠️ Gemini no disponible temporalmente (reintentando en 1s):', e.message);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        respuesta = await llamarGeminiExtraerParametros(fraseOriginal);
+      } else {
+        throw e;
+      }
+    }
+    const llamada = respuesta.functionCalls && respuesta.functionCalls[0];
+    if (!llamada || !llamada.args) return null;
+    const { tipo, referencia, cantidad, orden } = llamada.args;
 
     if (tipo === 'no_reconocido' || !tipo) return null;
 
@@ -404,11 +627,10 @@ async function interpretarConsultaConIA(fraseOriginal) {
 
     return { tipo, referencia: referenciaLimpia, cantidad: cantidadFinal, orden: ordenFinal };
   } catch (e) {
-    // Cualquier falla (Ollama no está corriendo, el modelo no está
-    // descargado, timeout, JSON mal formado, etc.) cae de vuelta al mensaje
-    // de "no entendí" — nunca debe tumbar el bot ni dejar a la persona sin
-    // respuesta.
-    console.error(`⚠️ Error consultando IA para modo consulta (${Date.now() - inicioMs}ms antes de fallar):`, e.message);
+    // Cualquier falla (red, llave inválida, límite de uso, etc.) cae de
+    // vuelta al mensaje de "no entendí" — nunca debe tumbar el bot ni dejar
+    // a la persona sin respuesta.
+    console.error('⚠️ Error consultando IA para modo consulta:', e.message);
     return null;
   }
 }
@@ -437,21 +659,18 @@ async function interpretarConsultaConIA(fraseOriginal) {
 // determinístico (formatearRespuestaLibre), igual que todas las respuestas
 // de arriba.
 const DECLARACION_EJECUTAR_CONSULTA_SQL = {
-  type: 'function',
-  function: {
-    name: 'ejecutar_consulta_sql',
-    description:
-      'Genera la consulta SQL de SOLO LECTURA (un único SELECT) que responde la pregunta de la persona, usando exclusivamente las tablas y columnas del esquema permitido que se te dio en las instrucciones.',
-    parameters: {
-      type: 'object',
-      properties: {
-        sql: {
-          type: 'string',
-          description: 'La consulta SQL. Debe ser un único SELECT (sin punto y coma), usando solo tablas de la lista permitida.',
-        },
+  name: 'ejecutar_consulta_sql',
+  description:
+    'Genera la consulta SQL de SOLO LECTURA (un único SELECT) que responde la pregunta de la persona, usando exclusivamente las tablas y columnas del esquema permitido que se te dio en las instrucciones.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      sql: {
+        type: Type.STRING,
+        description: 'La consulta SQL. Debe ser un único SELECT (sin punto y coma), usando solo tablas de la lista permitida.',
       },
-      required: ['sql'],
     },
+    required: ['sql'],
   },
 };
 
@@ -474,15 +693,20 @@ async function construirInstruccionConsultaLibre() {
   return instruccionConsultaLibreCache;
 }
 
-function llamarOllamaConsultaLibre(fraseOriginal, instruccion) {
-  return ollamaClient.chat({
+function llamarGeminiConsultaLibre(fraseOriginal, instruccion) {
+  return geminiClient.models.generateContent({
     model: MODELO_IA_MODO_CONSULTA,
-    messages: [
-      { role: 'system', content: instruccion },
-      { role: 'user', content: fraseOriginal },
-    ],
-    tools: [DECLARACION_EJECUTAR_CONSULTA_SQL],
-    stream: false,
+    contents: fraseOriginal,
+    config: {
+      systemInstruction: instruccion,
+      tools: [{ functionDeclarations: [DECLARACION_EJECUTAR_CONSULTA_SQL] }],
+      toolConfig: {
+        functionCallingConfig: {
+          mode: FunctionCallingConfigMode.ANY,
+          allowedFunctionNames: ['ejecutar_consulta_sql'],
+        },
+      },
+    },
   });
 }
 
@@ -507,26 +731,31 @@ function formatearRespuestaLibre(filas) {
 // para que quien llama simplemente caiga al "no entendí" de siempre sin
 // mostrarle a la persona ni el SQL ni el error crudo.
 async function interpretarYEjecutarConsultaLibre(fraseOriginal) {
-  if (!ollamaClient) return null;
-  const inicioMs = Date.now();
+  if (!geminiClient) return null;
   try {
     const instruccion = await construirInstruccionConsultaLibre();
-    // Un solo intento, sin reintento por "mucha demanda" — ver el comentario
-    // de interpretarConsultaConIA (Ollama es un servidor dedicado, no
-    // compartido, así que ese escenario de Gemini no aplica acá).
-    const respuesta = await llamarOllamaConsultaLibre(fraseOriginal, instruccion);
-    const duracionMs = Date.now() - inicioMs;
-    console.log(`⏱️ Ollama (SQL libre) tardó ${duracionMs}ms — modelo "${MODELO_IA_MODO_CONSULTA}"${respuesta.total_duration ? ` (Ollama reporta: total=${Math.round(respuesta.total_duration / 1e6)}ms, carga=${Math.round((respuesta.load_duration || 0) / 1e6)}ms)` : ''}`);
-
-    const llamada = respuesta.message && respuesta.message.tool_calls && respuesta.message.tool_calls[0];
-    if (!llamada || !llamada.function || !llamada.function.arguments) return null;
-    const args = typeof llamada.function.arguments === 'string' ? JSON.parse(llamada.function.arguments) : llamada.function.arguments;
-    const sql = args && args.sql;
+    let respuesta;
+    try {
+      respuesta = await llamarGeminiConsultaLibre(fraseOriginal, instruccion);
+    } catch (e) {
+      // Mismo caso real que en interpretarConsultaConIA (Gemini 503 "high
+      // demand" en el plan gratis) — un solo reintento tras una pausa
+      // corta, y solo para errores 5xx.
+      if (e instanceof ApiError && e.status >= 500) {
+        console.warn('⚠️ Gemini no disponible temporalmente (consulta libre, reintentando en 1s):', e.message);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        respuesta = await llamarGeminiConsultaLibre(fraseOriginal, instruccion);
+      } else {
+        throw e;
+      }
+    }
+    const llamada = respuesta.functionCalls && respuesta.functionCalls[0];
+    const sql = llamada && llamada.args && llamada.args.sql;
     if (!sql || typeof sql !== 'string') return null;
     const filas = await consultaLibreIA.ejecutarConsultaSql(sql, fraseOriginal);
     return { texto: formatearRespuestaLibre(filas) };
   } catch (e) {
-    console.error(`⚠️ Error en modo consulta libre (SQL generado por IA) (${Date.now() - inicioMs}ms antes de fallar):`, e.message);
+    console.error('⚠️ Error en modo consulta libre (SQL generado por IA):', e.message);
     return null;
   }
 }
@@ -920,6 +1149,42 @@ async function responderReporteGarantiasPDF(msg, etiquetaPeriodo, g) {
   try {
     const media = MessageMedia.fromFilePath(rutaArchivo);
     await msg.reply(media, null, { caption: `🛡️ *Reporte de Garantías — ${etiquetaPeriodo}*` });
+  } finally {
+    fs.unlink(rutaArchivo, () => {});
+  }
+}
+
+// Respaldo en texto plano del reporte de metrología, por si el PDF no se
+// pudo generar — mismo criterio que formatearReporteGarantiasTexto.
+function formatearReporteMetrologiaTexto(etiquetaPeriodo, m) {
+  let t = `📏 *REPORTE DE METROLOGÍA — ${etiquetaPeriodo}*\n\n`;
+  t += `Inspecciones: ${m.totalInspecciones || 0} | Medidas tomadas: ${m.totalMedidas || 0} | Conformes: ${m.conformes || 0} | Fuera de tolerancia: ${m.fueraTolerancia || 0}\n\n`;
+  if (m.pctFueraTolerancia !== null && m.pctFueraTolerancia !== undefined && (m.totalMedidas || 0) > 0) {
+    t += `${m.pctFueraTolerancia}% de las medidas del periodo quedaron fuera de tolerancia.\n\n`;
+  }
+  if ((m.topReferenciasProblema || []).length > 0) {
+    t += `*Top referencias con más medidas fuera de tolerancia:*\n`;
+    m.topReferenciasProblema.forEach((r, i) => { t += `  ${i + 1}. ${r.referencia}: ${r.medidas_fuera_tolerancia}\n`; });
+    t += '\n';
+  }
+  if ((m.totalInspecciones || 0) === 0) t += 'No se registraron inspecciones de Metrología en este periodo.\n';
+  return t;
+}
+
+// Reporte aparte de metrología (comando "reportes") — mismo patrón que
+// responderReporteGarantiasPDF: intenta el PDF y, si falla, cae a texto.
+async function responderReporteMetrologiaPDF(msg, etiquetaPeriodo, m) {
+  let rutaArchivo;
+  try {
+    rutaArchivo = await generarPdfReporteMetrologia(etiquetaPeriodo, m);
+  } catch (e) {
+    console.error('⚠️ No se pudo generar el PDF del reporte de metrología, se manda como texto:', e.message);
+    await msg.reply(formatearReporteMetrologiaTexto(etiquetaPeriodo, m));
+    return;
+  }
+  try {
+    const media = MessageMedia.fromFilePath(rutaArchivo);
+    await msg.reply(media, null, { caption: `📏 *Reporte de Metrología — ${etiquetaPeriodo}*` });
   } finally {
     fs.unlink(rutaArchivo, () => {});
   }
@@ -1348,6 +1613,7 @@ const LINEAS_COMANDOS = [
   { permiso: 'calidad_quincenal', linea: '• *quincenal* → resumen de calidad de la última quincena cerrada\n  *quincenal 1 agosto 2026* / *quincenal 2 agosto 2026* → una quincena específica (1=del 1-15, 2=del 16-fin)' },
   { permiso: 'calidad_mensual', linea: '• *mensual* → resumen de calidad del mes pasado\n  *mensual agosto 2026* → resumen de calidad de un mes específico' },
   { permiso: 'calidad_garantias', linea: '• *garantias* → estado actual del pico de garantías\n  *garantias diario* / *garantias quincenal [1|2] [mes] [año]* / *garantias mensual [mes] [año]* → reporte aparte de garantías de ese periodo (referencias y motivos más frecuentes, detalle completo)' },
+  { permiso: 'reportes', linea: '• *reportes* → menú por número para pedir el PDF de Garantías, Metrología o Muestreos (mensual, quincenal o histórico general)' },
   { permiso: 'cerrar_sesiones', linea: '• *cerrar <número>* → cierra la sesión activa de alguien' },
 ];
 
@@ -1550,6 +1816,25 @@ async function iniciarBotWhatsApp(db) {
 
       const sinPermiso = async () => { await msg.reply('⚠️ No tienes permiso para esa función. Escribe *ayuda* para ver qué puedes hacer.'); };
 
+      // Asistente "reportes" — interceptar ANTES que cualquier otro comando
+      // si el número está a mitad del asistente (ver manejarPasoReportes y
+      // numerosEnModoReportes más arriba). Cierre "en silencio" por
+      // inactividad (a diferencia del modo consulta, que avisa cada 60s vía
+      // revisarModoConsultaExpirado): si ya pasaron los 5 minutos, se borra
+      // el estado acá mismo (revisión perezosa, sin barrido aparte) y el
+      // mensaje sigue su camino normal — así un número suelto (ej. "3") que
+      // llega después de expirado cae de vuelta en el registro de
+      // entrada/salida de área, que es el comportamiento correcto.
+      if (numerosEnModoReportes.has(tel)) {
+        const estadoReportes = numerosEnModoReportes.get(tel);
+        if (Date.now() - estadoReportes.ultimaActividad > REPORTES_TIMEOUT_MS) {
+          numerosEnModoReportes.delete(tel);
+        } else {
+          await manejarPasoReportes(tel, txtOrig, msg);
+          return;
+        }
+      }
+
       // Admin commands
       if (txt === 'resumen') {
         if (!tienePermisoBot(tel, 'ver_resumen_asistencia')) { await sinPermiso(); return; }
@@ -1625,6 +1910,18 @@ async function iniciarBotWhatsApp(db) {
         } else {
           await msg.reply('No tienes el modo consulta activo. Escribe *consulta* para activarlo.');
         }
+        return;
+      }
+
+      // Comando "reportes" — punto de entrada al asistente por número (ver
+      // manejarPasoReportes/menuReportesModulos más arriba). Un solo permiso
+      // ('reportes') para las 3 pantallas del menú (Garantías/Metrología/
+      // Muestreos) — decisión de Julio: más simple de administrar que
+      // separar por módulo dentro del menú.
+      if (txt === 'reportes') {
+        if (!tienePermisoBot(tel, 'reportes')) { await sinPermiso(); return; }
+        numerosEnModoReportes.set(tel, { paso: 'modulo', ultimaActividad: Date.now() });
+        await msg.reply(menuReportesModulos());
         return;
       }
 
@@ -1721,7 +2018,7 @@ async function iniciarBotWhatsApp(db) {
         // justo lo que causó que Julio recibiera la misma respuesta
         // genérica para tres preguntas distintas.
         const requiereModoLibre = necesitaModoLibre(txtOrig);
-        if (!parametros && ollamaClient && !requiereModoLibre) {
+        if (!parametros && geminiClient && !requiereModoLibre) {
           parametros = await interpretarConsultaConIA(txtOrig);
         }
         if (!parametros) {
@@ -1735,7 +2032,7 @@ async function iniciarBotWhatsApp(db) {
           // Nunca lanza — si por lo que sea no puede (SQL inválido, tabla
           // no permitida, error de la IA), devuelve null y se cae al "no
           // entendí" de siempre.
-          if (ollamaClient) {
+          if (geminiClient) {
             const resultadoLibre = await interpretarYEjecutarConsultaLibre(txtOrig);
             if (resultadoLibre) {
               await msg.reply(resultadoLibre.texto);
@@ -1757,7 +2054,7 @@ async function iniciarBotWhatsApp(db) {
           // que no entendió. Si la referencia vino de las reglas (no de la
           // IA) y no hay resultados, se le da una segunda oportunidad a la
           // IA con el texto original antes de responder.
-          if (resultado.posibleFalsoNegativo && vinoDeReglas && ollamaClient) {
+          if (resultado.posibleFalsoNegativo && vinoDeReglas && geminiClient) {
             const parametrosIA = requiereModoLibre ? null : await interpretarConsultaConIA(txtOrig);
             if (parametrosIA) {
               resultado = await generarRespuestaModoConsulta(parametrosIA);
