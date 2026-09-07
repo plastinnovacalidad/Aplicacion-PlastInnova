@@ -227,6 +227,17 @@
               <h3>Tablero de Garantías</h3>
             </div>
           </a>
+
+          <!-- "Producción por Fábrica" (produccion.html) vivía sin tarjeta
+               propia en ninguna sección; Julio pidió que quedara acá, en
+               Reportes, y no en Calidad. Usa el mismo permiso 'calidad.ver'
+               que el módulo ya exige internamente (no hace falta uno nuevo). -->
+          <a href="produccion.html" class="portal-card" id="cardProduccion" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #2C43A2 0%, #1e2f75 100%);"><i class="fa-solid fa-industry"></i></div>
+            <div class="card-body">
+              <h3>Producción por Fábrica</h3>
+            </div>
+          </a>
         </div>
       </section>
 
@@ -269,13 +280,31 @@
             </div>
           </a>
 
-          <!-- Rechazos y lotes de producción sincronizados desde Calidad.xlsx
-               / Lotes.xlsx (cada 6 horas). Usa 'calidad.ver' igual que las
-               otras tarjetas de esta sección: no es un permiso nuevo. -->
-          <a href="produccion.html" class="portal-card" id="cardProduccion" style="display: none;">
-            <div class="card-banner" style="background: linear-gradient(135deg, #4c51bf 0%, #363795 100%);"><i class="fa-solid fa-industry"></i></div>
+          <!-- "Seguimiento de Producción" (antes la pestaña "Seguimiento" de
+               produccion.html) — Julio pidió que fuera su propio módulo
+               dentro de Calidad, no una pestaña de Reportes. Se muestra con
+               el nuevo permiso 'produccion.trazabilidad.ver' (solo ver esta
+               bitácora) o con 'produccion.trazabilidad.gestionar' (ya puede
+               crear/editar casos desde Producción, así que ver la bitácora
+               completa no le agrega ningún acceso nuevo), o con
+               'calidad.ver' (acceso completo a Calidad). -->
+          <a href="seguimiento_produccion.html" class="portal-card" id="cardSeguimientoProduccion" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #2C43A2 0%, #1e2f75 100%);"><i class="fa-solid fa-clipboard-list"></i></div>
             <div class="card-body">
-              <h3>Producción por Fábrica</h3>
+              <h3>Seguimiento de Producción</h3>
+            </div>
+          </a>
+
+          <!-- "Reportes por Áreas" (pedido por Julio, 04/09): Reporte Rápido,
+               Reporte de Problema Completo (causa raíz + medidas, escalado
+               desde uno Rápido) y Reporte Informativo (boletín entre áreas).
+               Se muestra con cualquiera de los 4 permisos del módulo, igual
+               que el propio módulo deja entrar (puedeVerModulo en
+               routes/reportes.js). -->
+          <a href="reportes_areas.html" class="portal-card" id="cardReportesAreas" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #c05621 0%, #9c4221 100%);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="card-body">
+              <h3>Reportes por Áreas</h3>
             </div>
           </a>
         </div>
@@ -348,6 +377,15 @@
             cardCal.style.display = tienePermiso('calidad.ver') ? 'flex' : 'none';
           }
 
+          // "Producción por Fábrica" reutiliza el mismo permiso que ya
+          // exige internamente el propio módulo (produccion.html pide
+          // 'calidad.ver'), así que se gatea igual que la tarjeta de
+          // Calidad General.
+          const cardProduccion = document.getElementById('cardProduccion');
+          if (cardProduccion) {
+            cardProduccion.style.display = tienePermiso('calidad.ver') ? 'flex' : 'none';
+          }
+
           // "Cargar Garantías" es su propio módulo (ver comentario en el
           // HTML de la sección Calidad) — usa el mismo permiso que ya
           // exigía esa funcionalidad ("garantias.ver"), sin depender de
@@ -390,9 +428,21 @@
             cardIso.style.display = (tienePermiso('iso2859.ver') || tienePermiso('iso2859.gestion')) ? 'flex' : 'none';
           }
 
-          const cardProduccion = document.getElementById('cardProduccion');
-          if (cardProduccion) {
-            cardProduccion.style.display = tienePermiso('calidad.ver') ? 'flex' : 'none';
+          // "Seguimiento de Producción" es su propio módulo (ver comentario
+          // en el HTML de la sección Calidad) — mismo criterio que usa el
+          // propio módulo para dejar entrar (puedeVerBitacora en
+          // routes/produccion.js).
+          const cardSeguimientoProduccion = document.getElementById('cardSeguimientoProduccion');
+          if (cardSeguimientoProduccion) {
+            cardSeguimientoProduccion.style.display = (tienePermiso('produccion.trazabilidad.ver') || tienePermiso('produccion.trazabilidad.gestionar') || tienePermiso('calidad.ver')) ? 'flex' : 'none';
+          }
+
+          // "Reportes por Áreas" es su propio módulo -- mismo criterio que
+          // usa el propio módulo para dejar entrar (puedeVerModulo en
+          // routes/reportes.js): cualquiera de los 4 permisos alcanza.
+          const cardReportesAreas = document.getElementById('cardReportesAreas');
+          if (cardReportesAreas) {
+            cardReportesAreas.style.display = ['reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar'].some(p => tienePermiso(p)) ? 'flex' : 'none';
           }
 
           // Secciones como "Piezas Plásticas" o "Calidad" solo tienen
@@ -411,7 +461,7 @@
           // ISO 2859 también terminaba saltándose el portal sin querer —
           // se completa la lista para que cualquier módulo aparte de SMD
           // mantenga a la persona en el portal.
-          const tieneOtroModulo = ['garantias.ver', 'gestion.ver', 'whatsapp.bot.ver', 'metrologia.ver', 'metrologia.gestion', 'metrologia.crear_referencia', 'metrologia.versiones', 'iso2859.ver', 'iso2859.gestion', 'calidad.ver', 'valores_cableado.ver']
+          const tieneOtroModulo = ['garantias.ver', 'gestion.ver', 'whatsapp.bot.ver', 'metrologia.ver', 'metrologia.gestion', 'metrologia.crear_referencia', 'metrologia.versiones', 'iso2859.ver', 'iso2859.gestion', 'calidad.ver', 'valores_cableado.ver', 'produccion.trazabilidad.ver', 'produccion.trazabilidad.gestionar', 'reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar']
             .some(p => tienePermiso(p));
           if (!tieneOtroModulo) {
             location.href = 'smd.html';

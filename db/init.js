@@ -151,6 +151,62 @@ async function migrarContrasenasAntiguas() {
 //        (solo Altas) — antes eso se contaba como "faltante" en la alerta
 //        de Valores y Cableado sin serlo. Se marca a mano por versión desde
 //        "Editar Referencia".
+//   #23 - referencias: agrega columnas activa/eliminado_por/eliminado_en
+//        (borrado suave). Julio pidió una forma de "borrar" una referencia
+//        de Electrónica sin romper el historial ni los reportes viejos que
+//        la mencionan (Calidad, ISO 2859, Producción) — así que en vez de
+//        un DELETE de verdad, la referencia se marca como inactiva: deja de
+//        aparecer en /api/referencias (listas y buscadores del día a día) y
+//        las rutas para modificarla/crearle versión quedan bloqueadas hasta
+//        restaurarla, pero la fila, sus versiones, sus fotos y su historial
+//        en registro_cambios siguen intactos. Mismo patrón que ya usa el
+//        resto del módulo (nunca borrar de verdad, siempre archivar/loguear).
+//   #24 - iso_muestreos: agrega piezas_rechazadas. Completa el trío
+//        reclasificadas/reparadas/rechazadas para "qué se hizo con las
+//        piezas defectuosas" en un muestreo En Proceso; las 3 deben sumar
+//        el total de hallazgos (validado en frontend y backend).
+//   #25 - trazabilidad_problemas / trazabilidad_anexos: tablas nuevas para
+//        el módulo de trazabilidad de soluciones del tablero de Producción
+//        (causa raíz, solución, responsable y estado de los problemas que
+//        salen en el ranking de referencias y en motivos de rechazo, con
+//        anexos/notas de seguimiento a lo largo del tiempo).
+//   #26 - trazabilidad_causas / trazabilidad_medidas: reemplazan el campo
+//        único de causa raíz y el de solución de trazabilidad_problemas
+//        por listas (varias causas raíz, varias medidas/intentos de
+//        solución con su propio estado). trazabilidad_anexos queda sin
+//        usarse desde el código nuevo. El estado general del caso ahora se
+//        calcula solo a partir del estado de sus medidas.
+//   #27 - trazabilidad_causas / trazabilidad_medidas: agrega
+//        responsable_id/responsable_nombre a cada una (elegido de la lista
+//        de usuarios). Ya no existe un "responsable" a nivel de todo el
+//        problema -- la columna `responsable` de trazabilidad_problemas
+//        queda sin usarse desde el código nuevo.
+//   #28 - trazabilidad_medidas: agrega causa_id (nullable), para que cada
+//        medida quede ligada a la causa raíz específica que busca resolver,
+//        en vez de ser una lista aparte sin relación. Las columnas
+//        responsable_id/responsable_nombre de la #27 siguen existiendo pero
+//        dejan de elegirse a mano: ahora se llenan solas con quien esté
+//        registrando la causa/medida (ya no hay selector de responsable).
+//   #29 - trazabilidad_catalogo_causas / trazabilidad_catalogo_medidas:
+//        tablas nuevas para el catálogo de "causas raíz posibles" y, dentro
+//        de cada una, sus "medidas posibles" (p.ej. la causa "Molde
+//        desgastado" trae ya sus propias medidas sugeridas). Se administra
+//        en la pestaña Catálogos de Gestión; al registrar un caso real se
+//        elige de aquí o se escribe "Otra" (que se agrega sola al catálogo
+//        para la próxima vez -- ver obtenerOCrearCausaCatalogo/
+//        obtenerOCrearMedidaCatalogo en data/trazabilidadCatalogo.js).
+//   #30 - trazabilidad_causas: agrega causa_catalogo_id (nullable) -- para
+//        cada causa ya registrada en un caso real, a cuál causa del
+//        catálogo (#29) corresponde. Así, al agregar una medida para esa
+//        causa, se sabe qué medidas del catálogo sugerirle (las ligadas a
+//        esa misma causa_catalogo_id). Nullable porque una causa registrada
+//        antes de esta migración no tiene con qué relacionarse.
+//   #31 - trazabilidad_medidas: borra (no desactiva) las medidas con
+//        causa_id NULL que hayan quedado de antes de la #28 -- Julio pidió
+//        quitar del todo esa situación ("medidas sueltas") en vez de seguir
+//        mostrándolas aparte en el frontend, ya que no había datos reales
+//        que le preocuparan. Recalcula el estado de cada caso afectado.
+//        Solo puede borrar algo la primera vez que corre.
 //
 // Si en el futuro se necesita otro cambio de esquema, seguir el mismo
 // patrón: agregar un nuevo bloque "MIGRACIÓN #20" (y sumarlo a esta lista)
@@ -576,7 +632,7 @@ async function inicializarBaseDatos() {
     // acceso maestro a los demás módulos de calidad (metrologia.gestion),
     // y el muestreo ISO 2859 es justamente una función de inspección de
     // calidad, así que sigue la misma lógica.
-    { nombre: 'inspector', permisos: ['referencias.ver','referencias.editar','versiones.crear','recomendaciones.ver','recomendaciones.crear','recomendaciones.eliminar','gestion.ver','observaciones.ver','observaciones.editar','garantias.ver','garantias.crear','garantias.editar','garantias.eliminar','garantias.dashboard','portal.volver','whatsapp.bot.ver','whatsapp.bot.gestionar','metrologia.ver','metrologia.inspeccionar','metrologia.versiones','metrologia.historial','metrologia.auditoria','metrologia.crear_referencia','metrologia.editar_cotas','metrologia.gestion','iso2859.ver','iso2859.crear_lote','iso2859.muestrear','iso2859.cambiar_plan','iso2859.reportes','iso2859.gestion','calidad.ver','valores_cableado.ver','valores_cableado.gestion'] },
+    { nombre: 'inspector', permisos: ['referencias.ver','referencias.editar','referencias.eliminar','versiones.crear','recomendaciones.ver','recomendaciones.crear','recomendaciones.eliminar','gestion.ver','observaciones.ver','observaciones.editar','garantias.ver','garantias.crear','garantias.editar','garantias.eliminar','garantias.dashboard','portal.volver','whatsapp.bot.ver','whatsapp.bot.gestionar','metrologia.ver','metrologia.inspeccionar','metrologia.versiones','metrologia.historial','metrologia.auditoria','metrologia.crear_referencia','metrologia.editar_cotas','metrologia.gestion','iso2859.ver','iso2859.crear_lote','iso2859.muestrear','iso2859.cambiar_plan','iso2859.reportes','iso2859.gestion','calidad.ver','valores_cableado.ver','valores_cableado.gestion'] },
     { nombre: 'operario',  permisos: ['referencias.ver','recomendaciones.crear','observaciones.ver'] },
   ];
 
@@ -1328,6 +1384,574 @@ async function inicializarBaseDatos() {
     `);
   } catch (e) {
     console.error('⚠️ Error creando tablas lotes / entregas_produccion:', e.message);
+  }
+
+  // MIGRACIÓN #23: referencias — agrega columnas activa/eliminado_por/
+  // eliminado_en para el borrado suave (ver detalle en el HISTORIAL DE
+  // MIGRACIONES más arriba). Una referencia nueva o ya existente nace con
+  // activa=1 (el DEFAULT cubre tanto las filas ya creadas como las nuevas
+  // que se sigan insertando con el INSERT de crearReferencia(), que no
+  // menciona esta columna).
+  try {
+    const colsRef = await db.all('PRAGMA table_info(referencias)');
+    const colNamesRef = colsRef.map(c => c.name);
+    if (!colNamesRef.includes('activa')) {
+      await db.run('ALTER TABLE referencias ADD COLUMN activa INTEGER DEFAULT 1');
+      console.log('➕ Columna activa agregada a referencias');
+    }
+    if (!colNamesRef.includes('eliminado_por')) {
+      await db.run('ALTER TABLE referencias ADD COLUMN eliminado_por INTEGER');
+      console.log('➕ Columna eliminado_por agregada a referencias');
+    }
+    if (!colNamesRef.includes('eliminado_en')) {
+      await db.run('ALTER TABLE referencias ADD COLUMN eliminado_en DATETIME');
+      console.log('➕ Columna eliminado_en agregada a referencias');
+    }
+  } catch (e) {
+    console.error('⚠️ Error verificando columnas de borrado suave en referencias:', e.message);
+  }
+
+  // MIGRACIÓN #24: iso_muestreos — agrega piezas_rechazadas. Junto con
+  // piezas_reclasificadas y piezas_reparadas (ver MIGRACIÓN #11), un
+  // muestreo "En Proceso" con hallazgos ahora tiene las 3 opciones de qué
+  // se hizo con las piezas defectuosas encontradas — antes solo estaban
+  // reclasificar/reparar, y no había dónde anotar las que simplemente se
+  // rechazaron/desecharon. El frontend (Public/js/iso2859/muestreo.js)
+  // exige que las 3 sumen exactamente el total de hallazgos antes de dejar
+  // guardar (ver validarPiezasVsHallazgos), y el backend
+  // (routes/iso2859.js) vuelve a validar lo mismo para no confiar solo en
+  // el frontend.
+  try {
+    const colsMuestreos = await db.all('PRAGMA table_info(iso_muestreos)');
+    if (!colsMuestreos.map(c => c.name).includes('piezas_rechazadas')) {
+      await db.run('ALTER TABLE iso_muestreos ADD COLUMN piezas_rechazadas INTEGER DEFAULT 0');
+      console.log('➕ Columna piezas_rechazadas agregada a iso_muestreos');
+    }
+  } catch (e) {
+    console.error('⚠️ Error verificando columna piezas_rechazadas en iso_muestreos:', e.message);
+  }
+
+  // MIGRACIÓN #25: trazabilidad_problemas / trazabilidad_anexos — nuevo
+  // módulo pedido por Julio para el tablero de Producción: registrar causa
+  // raíz y solución de los problemas que salen en el ranking de
+  // "Referencias con mayor % de desperdicio" y en "Motivos de rechazo",
+  // hacerles seguimiento con estado (Pendiente/En_Proceso/Implementado) y
+  // poder ir agregándoles anexos/notas con el tiempo sin perder lo ya
+  // escrito. `tipo_contexto` + `valor_contexto` + `fabrica` identifican de
+  // qué problema se trata (una referencia puntual o un motivo de rechazo);
+  // `semana` se calcula sola (semana ISO) al crear el registro, ya que
+  // Producción no tiene ese concepto en sus datos (solo agrupa por mes).
+  // `pct_desperdicio_inicial` guarda una foto del % de desperdicio (o de
+  // las unidades, si es un motivo) que tenía en el momento de crearse, para
+  // no perder ese dato de referencia aunque las cifras reales cambien
+  // después. Un problema reabierto (mismo contexto, todavía Pendiente o
+  // En_Proceso) se sigue editando sobre la misma fila; si el último para
+  // ese contexto ya estaba Implementado y el problema vuelve a aparecer, se
+  // crea uno nuevo (así queda evidencia de que la solución anterior no fue
+  // suficiente).
+  try {
+    const tablaTrazabilidad = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trazabilidad_problemas'");
+    if (!tablaTrazabilidad) {
+      await db.exec(`
+        CREATE TABLE trazabilidad_problemas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          fabrica TEXT NOT NULL,
+          tipo_contexto TEXT NOT NULL CHECK(tipo_contexto IN ('referencia','motivo')),
+          valor_contexto TEXT NOT NULL,
+          semana TEXT NOT NULL,
+          pct_desperdicio_inicial REAL,
+          causa_raiz TEXT,
+          solucion TEXT,
+          responsable TEXT,
+          estado TEXT NOT NULL DEFAULT 'Pendiente' CHECK(estado IN ('Pendiente','En_Proceso','Implementado')),
+          creado_por INTEGER,
+          creado_por_nombre TEXT,
+          created_at DATETIME DEFAULT (datetime('now','localtime')),
+          actualizado_en DATETIME DEFAULT (datetime('now','localtime')),
+          cerrado_en DATETIME,
+          FOREIGN KEY (creado_por) REFERENCES usuarios(id)
+        );
+        CREATE TABLE trazabilidad_anexos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          problema_id INTEGER NOT NULL REFERENCES trazabilidad_problemas(id),
+          nota TEXT NOT NULL,
+          autor_id INTEGER,
+          autor_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime')),
+          FOREIGN KEY (autor_id) REFERENCES usuarios(id)
+        );
+        CREATE INDEX idx_trazabilidad_contexto ON trazabilidad_problemas(fabrica, tipo_contexto, valor_contexto);
+        CREATE INDEX idx_trazabilidad_estado ON trazabilidad_problemas(estado);
+        CREATE INDEX idx_trazabilidad_anexos_problema ON trazabilidad_anexos(problema_id);
+      `);
+      console.log('🆕 Tablas trazabilidad_problemas y trazabilidad_anexos creadas.');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando tablas de trazabilidad de producción:', e.message);
+  }
+
+  // MIGRACIÓN #26: trazabilidad_causas / trazabilidad_medidas — Julio pidió
+  // (03/09, antes de haber usado el módulo en producción todavía) que la
+  // causa raíz y la solución dejaran de ser un solo campo de texto en
+  // trazabilidad_problemas: ahora se pueden ir agregando VARIAS causas raíz
+  // (cada una con quién la registró, automático) y VARIAS medidas/intentos
+  // de solución (cada una con su propio estado: En_Proceso, Funciono o
+  // No_Funciono), sin perder las anteriores. Las columnas causa_raiz/
+  // solucion de trazabilidad_problemas y la tabla trazabilidad_anexos
+  // quedan sin usarse desde el código nuevo (no se borran, para no
+  // arriesgar nada si alguna instalación ya las tenía con datos) -- el
+  // seguimiento de un caso ahora se hace por completo con la lista de
+  // medidas. El estado GENERAL del caso (columna `estado` de
+  // trazabilidad_problemas) deja de escribirse a mano desde el formulario:
+  // se recalcula solo cada vez que se agrega una medida o se le cambia el
+  // estado (ver recalcularEstadoProblema en data/trazabilidadProduccion.js)
+  // -- Implementado si alguna medida quedó "Funcionó", En_Proceso si tiene
+  // medidas pero ninguna funcionó todavía, Pendiente si no tiene ninguna.
+  try {
+    const tablaCausas = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trazabilidad_causas'");
+    if (!tablaCausas) {
+      await db.exec(`
+        CREATE TABLE trazabilidad_causas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          problema_id INTEGER NOT NULL REFERENCES trazabilidad_problemas(id),
+          texto TEXT NOT NULL,
+          autor_id INTEGER,
+          autor_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime')),
+          FOREIGN KEY (autor_id) REFERENCES usuarios(id)
+        );
+        CREATE TABLE trazabilidad_medidas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          problema_id INTEGER NOT NULL REFERENCES trazabilidad_problemas(id),
+          texto TEXT NOT NULL,
+          estado TEXT NOT NULL DEFAULT 'En_Proceso' CHECK(estado IN ('En_Proceso','Funciono','No_Funciono')),
+          autor_id INTEGER,
+          autor_nombre TEXT,
+          creado_en DATETIME DEFAULT (datetime('now','localtime')),
+          actualizado_en DATETIME DEFAULT (datetime('now','localtime')),
+          FOREIGN KEY (autor_id) REFERENCES usuarios(id)
+        );
+        CREATE INDEX idx_trazabilidad_causas_problema ON trazabilidad_causas(problema_id);
+        CREATE INDEX idx_trazabilidad_medidas_problema ON trazabilidad_medidas(problema_id);
+      `);
+      console.log('🆕 Tablas trazabilidad_causas y trazabilidad_medidas creadas.');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando tablas trazabilidad_causas/trazabilidad_medidas:', e.message);
+  }
+
+  // MIGRACIÓN #27: responsable_id/responsable_nombre en trazabilidad_causas
+  // y trazabilidad_medidas — Julio pidió (03/09, mismo día que la #26, antes
+  // de usar el módulo en producción) que el responsable ya NO sea un campo
+  // del problema en general, sino uno por cada causa raíz y cada medida
+  // (quien detecta la causa, quien la investiga y quien ejecuta la medida no
+  // siempre es la misma persona). Se elige de la lista de usuarios del
+  // sistema (no texto libre) y queda aparte del autor automático (quién la
+  // escribió y cuándo, eso no cambia). La columna `responsable` de
+  // trazabilidad_problemas queda sin usarse desde el código nuevo (mismo
+  // criterio que las demás migraciones de este módulo: no se borra).
+  try {
+    const colsCausas = await db.all("PRAGMA table_info(trazabilidad_causas)");
+    const nombresCausas = colsCausas.map((c) => c.name);
+    if (!nombresCausas.includes('responsable_id')) {
+      await db.exec('ALTER TABLE trazabilidad_causas ADD COLUMN responsable_id INTEGER REFERENCES usuarios(id)');
+      await db.exec('ALTER TABLE trazabilidad_causas ADD COLUMN responsable_nombre TEXT');
+      console.log('➕ Columnas responsable_id/responsable_nombre agregadas a trazabilidad_causas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando responsable a trazabilidad_causas:', e.message);
+  }
+  try {
+    const colsMedidas = await db.all("PRAGMA table_info(trazabilidad_medidas)");
+    const nombresMedidas = colsMedidas.map((c) => c.name);
+    if (!nombresMedidas.includes('responsable_id')) {
+      await db.exec('ALTER TABLE trazabilidad_medidas ADD COLUMN responsable_id INTEGER REFERENCES usuarios(id)');
+      await db.exec('ALTER TABLE trazabilidad_medidas ADD COLUMN responsable_nombre TEXT');
+      console.log('➕ Columnas responsable_id/responsable_nombre agregadas a trazabilidad_medidas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando responsable a trazabilidad_medidas:', e.message);
+  }
+
+  // MIGRACIÓN #28: causa_id en trazabilidad_medidas — Julio pidió (03/09,
+  // mismo día, todavía sin uso real del módulo) que causas raíz y medidas
+  // vuelvan a ser DOS listas separadas (no una sola línea de tiempo
+  // mezclada), pero relacionadas: cada medida debe decir para cuál causa
+  // raíz es. Columna nullable a propósito -- una medida vieja (de antes de
+  // este cambio) puede quedar sin causa asociada; el frontend las agrupa
+  // aparte ("Otras medidas") en vez de perderlas u obligar a adivinar de
+  // cuál causa eran.
+  try {
+    const colsMedidasCausaId = await db.all("PRAGMA table_info(trazabilidad_medidas)");
+    if (!colsMedidasCausaId.map((c) => c.name).includes('causa_id')) {
+      await db.exec('ALTER TABLE trazabilidad_medidas ADD COLUMN causa_id INTEGER REFERENCES trazabilidad_causas(id)');
+      console.log('➕ Columna causa_id agregada a trazabilidad_medidas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando causa_id a trazabilidad_medidas:', e.message);
+  }
+
+  // MIGRACIÓN #29: trazabilidad_catalogo_causas / trazabilidad_catalogo_medidas
+  // — catálogo administrable (pestaña Catálogos de Gestión) de causas raíz
+  // posibles, cada una con sus propias medidas posibles ligadas. `activo`
+  // sigue el mismo patrón de "nunca borrar de verdad" que ya usan otros
+  // catálogos del sistema (defectos ISO, etc.) -- desactivar en vez de
+  // eliminar cuando ya se usó en algún caso real o ya tiene medidas.
+  try {
+    const tablaCatalogoCausas = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trazabilidad_catalogo_causas'");
+    if (!tablaCatalogoCausas) {
+      await db.exec(`
+        CREATE TABLE trazabilidad_catalogo_causas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          texto TEXT NOT NULL,
+          activo TEXT NOT NULL DEFAULT 'Activo' CHECK(activo IN ('Activo','Inactivo')),
+          creado_en DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE trazabilidad_catalogo_medidas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          causa_catalogo_id INTEGER NOT NULL REFERENCES trazabilidad_catalogo_causas(id),
+          texto TEXT NOT NULL,
+          activo TEXT NOT NULL DEFAULT 'Activo' CHECK(activo IN ('Activo','Inactivo')),
+          creado_en DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX idx_trazabilidad_catalogo_medidas_causa ON trazabilidad_catalogo_medidas(causa_catalogo_id);
+      `);
+      console.log('🆕 Tablas trazabilidad_catalogo_causas y trazabilidad_catalogo_medidas creadas.');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando tablas de catálogo de trazabilidad:', e.message);
+  }
+
+  // MIGRACIÓN #30: causa_catalogo_id en trazabilidad_causas — liga cada
+  // causa ya registrada en un caso real con la causa del catálogo (#29) de
+  // la que vino (o que se creó sola al escribir "Otra"). Nullable: una
+  // causa de antes de esta migración queda sin esa relación (el frontend
+  // simplemente no le sugiere medidas de catálogo a esas causas viejas).
+  try {
+    const colsCausasCatalogo = await db.all("PRAGMA table_info(trazabilidad_causas)");
+    if (!colsCausasCatalogo.map((c) => c.name).includes('causa_catalogo_id')) {
+      await db.exec('ALTER TABLE trazabilidad_causas ADD COLUMN causa_catalogo_id INTEGER REFERENCES trazabilidad_catalogo_causas(id)');
+      console.log('➕ Columna causa_catalogo_id agregada a trazabilidad_causas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando causa_catalogo_id a trazabilidad_causas:', e.message);
+  }
+
+  // MIGRACIÓN #31: limpieza de medidas "sueltas" (causa_id NULL, de antes de
+  // la MIGRACIÓN #28) — Julio pidió (04/09) quitar por completo esa
+  // situación: ya no había datos reales que le preocuparan, así que en vez
+  // de seguir mostrándolas aparte en el frontend ("medidas sueltas"), se
+  // borran directamente. Solo puede haber alguna la primera vez que corre
+  // esta migración con datos de antes del 03/09 -- desde entonces toda
+  // medida nueva siempre trae su causa_id (routes/produccion.js lo exige),
+  // así que después de la primera vez esta consulta no encuentra nada y no
+  // hace nada (es segura de correr en cada arranque). Se recalcula el
+  // estado de cada caso afectado por si la medida borrada era la que lo
+  // tenía en Implementado/En_Proceso.
+  try {
+    const problemasAfectados = await db.all('SELECT DISTINCT problema_id FROM trazabilidad_medidas WHERE causa_id IS NULL');
+    if (problemasAfectados.length > 0) {
+      await db.run('DELETE FROM trazabilidad_medidas WHERE causa_id IS NULL');
+      for (const { problema_id } of problemasAfectados) {
+        const medidasRestantes = await db.all('SELECT estado FROM trazabilidad_medidas WHERE problema_id = ?', [problema_id]);
+        let estado;
+        if (medidasRestantes.some((m) => m.estado === 'Funciono')) estado = 'Implementado';
+        else if (medidasRestantes.length > 0) estado = 'En_Proceso';
+        else estado = 'Pendiente';
+        await db.run(
+          `UPDATE trazabilidad_problemas
+             SET estado = ?,
+                 cerrado_en = CASE WHEN ? = 'Implementado' THEN COALESCE(cerrado_en, datetime('now','localtime')) ELSE NULL END,
+                 actualizado_en = datetime('now','localtime')
+           WHERE id = ?`,
+          [estado, estado, problema_id]
+        );
+      }
+      console.log(`🧹 Migración #31: se eliminaron medidas sin causa raíz específica de ${problemasAfectados.length} caso(s) de Producción (datos de antes de la MIGRACIÓN #28) y se recalculó su estado.`);
+    }
+  } catch (e) {
+    console.error('⚠️ Error en migración #31 (limpieza de medidas sin causa):', e.message);
+  }
+
+  // MIGRACIÓN #32: columna `encargado` en iso_areas (catálogo "Áreas de
+  // Inspección", administrado desde Gestión -> Catálogos). Pedido por Julio
+  // (04/09): además de reusar este mismo catálogo para el nuevo módulo de
+  // "Reportes por Áreas" (identifica en qué área ocurrió el problema), cada
+  // área necesita guardar quién es su encargado -- la persona a la que hay
+  // que avisar. Columna de texto libre y nullable a propósito: Julio va a
+  // llenarla él mismo desde la pantalla, área por área, así que las áreas
+  // que ya existían quedan sin encargado hasta que él lo escriba (no hay
+  // manera de adivinarlo).
+  try {
+    const colsIsoAreas = await db.all("PRAGMA table_info(iso_areas)");
+    if (!colsIsoAreas.map((c) => c.name).includes('encargado')) {
+      await db.exec('ALTER TABLE iso_areas ADD COLUMN encargado TEXT');
+      console.log('➕ Columna encargado agregada a iso_areas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando encargado a iso_areas:', e.message);
+  }
+
+  // MIGRACIÓN #33: módulo "Reportes por Áreas" (pedido por Julio, 04/09).
+  // Los 3 tipos de reporte (Rápido, Completo, Informativo) viven en UNA sola
+  // tabla `reportes` con una columna `tipo` -- igual que trazabilidad_problemas
+  // ya usa `tipo_contexto` para dos formas del mismo concepto. La razón:
+  // "escalar" un Reporte Rápido a Completo es solo cambiar ese campo
+  // (UPDATE reportes SET tipo='completo'), sin copiar filas ni perder el
+  // historial de que empezó como Rápido (mismo id, misma fecha de creación).
+  //
+  // Reusa el catálogo `iso_areas` ("Áreas de Inspección" de Gestión ->
+  // Catálogos, ver MIGRACIÓN #32 para el campo `encargado`) como catálogo de
+  // áreas -- Julio pidió no duplicar un catálogo nuevo cuando ya existe uno
+  // que representa lo mismo (dónde, en la planta, pasó algo).
+  //
+  // Columnas de `reportes` que no aplican a todos los tipos quedan NULL para
+  // los que no las usan (mismo patrón que columnas nullable en otras tablas
+  // de este archivo): urgencia/referencia/lote/estado son de rapido/completo;
+  // titulo/contenido/fecha_vigencia son de informativo.
+  //
+  // Estados: 'rapido' usa Pendiente -> Revisado (se cierra sin escalar) o
+  // pasa a tipo='completo' (y ahí el estado ya lo recalcula solo el mismo
+  // criterio de trazabilidad_problemas: Pendiente/En_Proceso/Implementado
+  // según las medidas). 'informativo' no usa esta columna -- su vigencia se
+  // calcula sola comparando fecha_vigencia contra hoy, no se guarda aparte.
+  try {
+    const tablaReportes = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='reportes'");
+    if (!tablaReportes) {
+      await db.exec(`
+        CREATE TABLE reportes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tipo TEXT NOT NULL CHECK(tipo IN ('rapido','completo','informativo')),
+          area_origen_id INTEGER REFERENCES iso_areas(id),
+          referencia TEXT,
+          lote TEXT,
+          urgencia TEXT CHECK(urgencia IS NULL OR urgencia IN ('Baja','Media','Alta','Critica')),
+          titulo TEXT,
+          descripcion TEXT,
+          estado TEXT CHECK(estado IS NULL OR estado IN ('Pendiente','Revisado','En_Proceso','Implementado')),
+          fecha_vigencia TEXT,
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          created_at DATETIME DEFAULT (datetime('now','localtime')),
+          actualizado_en DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE reportes_causas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          reporte_id INTEGER NOT NULL REFERENCES reportes(id),
+          texto TEXT NOT NULL,
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          responsable_id INTEGER REFERENCES usuarios(id),
+          responsable_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE reportes_medidas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          reporte_id INTEGER NOT NULL REFERENCES reportes(id),
+          causa_id INTEGER NOT NULL REFERENCES reportes_causas(id),
+          texto TEXT NOT NULL,
+          estado TEXT NOT NULL DEFAULT 'En_Proceso' CHECK(estado IN ('En_Proceso','Funciono','No_Funciono')),
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          responsable_id INTEGER REFERENCES usuarios(id),
+          responsable_nombre TEXT,
+          creado_en DATETIME DEFAULT (datetime('now','localtime')),
+          actualizado_en DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE reportes_adjuntos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          reporte_id INTEGER NOT NULL REFERENCES reportes(id),
+          archivo TEXT NOT NULL,
+          nombre_original TEXT,
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE reportes_destinos (
+          reporte_id INTEGER NOT NULL REFERENCES reportes(id),
+          area_id INTEGER NOT NULL REFERENCES iso_areas(id),
+          PRIMARY KEY (reporte_id, area_id)
+        );
+        CREATE INDEX idx_reportes_tipo ON reportes(tipo);
+        CREATE INDEX idx_reportes_estado ON reportes(estado);
+        CREATE INDEX idx_reportes_area ON reportes(area_origen_id);
+        CREATE INDEX idx_reportes_causas_reporte ON reportes_causas(reporte_id);
+        CREATE INDEX idx_reportes_medidas_reporte ON reportes_medidas(reporte_id);
+        CREATE INDEX idx_reportes_adjuntos_reporte ON reportes_adjuntos(reporte_id);
+        CREATE INDEX idx_reportes_destinos_area ON reportes_destinos(area_id);
+      `);
+      console.log('🆕 Tablas del módulo Reportes por Áreas creadas (reportes, reportes_causas, reportes_medidas, reportes_adjuntos, reportes_destinos).');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando tablas del módulo Reportes por Áreas:', e.message);
+  }
+
+  // MIGRACIÓN #34: columna `telefono` en usuarios. Pedido por Julio (07/09)
+  // para unificar: en vez de mantener un catálogo aparte de contactos de
+  // WhatsApp para avisos de Reportes por Áreas, cada usuario del sistema
+  // (los que ya tienen cuenta y contraseña) puede tener su propio número, y
+  // ese es el que se usa como destinatario al mandar el aviso de un Reporte
+  // Rápido. Columna de texto libre y nullable a propósito -- un usuario
+  // puede no tener número todavía, y no debería poder elegirse como
+  // destinatario hasta que alguien se lo complete desde Gestión → Usuarios.
+  // Formato esperado: solo el número con indicativo de país (ej.
+  // "573001234567"), sin el sufijo "@c.us" que usa internamente
+  // whatsapp-web.js -- ese sufijo se agrega solo al momento de enviar (ver
+  // el mismo criterio que ya usa el comando "cerrar" del bot).
+  try {
+    const colsUsuarios = await db.all("PRAGMA table_info(usuarios)");
+    if (!colsUsuarios.map((c) => c.name).includes('telefono')) {
+      await db.exec('ALTER TABLE usuarios ADD COLUMN telefono TEXT');
+      console.log('➕ Columna telefono agregada a usuarios');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando telefono a usuarios:', e.message);
+  }
+
+  // MIGRACIÓN #35: conectar Reportes por Áreas con los catálogos que ya
+  // existen en otros módulos, pedido por Julio (07/09) para el nuevo
+  // asistente de creación:
+  //   - `reportes.defecto_id` (nullable): "el problema" de un Reporte
+  //     Completo se elige del mismo catálogo de defectos que ya administra
+  //     Muestreos ISO 2859 (iso_tipificacion_defectos) -- no se duplica un
+  //     catálogo de "problemas" aparte.
+  //   - `reportes_causas.causa_catalogo_id` (nullable): la causa raíz de un
+  //     Reporte Completo se puede elegir del mismo catálogo compartido de
+  //     causas/medidas que ya usa Seguimiento de Producción
+  //     (trazabilidad_catalogo_causas) -- mismo criterio EXACTO que ya usa
+  //     trazabilidad_causas.causa_catalogo_id (ver MIGRACIÓN #30): nullable
+  //     porque también se puede escribir una causa nueva de una vez (queda
+  //     sin id de catálogo, o se agrega sola al catálogo si se resuelve así
+  //     desde el backend). No se agrega el equivalente a `reportes_medidas`
+  //     porque tampoco existe en trazabilidad_medidas -- las medidas del
+  //     catálogo solo prestan su texto, no dejan rastro del id elegido.
+  try {
+    const colsReportes = await db.all("PRAGMA table_info(reportes)");
+    if (!colsReportes.map((c) => c.name).includes('defecto_id')) {
+      await db.exec('ALTER TABLE reportes ADD COLUMN defecto_id INTEGER REFERENCES iso_tipificacion_defectos(id)');
+      console.log('➕ Columna defecto_id agregada a reportes');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando defecto_id a reportes:', e.message);
+  }
+  try {
+    const colsReportesCausas = await db.all("PRAGMA table_info(reportes_causas)");
+    if (!colsReportesCausas.map((c) => c.name).includes('causa_catalogo_id')) {
+      await db.exec('ALTER TABLE reportes_causas ADD COLUMN causa_catalogo_id INTEGER REFERENCES trazabilidad_catalogo_causas(id)');
+      console.log('➕ Columna causa_catalogo_id agregada a reportes_causas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando causa_catalogo_id a reportes_causas:', e.message);
+  }
+  // Julio pidió (07/09, en la misma conversación) que quedara amarrado
+  // defecto↔causa: al elegir "el problema" en un Reporte Completo, el
+  // selector de causa raíz debe traer SOLO las causas que ya se hayan
+  // usado/agregado para ESE defecto en concreto -- no el catálogo entero.
+  // Columna nullable porque las causas que ya existían (todas las de
+  // Producción, que no tiene el concepto de "defecto") se quedan sin ligar
+  // a ninguno -- no aparecen al filtrar por defecto, pero siguen intactas
+  // para Seguimiento de Producción, que sigue viendo el catálogo completo
+  // sin filtrar (ver listarCausasCatalogo en data/trazabilidadCatalogo.js).
+  try {
+    const colsCatalogoCausas = await db.all("PRAGMA table_info(trazabilidad_catalogo_causas)");
+    if (!colsCatalogoCausas.map((c) => c.name).includes('defecto_id')) {
+      await db.exec('ALTER TABLE trazabilidad_catalogo_causas ADD COLUMN defecto_id INTEGER REFERENCES iso_tipificacion_defectos(id)');
+      console.log('➕ Columna defecto_id agregada a trazabilidad_catalogo_causas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando defecto_id a trazabilidad_catalogo_causas:', e.message);
+  }
+
+  // MIGRACIÓN #36: elimina trazabilidad_anexos -- confirmado con Julio
+  // (07/09) que esta tabla quedó sin usarse desde la MIGRACIÓN #26 (el
+  // seguimiento de un caso se hace por completo con las listas de causas/
+  // medidas) y nunca llegó a tener datos reales en producción. Se borra
+  // directamente (no se desactiva, no hay nada real que preservar).
+  try {
+    const tablaAnexos = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='trazabilidad_anexos'");
+    if (tablaAnexos) {
+      await db.exec('DROP TABLE trazabilidad_anexos');
+      console.log('🗑️ Tabla trazabilidad_anexos eliminada (sin uso).');
+    }
+  } catch (e) {
+    console.error('⚠️ Error eliminando trazabilidad_anexos:', e.message);
+  }
+
+  // MIGRACIÓN #37: unifica causas raíz y medidas entre Trazabilidad de
+  // Producción y Reportes por Áreas -- pedido por Julio (07/09): la misma
+  // causa real (ej. un defecto que se ve tanto en el tablero de Producción
+  // como en un Reporte de un área) se pueda vincular a los dos casos a la
+  // vez y compartir el mismo historial de medidas, sin importar desde cuál
+  // módulo se trabaje.
+  //
+  // trazabilidad_causas/trazabilidad_medidas (Producción) y reportes_causas/
+  // reportes_medidas (Reportes) quedan reemplazadas por:
+  //   - causas_raiz: una fila por causa real (ya no cuelga de un solo
+  //     problema_id/reporte_id).
+  //   - causas_raiz_casos: tabla puente -- a qué caso(s) está vinculada esa
+  //     causa (tipo_caso 'problema' o 'reporte' + caso_id). Una causa con
+  //     más de un vínculo es una causa compartida entre módulos.
+  //   - medidas: cuelga de causa_id (no de un caso) -- así, si una causa
+  //     está vinculada a dos casos, sus medidas se ven y se editan igual
+  //     desde cualquiera de los dos.
+  //
+  // La vinculación entre módulos SIEMPRE es una acción explícita del
+  // analista (ver vincularCausaExistente en data/causasRaiz.js) -- nunca
+  // automática por coincidir el texto del catálogo: el mismo defecto puede
+  // tener causas distintas según la fábrica/área (ejemplo de Julio: "I1
+  // Incompleto" es falta de verificación en Fábrica, pero parámetros de
+  // máquina en Inyección).
+  //
+  // Julio confirmó (07/09) que los registros que había en las 4 tablas
+  // viejas eran solo pruebas -- se borran sin migrar nada.
+  try {
+    const tablaNueva = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='causas_raiz'");
+    if (!tablaNueva) {
+      await db.exec('DROP TABLE IF EXISTS trazabilidad_medidas');
+      await db.exec('DROP TABLE IF EXISTS trazabilidad_causas');
+      await db.exec('DROP TABLE IF EXISTS reportes_medidas');
+      await db.exec('DROP TABLE IF EXISTS reportes_causas');
+      await db.exec(`
+        CREATE TABLE causas_raiz (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          texto TEXT NOT NULL,
+          causa_catalogo_id INTEGER REFERENCES trazabilidad_catalogo_causas(id),
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          responsable_id INTEGER REFERENCES usuarios(id),
+          responsable_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE causas_raiz_casos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          causa_id INTEGER NOT NULL REFERENCES causas_raiz(id),
+          tipo_caso TEXT NOT NULL CHECK(tipo_caso IN ('problema','reporte')),
+          caso_id INTEGER NOT NULL,
+          vinculado_por_id INTEGER REFERENCES usuarios(id),
+          vinculado_por_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime')),
+          UNIQUE(causa_id, tipo_caso, caso_id)
+        );
+        CREATE TABLE medidas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          causa_id INTEGER NOT NULL REFERENCES causas_raiz(id),
+          texto TEXT NOT NULL,
+          estado TEXT NOT NULL DEFAULT 'En_Proceso' CHECK(estado IN ('En_Proceso','Funciono','No_Funciono')),
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          responsable_id INTEGER REFERENCES usuarios(id),
+          responsable_nombre TEXT,
+          creado_en DATETIME DEFAULT (datetime('now','localtime')),
+          actualizado_en DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX idx_causas_raiz_casos_causa ON causas_raiz_casos(causa_id);
+        CREATE INDEX idx_causas_raiz_casos_caso ON causas_raiz_casos(tipo_caso, caso_id);
+        CREATE INDEX idx_medidas_causa ON medidas(causa_id);
+      `);
+      console.log('🆕 Tablas causas_raiz, causas_raiz_casos y medidas creadas (reemplazan trazabilidad_causas/medidas y reportes_causas/medidas).');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando tablas unificadas de causas/medidas:', e.message);
   }
 
   // Usuarios por defecto si está vacío

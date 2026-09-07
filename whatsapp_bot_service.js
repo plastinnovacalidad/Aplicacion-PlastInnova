@@ -27,6 +27,10 @@ const { generarPdfReporteGarantias } = require('./utils/pdfReporteGarantias');
 // utils/pdfReporteMetrologia.js y data/calidad.js#obtenerMetrologiaReportePeriodo.
 const { generarPdfReporteMetrologia } = require('./utils/pdfReporteMetrologia');
 const { construirHtmlReporteInspeccion } = require('./utils/imagenReporteMetrologia');
+// Tarjeta-imagen del Reporte Rápido del módulo "Reportes por Áreas" (pedido
+// por Julio, 07/09) -- mismo criterio que la de Metrología, un archivo aparte
+// solo con el HTML, la captura y el envío quedan acá.
+const { construirHtmlResumenReporteRapido } = require('./utils/imagenResumenReporte');
 // Julio quiere comparar: volvió a mandar el reporte de inspección como PDF
 // (en vez de la imagen compacta) para ver cómo se ve ahora que cambió dos
 // planos de PDF a PNG (Iny_Ap0111 e Iny_Bas_0111) — antes esos dos siempre
@@ -1284,6 +1288,115 @@ async function enviarReporteInspeccionMetrologia(codigo, inspeccion, medidas, pl
   }
 }
 
+// ======================== REPORTES POR ÁREAS: TARJETA-IMAGEN DEL RÁPIDO ========================
+// Pedido por Julio (07/09): al terminar de crear un Reporte Rápido, se
+// elige a qué usuarios avisar (los que tengan teléfono cargado en Gestión →
+// Usuarios) y se les manda esta tarjeta-imagen por WhatsApp -- mismo
+// mecanismo EXACTO que generarImagenInspeccion (Puppeteer sobre el propio
+// navegador del bot, viewport de alto dinámico según el contenido real).
+async function generarImagenResumenReporte(reporte) {
+  if (!client || !client.pupBrowser) {
+    throw new Error('El bot de WhatsApp no está conectado (no hay navegador disponible para generar la imagen).');
+  }
+  const html = construirHtmlResumenReporteRapido(reporte);
+  const nombreArchivo = `reporte-rapido-${Date.now()}-${Math.round(Math.random() * 1e6)}.png`;
+  const rutaArchivo = path.join(os.tmpdir(), nombreArchivo);
+
+  const ANCHO = 640;
+  const page = await client.pupBrowser.newPage();
+  try {
+    await page.setViewport({ width: ANCHO, height: 800 });
+    await page.setContent(html, { waitUntil: 'load' });
+    const altoReal = await page.evaluate(() => document.body.scrollHeight);
+    await page.setViewport({ width: ANCHO, height: Math.max(1, altoReal) });
+    await page.screenshot({ path: rutaArchivo, type: 'png' });
+  } finally {
+    await page.close();
+  }
+  return rutaArchivo;
+}
+
+// El teléfono se guarda en usuarios.telefono como texto libre (solo dígitos
+// con indicativo de país, ej. "573001234567") -- acá se le agrega el sufijo
+// que espera whatsapp-web.js si todavía no lo tiene, mismo criterio que ya
+// usa el comando "cerrar" del bot para un número que llega sin "@algo".
+function normalizarNumeroWhatsapp(telefono) {
+  if (!telefono) return null;
+  const limpio = String(telefono).trim();
+  if (!limpio) return null;
+  if (limpio.includes('@')) return limpio;
+  const soloDigitos = limpio.replace(/\D/g, '');
+  if (!soloDigitos) return null;
+  return soloDigitos + '@c.us';
+}
+
+// Reportado por Julio (07/09): al compartir un reporte salió "No LID for
+// user" y no se entregó. WhatsApp viene migrando cuentas a un identificador
+// nuevo ("LID", Linked ID) -- para esas cuentas ya no basta con armar
+// "<número>@c.us" a mano como hacía normalizarNumeroWhatsapp(): hay que
+// preguntarle a WhatsApp cuál es el id que de verdad usa esa cuenta ahora.
+// client.getNumberId() hace justo eso (funcione o no la cuenta con LID). Si
+// por lo que sea no se puede resolver (número no registrado en WhatsApp, o
+// falla la consulta), se sigue intentando con el id armado a mano como
+// antes -- por si acaso, para no romper lo que ya venía funcionando.
+async function resolverIdWhatsapp(numeroCrudo) {
+  try {
+    const info = await client.getNumberId(numeroCrudo);
+    if (info && info._serialized) return info._serialized;
+  } catch (e) {
+    // Se sigue abajo con el id armado a mano.
+  }
+  return numeroCrudo;
+}
+
+// A diferencia de enviarAlerta (fire-and-forget, nunca lanza ni devuelve
+// nada), esta función SÍ devuelve {enviado, motivo, fallos} -- la llama
+// routes/reportes.js justo después de crear el Reporte Rápido, para poder
+// avisar en la respuesta si algún destinatario no recibió el aviso, sin que
+// eso signifique que el reporte no se guardó (el reporte YA quedó guardado
+// de todas formas).
+async function enviarResumenReporteRapido(reporte, destinatarios) {
+  if (!client) {
+    return { enviado: false, motivo: 'El bot de WhatsApp no está conectado en este momento.' };
+  }
+  if (!destinatarios || destinatarios.length === 0) {
+    return { enviado: false, motivo: 'No se eligió ningún destinatario.' };
+  }
+
+  let rutaArchivo;
+  try {
+    rutaArchivo = await generarImagenResumenReporte(reporte);
+  } catch (e) {
+    console.error('⚠️ No se pudo generar la imagen del Reporte Rápido:', e.message);
+    return { enviado: false, motivo: 'No se pudo generar la imagen del reporte.' };
+  }
+
+  try {
+    const media = MessageMedia.fromFilePath(rutaArchivo);
+    let algunoEnviado = false;
+    const fallos = [];
+    for (const dest of destinatarios) {
+      const numeroCrudo = normalizarNumeroWhatsapp(dest.telefono);
+      if (!numeroCrudo) { fallos.push(dest.nombre); continue; }
+      try {
+        const numero = await resolverIdWhatsapp(numeroCrudo);
+        await client.sendMessage(numero, media);
+        algunoEnviado = true;
+      } catch (e) {
+        console.error(`❌ Error enviando Reporte Rápido a ${dest.nombre}:`, e.message);
+        fallos.push(dest.nombre);
+      }
+    }
+    if (algunoEnviado) {
+      console.log(`🔔 Reporte Rápido #${reporte.id} enviado por WhatsApp a ${destinatarios.length - fallos.length} destinatario(s).`);
+      return { enviado: true, fallos };
+    }
+    return { enviado: false, motivo: 'No se pudo entregar el mensaje a ningún destinatario.', fallos };
+  } finally {
+    fs.unlink(rutaArchivo, () => {});
+  }
+}
+
 // ---- Fechas para los reportes periódicos -----------------------------
 // iso_muestreos/iso_lotes guardan fecha_hora/fecha_cierre con
 // datetime('now','localtime') (hora del propio servidor); garantias y
@@ -1620,17 +1733,33 @@ const LINEAS_COMANDOS = [
 // Arma el mensaje de "ayuda"/"hola"/"menu" a la medida de lo que ese número
 // específico puede hacer — reemplaza la combinación fija de
 // msgBienvenida() + un bloque de admin igual para todos que había antes.
-function construirMenuPara(telefono) {
+//
+// incluirComandos=false (usado para "hola"/"ayuda", ver el dispatch más
+// abajo): Julio pidió que esos dos solo muestren las áreas, sin el bloque
+// "Comandos disponibles" — ese listado ya se puede pedir aparte (por
+// ejemplo, escribiendo "reportes" para el menú de reportes). "areas",
+// "menu" e "inicio" no cambiaron: siguen mostrando también los comandos,
+// como ya se comportaban desde antes.
+function construirMenuPara(telefono, incluirComandos = true) {
   const partes = [];
-  if (tienePermisoBot(telefono, 'registro_entrada')) {
-    partes.push(msgBienvenida());
-  }
+  const tieneRegistro = tienePermisoBot(telefono, 'registro_entrada');
+  if (tieneRegistro) partes.push(msgBienvenida());
+
   const lineasPermitidas = LINEAS_COMANDOS.filter(c => tienePermisoBot(telefono, c.permiso)).map(c => c.linea);
-  if (lineasPermitidas.length > 0) {
+  if (incluirComandos && lineasPermitidas.length > 0) {
     partes.push('🛠️ *Comandos disponibles*\n' + lineasPermitidas.join('\n'));
   }
-  if (partes.length === 0) {
+
+  // "No tienes ninguna función habilitada" solo si de verdad no tiene NADA
+  // (ni áreas ni comandos) — se revisa aparte de `partes` porque con
+  // incluirComandos=false (hola/ayuda) alguien puede tener comandos
+  // permitidos que igual no se van a mostrar en esta respuesta puntual, y
+  // eso no es lo mismo que no tener ninguna función.
+  if (!tieneRegistro && lineasPermitidas.length === 0) {
     return 'Por ahora no tienes ninguna función habilitada en este bot. Pídele a un administrador que revise tus permisos.';
+  }
+  if (partes.length === 0) {
+    return 'Escribe *menu* para ver los comandos disponibles para tu número.';
   }
   return partes.join('\n\n');
 }
@@ -1927,7 +2056,10 @@ async function iniciarBotWhatsApp(db) {
 
       // Standard commands
       if (['hola', 'areas', 'ayuda', 'menu', 'inicio'].includes(txt)) {
-        await msg.reply(construirMenuPara(tel));
+        // "hola"/"ayuda": solo las áreas, sin "Comandos disponibles" (pedido
+        // explícito de Julio). El resto de sinónimos no cambia.
+        const incluirComandos = !['hola', 'ayuda'].includes(txt);
+        await msg.reply(construirMenuPara(tel, incluirComandos));
         return;
       }
 
@@ -2113,4 +2245,5 @@ module.exports = {
   enviarAlerta,
   esAdmin,
   enviarReporteInspeccionMetrologia,
+  enviarResumenReporteRapido,
 };

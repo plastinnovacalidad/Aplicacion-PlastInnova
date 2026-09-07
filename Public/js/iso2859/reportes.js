@@ -22,23 +22,29 @@ const Iso2859Reportes = {
         </div>
 
         <h4 style="margin-bottom:0.6rem;">Informe de Lote</h4>
-        <div style="display:flex; gap:0.6rem;">
-          <input type="text" id="rp-lote" placeholder="Número de lote..." style="flex:1; padding:0.6rem; border:1px solid #cbd5e0; border-radius:6px;">
+        <div style="display:flex; gap:0.6rem; position:relative;">
+          <input type="text" id="rp-lote" placeholder="Escriba para buscar un lote..." autocomplete="off" oninput="Iso2859Reportes.buscarLotes(this.value)" style="flex:1; padding:0.6rem; border:1px solid #cbd5e0; border-radius:6px;">
           <button class="btn-primary" onclick="Iso2859Reportes.descargarLote()">Generar PDF</button>
+          <div id="rp-lote-lista" class="autocomplete-list" style="display:none; top:100%;"></div>
         </div>
       </div>
     `;
   },
 
+  // Trae solo referencias/lotes que YA tienen al menos un muestreo
+  // registrado (ver buscarReferenciasConMuestreos/buscarLotesConMuestreos
+  // en data/iso2859.js) — a diferencia del catálogo completo que se usa al
+  // crear un lote nuevo, acá no tiene sentido ofrecer algo que todavía no
+  // se ha muestreado: el reporte saldría vacío o con error.
   buscarReferencias(valor) {
-    clearTimeout(this._debounce);
+    clearTimeout(this._debounceRef);
     const val = valor.trim();
     const lista = document.getElementById('rp-ref-lista');
-    if (val.length < 2) { lista.style.display = 'none'; return; }
-    this._debounce = setTimeout(async () => {
-      const res = await isoFetch(`/api/iso2859/catalogos/referencias?q=${encodeURIComponent(val)}`);
+    if (val.length < 1) { lista.style.display = 'none'; return; }
+    this._debounceRef = setTimeout(async () => {
+      const res = await isoFetch(`/api/iso2859/catalogos/referencias-con-muestreos?q=${encodeURIComponent(val)}`);
       const refs = await res.json();
-      if (!refs || refs.length === 0) { lista.style.display = 'none'; return; }
+      if (!refs || refs.length === 0) { lista.innerHTML = '<div class="autocomplete-item" style="color:#a0aec0;">Sin referencias con muestreos que coincidan</div>'; lista.style.display = 'block'; return; }
       lista.innerHTML = refs.map(r => `<div class="autocomplete-item" onclick="Iso2859Reportes.seleccionarReferencia('${escapeHtml(r.nombre)}')"><strong>${escapeHtml(r.nombre)}</strong></div>`).join('');
       lista.style.display = 'block';
     }, 250);
@@ -47,6 +53,25 @@ const Iso2859Reportes = {
   seleccionarReferencia(nombre) {
     document.getElementById('rp-referencia').value = nombre;
     document.getElementById('rp-ref-lista').style.display = 'none';
+  },
+
+  buscarLotes(valor) {
+    clearTimeout(this._debounceLote);
+    const val = valor.trim();
+    const lista = document.getElementById('rp-lote-lista');
+    if (val.length < 1) { lista.style.display = 'none'; return; }
+    this._debounceLote = setTimeout(async () => {
+      const res = await isoFetch(`/api/iso2859/catalogos/lotes-con-muestreos?q=${encodeURIComponent(val)}`);
+      const lotes = await res.json();
+      if (!lotes || lotes.length === 0) { lista.innerHTML = '<div class="autocomplete-item" style="color:#a0aec0;">Sin lotes con muestreos que coincidan</div>'; lista.style.display = 'block'; return; }
+      lista.innerHTML = lotes.map(l => `<div class="autocomplete-item" onclick="Iso2859Reportes.seleccionarLote('${escapeHtml(l.id_lote)}')"><strong>${escapeHtml(l.id_lote)}</strong><br><small>${escapeHtml(l.referencia)}</small></div>`).join('');
+      lista.style.display = 'block';
+    }, 250);
+  },
+
+  seleccionarLote(idLote) {
+    document.getElementById('rp-lote').value = idLote;
+    document.getElementById('rp-lote-lista').style.display = 'none';
   },
 
   async _descargar(url, mensajeError) {

@@ -14,6 +14,13 @@ function crearReferencia(codigoBase, usuarioId) {
   );
 }
 
+// Estas búsquedas por código/id NO filtran por 'activa' a propósito: las
+// usan tanto las rutas normales de lectura (fotos, imagen, versiones,
+// seguimiento) como las nuevas rutas de eliminar/restaurar, que necesitan
+// encontrar la referencia sin importar su estado. Lo que sí queda oculto
+// para el día a día es la LISTA (listarCodigosReferencias, más abajo) y las
+// rutas de escritura de versiones bloquean explícitamente si activa=0 (ver
+// routes/referencias.js).
 function buscarReferenciaPorCodigo(codigoBase) {
   return getDb().get('SELECT * FROM referencias WHERE codigo_base = ?', [codigoBase]);
 }
@@ -26,8 +33,40 @@ function buscarReferenciaPorId(id) {
   return getDb().get('SELECT * FROM referencias WHERE id = ?', [id]);
 }
 
+// Lista del día a día (buscador de "Editar Referencia", selector de
+// Circuitos SMD, etc.) — excluye las referencias eliminadas (borrado
+// suave). COALESCE cubre el instante entre que se agrega la columna
+// 'activa' (migración #23) y se termina de aplicar a todas las filas,
+// aunque el ALTER TABLE con DEFAULT 1 ya debería dejarlas todas en 1.
 function listarCodigosReferencias() {
-  return getDb().all('SELECT codigo_base FROM referencias ORDER BY codigo_base');
+  return getDb().all("SELECT codigo_base FROM referencias WHERE COALESCE(activa, 1) = 1 ORDER BY codigo_base");
+}
+
+// "Papelera": referencias eliminadas (borrado suave), para la pantalla de
+// restaurar. Trae el nombre de quien la eliminó (si todavía existe el
+// usuario) para mostrarlo junto a la fecha.
+function listarCodigosReferenciasEliminadas() {
+  return getDb().all(`
+    SELECT r.codigo_base, r.eliminado_en, u.nombre as eliminado_por_nombre
+    FROM referencias r
+    LEFT JOIN usuarios u ON r.eliminado_por = u.id
+    WHERE COALESCE(r.activa, 1) = 0
+    ORDER BY r.eliminado_en DESC
+  `);
+}
+
+function marcarReferenciaEliminada(id, usuarioId) {
+  return getDb().run(
+    'UPDATE referencias SET activa = 0, eliminado_por = ?, eliminado_en = ? WHERE id = ?',
+    [usuarioId, ahoraISO(), id]
+  );
+}
+
+function restaurarReferencia(id) {
+  return getDb().run(
+    'UPDATE referencias SET activa = 1, eliminado_por = NULL, eliminado_en = NULL WHERE id = ?',
+    [id]
+  );
 }
 
 // Para el punto rojo "necesita prueba" en la lista de Circuitos SMD: antes
@@ -42,13 +81,13 @@ function listarCodigosConPruebaPendiente() {
     SELECT DISTINCT r.codigo_base
     FROM referencias r
     JOIN versiones v ON v.referencia_id = r.id
-    WHERE LOWER(v.estado) = 'activa' AND v.necesita_prueba = 1
+    WHERE LOWER(v.estado) = 'activa' AND v.necesita_prueba = 1 AND COALESCE(r.activa, 1) = 1
   `);
 }
 
 function buscarReferenciaConCreador(codigoBase) {
   return getDb().get(`
-    SELECT r.id, r.codigo_base, r.creado_por, r.created_at, u.nombre as creado_por_nombre
+    SELECT r.id, r.codigo_base, r.creado_por, r.created_at, r.activa, u.nombre as creado_por_nombre
     FROM referencias r
     LEFT JOIN usuarios u ON r.creado_por = u.id
     WHERE r.codigo_base = ?
@@ -186,6 +225,9 @@ module.exports = {
   buscarIdReferenciaPorCodigo,
   buscarReferenciaPorId,
   listarCodigosReferencias,
+  listarCodigosReferenciasEliminadas,
+  marcarReferenciaEliminada,
+  restaurarReferencia,
   listarCodigosConPruebaPendiente,
   buscarReferenciaConCreador,
   crearVersion,

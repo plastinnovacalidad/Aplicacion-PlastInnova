@@ -311,12 +311,17 @@ const COLUMNAS_PRODUCCION = ['Id_Entrega', 'Fecha_Entrega', 'Linea_Entrega', 'Lo
 // servidor). A propósito NO llama a process.exit() en ningún punto — si lo
 // hiciera, un ciclo llamado desde dentro del servidor tumbaría toda la app,
 // no solo esta sincronización.
-async function sincronizarProduccion() {
+async function sincronizarProduccion(forzarRefresco = false) {
   console.log('======================== Sincronización de Producción (rechazos + lotes + entregas) ========================');
   console.log(new Date().toLocaleString('es-CO'), '\n');
 
-  console.log('📤 Refrescando Calidad.xlsx, Lotes.xlsx y Produccion.xlsx en Excel...');
-  const estadoRefresco = await refrescarExcel([RUTA_CALIDAD, RUTA_LOTES, RUTA_PRODUCCION]);
+  let estadoRefresco = { [RUTA_CALIDAD]: true, [RUTA_LOTES]: true, [RUTA_PRODUCCION]: true };
+  if (forzarRefresco) {
+    console.log('📤 Refrescando Calidad.xlsx, Lotes.xlsx y Produccion.xlsx en Excel...');
+    estadoRefresco = await refrescarExcel([RUTA_CALIDAD, RUTA_LOTES, RUTA_PRODUCCION]);
+  } else {
+    console.log('📂 Omitiendo refresco de Excel (usando archivos locales)...');
+  }
 
   // getDb() ya funciona si app_circuitos.js llamó a inicializarBaseDatos() al
   // arrancar (es el caso normal: este ciclo corre dentro del servidor cada 6
@@ -381,7 +386,7 @@ module.exports = { sincronizarProduccion };
 // require('./scripts/sincronizar_produccion') para engancharlo al ciclo de
 // 6 horas.
 if (require.main === module) {
-  sincronizarProduccion()
+  sincronizarProduccion(true)
     .then(() => process.exit(0))
     .catch(err => {
       console.error('❌ Error inesperado durante la sincronización:', err);

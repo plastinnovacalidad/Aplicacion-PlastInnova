@@ -188,9 +188,9 @@ const Iso2859Muestreo = {
           <h4>Hallazgos</h4>
           <div id="ep-defectos-lista">
             <div class="form-group" style="display:flex;gap:0.5rem">
-              <input type="text" class="def-codigo" placeholder="Escriba código de defecto..." list="lista-defectos" style="flex:1" oninput="Iso2859Muestreo.buscarDefectos(this)">
-              <input type="number" class="def-cantidad" value="1" min="1" style="width:80px">
-              <button type="button" onclick="this.parentElement.remove()">✕</button>
+              <input type="text" class="def-codigo" placeholder="Escriba código de defecto..." list="lista-defectos" style="flex:1" oninput="Iso2859Muestreo.buscarDefectos(this); Iso2859Muestreo.actualizarSumaPiezas();">
+              <input type="number" class="def-cantidad" value="1" min="1" style="width:80px" oninput="Iso2859Muestreo.actualizarSumaPiezas()">
+              <button type="button" onclick="this.parentElement.remove(); Iso2859Muestreo.actualizarSumaPiezas();">✕</button>
             </div>
           </div>
           <datalist id="lista-defectos"></datalist>
@@ -202,16 +202,21 @@ const Iso2859Muestreo = {
                (reclasificar) o corregirlas (reparar). Se puede tener de las
                dos, o ninguna si no aplica. -->
           <h4>Piezas defectuosas: ¿qué se hizo con ellas?</h4>
-          <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+          <div style="display:flex; gap:1rem; margin-bottom:0.4rem;">
             <div class="form-group" style="flex:1; margin-bottom:0;">
               <label>Piezas reclasificadas</label>
-              <input type="number" id="ep-piezas-reclasificadas" value="0" min="0">
+              <input type="number" id="ep-piezas-reclasificadas" value="0" min="0" oninput="Iso2859Muestreo.actualizarSumaPiezas()">
             </div>
             <div class="form-group" style="flex:1; margin-bottom:0;">
               <label>Piezas reparadas</label>
-              <input type="number" id="ep-piezas-reparadas" value="0" min="0">
+              <input type="number" id="ep-piezas-reparadas" value="0" min="0" oninput="Iso2859Muestreo.actualizarSumaPiezas()">
+            </div>
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+              <label>Piezas rechazadas</label>
+              <input type="number" id="ep-piezas-rechazadas" value="0" min="0" oninput="Iso2859Muestreo.actualizarSumaPiezas()">
             </div>
           </div>
+          <p id="ep-suma-piezas-aviso" style="font-size:0.85rem; margin:0 0 1rem 0; color:#718096;"></p>
 
           <div class="form-group">
             <label>Observaciones</label>
@@ -244,8 +249,23 @@ const Iso2859Muestreo = {
       document.querySelectorAll('#ep-defectos-lista > div').forEach(div => {
         const cod = this._extraerCodigo(div.querySelector('.def-codigo').value.trim());
         const cant = parseInt(div.querySelector('.def-cantidad').value, 10);
-        if (cod) defectos.push({ codigo: cod, cantidad: cant });
+        if (cod) defectos.push({ codigo: cod, cantidad: cant || 0 });
       });
+
+      const piezasReclasificadas = parseInt(document.getElementById('ep-piezas-reclasificadas').value, 10) || 0;
+      const piezasReparadas = parseInt(document.getElementById('ep-piezas-reparadas').value, 10) || 0;
+      const piezasRechazadas = parseInt(document.getElementById('ep-piezas-rechazadas').value, 10) || 0;
+      const totalHallazgos = defectos.reduce((suma, d) => suma + d.cantidad, 0);
+      const totalPiezas = piezasReclasificadas + piezasReparadas + piezasRechazadas;
+      // Julio pidió que esto sea obligatorio: no dejar guardar si reclasificadas
+      // + reparadas + rechazadas no cuadra exactamente con el total de
+      // hallazgos (el backend vuelve a validar esto mismo, ver
+      // routes/iso2859.js, por si algo llega a saltarse este chequeo).
+      if (totalPiezas !== totalHallazgos) {
+        alert(`La suma de piezas reclasificadas + reparadas + rechazadas (${totalPiezas}) debe ser igual al total de hallazgos (${totalHallazgos}). Corrígelo antes de guardar.`);
+        reactivar();
+        return;
+      }
 
       const body = {
         id_lote: idLote, tipo: 'En_Proceso', decision,
@@ -253,8 +273,9 @@ const Iso2859Muestreo = {
         observaciones: document.getElementById('ep-obs').value || null,
         turno: prefill.turno || null, area: prefill.area || null, operario: prefill.operario || null,
         defectos,
-        piezas_reclasificadas: parseInt(document.getElementById('ep-piezas-reclasificadas').value, 10) || 0,
-        piezas_reparadas: parseInt(document.getElementById('ep-piezas-reparadas').value, 10) || 0,
+        piezas_reclasificadas: piezasReclasificadas,
+        piezas_reparadas: piezasReparadas,
+        piezas_rechazadas: piezasRechazadas,
       };
       try {
         const res = await isoFetchJSON('/api/iso2859/muestreos', { method: 'POST', body: JSON.stringify(body) });
@@ -592,11 +613,55 @@ const Iso2859Muestreo = {
     div.className = 'form-group';
     div.style = 'display:flex;gap:0.5rem';
     div.innerHTML = `
-      <input type="text" class="def-codigo" placeholder="Escriba código de defecto..." list="lista-defectos" style="flex:1" oninput="Iso2859Muestreo.buscarDefectos(this)">
-      <input type="number" class="def-cantidad" value="1" min="1" style="width:80px">
-      <button type="button" onclick="this.parentElement.remove()">✕</button>
+      <input type="text" class="def-codigo" placeholder="Escriba código de defecto..." list="lista-defectos" style="flex:1" oninput="Iso2859Muestreo.buscarDefectos(this); Iso2859Muestreo.actualizarSumaPiezas();">
+      <input type="number" class="def-cantidad" value="1" min="1" style="width:80px" oninput="Iso2859Muestreo.actualizarSumaPiezas()">
+      <button type="button" onclick="this.parentElement.remove(); Iso2859Muestreo.actualizarSumaPiezas();">✕</button>
     `;
     document.getElementById(containerId).appendChild(div);
+    // Solo tiene efecto real en "En Proceso" (los demás formularios no
+    // tienen los campos de piezas reclasificadas/reparadas/rechazadas) —
+    // actualizarSumaPiezas() no hace nada si no los encuentra.
+    this.actualizarSumaPiezas();
+  },
+
+  // Total de hallazgos ya escritos en un contenedor de defectos: mismo
+  // criterio que usa el envío del formulario (solo cuentan las filas que
+  // ya tienen un código escrito, no las filas vacías que quedaron con la
+  // cantidad por defecto en 1 sin que nadie las haya llenado todavía).
+  _totalHallazgos(containerId) {
+    let total = 0;
+    document.querySelectorAll(`#${containerId} > div`).forEach(div => {
+      const codigoInput = div.querySelector('.def-codigo');
+      const cantidadInput = div.querySelector('.def-cantidad');
+      if (codigoInput && codigoInput.value.trim()) {
+        total += parseInt(cantidadInput.value, 10) || 0;
+      }
+    });
+    return total;
+  },
+
+  // Muestra en vivo, mientras se llena el formulario de "En Proceso", si
+  // reclasificadas + reparadas + rechazadas ya cuadra con el total de
+  // hallazgos — Julio pidió que esa suma sea obligatoria para poder
+  // guardar (ver el bloqueo real en el submit, más abajo); esto es solo el
+  // aviso visual para que se note ANTES de intentar guardar.
+  actualizarSumaPiezas() {
+    const inputReclasificadas = document.getElementById('ep-piezas-reclasificadas');
+    if (!inputReclasificadas) return; // no estamos en el formulario de En Proceso
+    const totalHallazgos = this._totalHallazgos('ep-defectos-lista');
+    const totalPiezas = ['ep-piezas-reclasificadas', 'ep-piezas-reparadas', 'ep-piezas-rechazadas']
+      .reduce((suma, id) => suma + (parseInt(document.getElementById(id).value, 10) || 0), 0);
+    const aviso = document.getElementById('ep-suma-piezas-aviso');
+    if (!aviso) return;
+    if (totalHallazgos === 0) {
+      aviso.textContent = '';
+    } else if (totalPiezas === totalHallazgos) {
+      aviso.style.color = '#38a169';
+      aviso.textContent = `✓ Suma correcta: ${totalPiezas} de ${totalHallazgos} hallazgo(s).`;
+    } else {
+      aviso.style.color = '#c53030';
+      aviso.textContent = `⚠ La suma de reclasificadas + reparadas + rechazadas (${totalPiezas}) debe ser igual al total de hallazgos (${totalHallazgos}).`;
+    }
   },
 
   calcularVeredicto() {

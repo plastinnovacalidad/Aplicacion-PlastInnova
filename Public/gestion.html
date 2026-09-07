@@ -520,12 +520,13 @@
         usuariosCache = data.usuarios || [];
         const container = document.getElementById('usuariosContainer');
         let html = '<button class="btn-create" onclick="abrirModalUsuario()">+ Crear nuevo usuario</button>';
-        html += '<table class="admin-table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Acciones</th></tr></thead><tbody>';
+        html += '<table class="admin-table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Teléfono</th><th>Acciones</th></tr></thead><tbody>';
         usuariosCache.forEach(u => {
           html += `<tr>
             <td><strong>${escapeHtml(u.nombre)}</strong></td>
             <td>${escapeHtml(u.usuario)}</td>
             <td>${escapeHtml(u.rol_nombre || u.rol || '--')}</td>
+            <td>${u.telefono ? escapeHtml(u.telefono) : '<span style="color:#a0aec0;">— sin definir —</span>'}</td>
             <td>
               <button class="btn-small btn-edit" onclick="abrirModalUsuario(${u.id})">Editar</button>
               <button class="btn-small btn-delete" onclick="eliminarUsuario(${u.id}, '${escapeHtml(u.nombre)}')">Eliminar</button>
@@ -553,6 +554,7 @@
         <div class="modal-field"><label>Usuario (Login)</label><input type="text" id="userLogin" value="${u ? escapeHtml(u.usuario) : ''}"></div>
         <div class="modal-field"><label>Contraseña ${u ? '(Dejar en blanco para no cambiar)' : ''}</label><input type="password" id="userPass" placeholder="••••••••"></div>
         <div class="modal-field"><label>Rol</label><select id="userRol">${rolOptions}</select></div>
+        <div class="modal-field"><label>Teléfono (para recibir avisos de Reportes por Áreas)</label><input type="text" id="userTelefono" value="${u && u.telefono ? escapeHtml(u.telefono) : ''}" placeholder="Ej: 573001234567"></div>
       `;
       document.getElementById('modalBody').innerHTML = body;
       document.getElementById('modalConfirm').onclick = () => guardarUsuario(userId);
@@ -564,10 +566,11 @@
       const usuario = document.getElementById('userLogin').value.trim();
       const contrasena = document.getElementById('userPass').value;
       const rol_id = parseInt(document.getElementById('userRol').value);
+      const telefono = document.getElementById('userTelefono').value.trim();
       if (!nombre || !usuario) return alert('Nombre y usuario son obligatorios');
       if (!userId && !contrasena) return alert('La contraseña es obligatoria para nuevos usuarios');
 
-      const payload = { nombre, usuario, rol_id };
+      const payload = { nombre, usuario, rol_id, telefono };
       if (contrasena) payload.contrasena = contrasena;
 
       const url = userId ? '/api/usuarios/' + userId : '/api/usuarios';
@@ -788,11 +791,12 @@
         const data = await res.json();
         catalogoCache = Array.isArray(data) ? data : [];
         let html = '<button class="btn-create" onclick="abrirModalArea()">+ Agregar área</button>';
-        html += '<table class="admin-table"><thead><tr><th>Nombre</th><th>Módulo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
+        html += '<table class="admin-table"><thead><tr><th>Nombre</th><th>Módulo</th><th>Encargado</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
         catalogoCache.forEach(a => {
           html += `<tr>
             <td><strong>${escapeHtml(a.nombre)}</strong></td>
             <td>${escapeHtml(a.modulo)}</td>
+            <td>${a.encargado ? escapeHtml(a.encargado) : '<span style="color:#a0aec0;">— sin definir —</span>'}</td>
             <td>${badgeEstado(a.estado)}</td>
             <td>
               <button class="btn-small btn-edit" onclick="abrirModalArea(${a.id})">Editar</button>
@@ -819,6 +823,7 @@
             <option value="Ambos" ${!a || a.modulo === 'Ambos' ? 'selected' : ''}>Ambos</option>
           </select>
         </div>
+        <div class="modal-field"><label>Encargado</label><input type="text" id="areaEncargado" value="${a && a.encargado ? escapeHtml(a.encargado) : ''}" placeholder="Quién debe enterarse si pasa algo en esta área"></div>
         ${a ? `<div class="modal-field"><label>Estado</label>
           <select id="areaEstado">
             <option value="Activo" ${a.estado !== 'Inactivo' ? 'selected' : ''}>Activo</option>
@@ -834,8 +839,9 @@
     async function guardarArea(id) {
       const nombre = document.getElementById('areaNombre').value.trim();
       const modulo = document.getElementById('areaModulo').value;
+      const encargado = document.getElementById('areaEncargado').value.trim();
       if (!nombre) return alert('El nombre es obligatorio');
-      const payload = { nombre, modulo };
+      const payload = { nombre, modulo, encargado };
       const estadoSel = document.getElementById('areaEstado');
       if (estadoSel) payload.estado = estadoSel.value;
       const url = id ? CATALOGO_ENDPOINTS.areas.item(id) : CATALOGO_ENDPOINTS.areas.crear;

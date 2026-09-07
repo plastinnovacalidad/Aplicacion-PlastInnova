@@ -126,6 +126,11 @@ router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerir
         error.status = 404;
         throw error;
       }
+      if (ref.activa === 0) {
+        const error = new Error('Esta referencia está eliminada. Restáurela antes de subirle una nueva versión.');
+        error.status = 409;
+        throw error;
+      }
       const referenciaId = ref.id;
 
       const versionActiva = await refData.buscarVersionActivaMasReciente(referenciaId);
@@ -250,6 +255,11 @@ router.post('/referencias/:codigo_base/modificar-version', validarToken, requeri
       if (!ref) {
         const error = new Error('Referencia no encontrada');
         error.status = 404;
+        throw error;
+      }
+      if (ref.activa === 0) {
+        const error = new Error('Esta referencia está eliminada. Restáurela antes de modificar su versión.');
+        error.status = 409;
         throw error;
       }
 
@@ -399,9 +409,67 @@ router.get('/imagen/:referencia', validarToken, requerirPermiso('referencias.ver
       creado_por: ref.creado_por_nombre || 'Desconocido',
       fecha_creacion: ref.created_at,
       version_id: versionActiva?.id || null,
-      necesita_prueba: versionActiva?.necesita_prueba || 0
+      necesita_prueba: versionActiva?.necesita_prueba || 0,
+      // 0 solo si de verdad está eliminada (borrado suave); cualquier otro
+      // valor (1, undefined en una fila muy vieja sin migrar todavía) se
+      // trata como activa. Lo usa Public/referencias.html para mostrar el
+      // botón de Eliminar/Restaurar y bloquear los formularios de versión.
+      activa: ref.activa === 0 ? 0 : 1
     }
   });
+}));
+
+// ======================== BORRADO SUAVE ========================
+// La referencia se marca inactiva: desaparece de /api/referencias (listas y
+// buscadores del día a día) y las rutas de arriba que le crean/modifican
+// una versión quedan bloqueadas, pero la fila, sus versiones, sus fotos y
+// su historial en registro_cambios NO se tocan — se puede restaurar en
+// cualquier momento. Mismo permiso para eliminar y restaurar: quien puede
+// una cosa puede la otra.
+router.post('/referencias/:codigo_base/eliminar', validarToken, requerirPermiso('referencias.eliminar'), asyncHandler(async (req, res) => {
+  const codigoBase = req.params.codigo_base || '';
+  const { motivo } = req.body;
+  const usuarioId = req.usuario.id;
+
+  if (!motivo || !motivo.trim()) return res.status(400).json({ error: 'El motivo de la eliminación es obligatorio' });
+
+  const ref = await refData.buscarReferenciaPorCodigo(codigoBase);
+  if (!ref) return res.status(404).json({ error: 'Referencia no encontrada' });
+  if (ref.activa === 0) return res.status(409).json({ error: 'Esta referencia ya está eliminada' });
+
+  await refData.marcarReferenciaEliminada(ref.id, usuarioId);
+  await refData.insertarSeguimientoCambios(
+    ref.id, 'eliminacion',
+    { accion: 'Referencia eliminada (borrado suave)', codigo_base: codigoBase },
+    usuarioId, motivo
+  );
+
+  res.json({ success: true, message: `Referencia ${codigoBase} eliminada correctamente` });
+}));
+
+router.post('/referencias/:codigo_base/restaurar', validarToken, requerirPermiso('referencias.eliminar'), asyncHandler(async (req, res) => {
+  const codigoBase = req.params.codigo_base || '';
+  const usuarioId = req.usuario.id;
+
+  const ref = await refData.buscarReferenciaPorCodigo(codigoBase);
+  if (!ref) return res.status(404).json({ error: 'Referencia no encontrada' });
+  if (ref.activa !== 0) return res.status(409).json({ error: 'Esta referencia no está eliminada' });
+
+  await refData.restaurarReferencia(ref.id);
+  await refData.insertarSeguimientoCambios(
+    ref.id, 'restauracion',
+    { accion: 'Referencia restaurada', codigo_base: codigoBase },
+    usuarioId, null
+  );
+
+  res.json({ success: true, message: `Referencia ${codigoBase} restaurada correctamente` });
+}));
+
+// Lista para la "papelera" (pantalla de restaurar) — mismo permiso que
+// eliminar, ya que solo tiene sentido para quien también puede restaurar.
+router.get('/referencias-eliminadas', validarToken, requerirPermiso('referencias.eliminar'), asyncHandler(async (req, res) => {
+  const eliminadas = await refData.listarCodigosReferenciasEliminadas();
+  res.json({ referencias: eliminadas });
 }));
 
 // PUT: marcar/desmarcar necesita_prueba en una versión

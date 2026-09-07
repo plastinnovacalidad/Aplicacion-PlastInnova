@@ -151,6 +151,12 @@
     .checklist-pieza { border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; }
     .checklist-pieza h5 { margin-bottom: 0.5rem; color: var(--brand-primary); }
 
+    /* Ventana flotante del "Ver" en Historial (ver verMuestreos en
+       historial.js): antes el detalle se pintaba debajo de la tabla y había
+       que desplazarse para verlo. */
+    .hi-modal-overlay { position: fixed; inset: 0; background: rgba(23,32,53,0.55); display: flex; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; z-index: 1000; }
+    .hi-modal-panel { max-width: 720px; width: 100%; margin: 0; }
+
     .timeline-item { border-left: 3px solid #e2e8f0; padding-left: 1rem; margin-bottom: 1rem; }
     .timeline-item.alerta { border-left-color: #d69e2e; }
     .timeline-item.rechazado { border-left-color: #c53030; }

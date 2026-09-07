@@ -66,6 +66,156 @@
     .buscar-lote-controls { margin-bottom: 12px; }
     .buscar-lote-controls input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; width: 320px; max-width: 100%; }
     .buscar-lote-hint { font-size: 11.5px; color: #a0aec0; margin-top: 6px; }
+
+    /* Recuadro de filtros cruzados activos: ahora son varios a la vez
+       (mes + motivo/línea combinados, inspirado en el tablero de garantías
+       -- ahí selectedMes/selectedProblema/selectedTipoSolicitud se combinan
+       igual, cada uno su propio "chip" quitable sin borrar los demás). */
+    .filtro-activo-box { display: none; flex-direction: column; gap: 10px; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; }
+    .filtro-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .filtro-chip { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #c7d2fe; color: #312e81; border-radius: 999px; padding: 4px 4px 4px 12px; font-size: 12px; font-weight: 600; }
+    .filtro-chip button { background: none; border: none; color: #6366f1; cursor: pointer; font-size: 15px; line-height: 1; padding: 3px 8px; border-radius: 999px; }
+    .filtro-chip button:hover { background: #e0e7ff; }
+    .btn-quitar-todos { background: #fff; border: 1px solid #c7d2fe; color: #312e81; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .btn-quitar-todos:hover { background: #e0e7ff; }
+    .filtro-activo-texto { font-size: 12.5px; color: #312e81; line-height: 1.5; }
+
+    /* Sub-pestañas Gráficos/Datos dentro de cada pestaña de fábrica: mismos
+       datos, dos formas de verlos, como pidió Julio. */
+    .subtabs-nav { display: flex; gap: 8px; margin-bottom: 16px; }
+    .subtab-btn { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .15s, color .15s; }
+    .subtab-btn:hover { background: #edf2f7; }
+    .subtab-btn.activa { background: #2C43A2; border-color: #2C43A2; color: #fff; }
+    .subtab-pane { display: none; }
+    .subtab-pane.activa { display: block; }
+
+    /* Fila activa en las tablas de meses/motivos/líneas (equivalente a la
+       barra resaltada en su gráfica hermana). */
+    .admin-table tr.fila-activa td { background: #eef2ff; }
+    .admin-table tr.fila-clicable { cursor: pointer; }
+
+    /* ======================== TRAZABILIDAD DE SOLUCIONES ======================== */
+    .pill-info { background: #ebf8ff; color: #1B4FC4; }
+
+    /* Botón "🛠️" al final de una fila de Referencias/Motivos -- separado a
+       propósito del clic de la fila (que sigue filtrando como siempre), por
+       eso lleva su propio event.stopPropagation() al usarlo. */
+    .btn-trazabilidad { background: #f8fafc; border: 1px solid #e2e8f0; color: #2C43A2; border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; }
+    .btn-trazabilidad:hover { background: #eef2ff; border-color: #c7d2fe; }
+
+    .btn-secondary-trz { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; border-radius: 6px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-secondary-trz:hover { background: #edf2f7; }
+    /* Botón de eliminar causa raíz/medida (pedido por Julio 04/09) -- pide
+       su propio permiso 'produccion.trazabilidad.eliminar', aparte del de
+       agregar ('produccion.trazabilidad.gestionar'), así que puede aparecer
+       aunque no se muestre el select de "cambiar estado" (que sí depende de
+       gestionar). */
+    .btn-eliminar-trz { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 6px; padding: 3px 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; }
+    .btn-eliminar-trz:hover { background: #fed7d7; }
+    /* Botón "+" para agregar otra causa raíz (pedido por Julio 04/09): antes
+       el formulario para agregar quedaba siempre abierto, como su propia
+       sección al final de la lista de causas -- ahora es un botón chiquito
+       arriba del cuadro "Causas raíz y sus medidas" que abre/cierra ese
+       formulario (ver toggleCausaNuevaBox). */
+    .btn-trz-agregar-causa { background: #ebf4ff; border: 1px solid #c3dafe; color: #2C43A2; border-radius: 6px; padding: 3px 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0; }
+    .btn-trz-agregar-causa:hover { background: #c3dafe; }
+
+    .trz-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(23,32,53,0.55); align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; z-index: 1000; }
+    /* Rediseño 04/09 (3), pedido por Julio con captura de pantalla: modal aún
+       más ancho para que el cuadro de causas/medidas y las gráficas respiren
+       más (mismo ancho que en Seguimiento de Producción). */
+    .trz-modal-panel { max-width: 920px; width: 100%; margin: 0; background: #fff; border-radius: 14px; padding: 26px 32px; box-shadow: 0 12px 40px rgba(17,27,67,0.25); }
+    .trz-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .trz-modal-header h3 { margin: 0; font-size: 17px; color: #2d3748; }
+    .trz-modal-cerrar { background: none; border: none; font-size: 22px; line-height: 1; color: #a0aec0; cursor: pointer; padding: 2px 6px; }
+    .trz-modal-cerrar:hover { color: #4a5568; }
+
+    .trz-contexto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+    .trz-contexto-grid > div { display: flex; flex-direction: column; gap: 2px; }
+    .trz-contexto-grid span { font-size: 10.5px; color: #a0aec0; font-weight: 700; text-transform: uppercase; }
+    .trz-contexto-grid strong { font-size: 13.5px; color: #2d3748; }
+
+    .trz-modal-mensaje { border-radius: 8px; padding: 10px 14px; font-size: 12.5px; margin-bottom: 14px; }
+    .trz-modal-mensaje.error { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+
+    /* Selector de motivos de una Referencia (pedido por Julio 04/09): al
+       hacer clic en el 🛠️ de una fila de Referencias, en vez de ir directo
+       a registrar causa raíz, primero se muestra esta lista (ordenada por
+       más frecuente, igual que la tabla de Motivos) para elegir CUÁL motivo
+       de rechazo de esa referencia se va a trabajar -- reutiliza el mismo
+       caso de tipo "motivo" que ya existe en la tabla de Motivos general
+       (no crea uno nuevo por cada referencia). */
+    /* Rediseño 04/09 (2): ya no es una lista de filas de texto -- son 2
+       gráficas de barras apiladas (una debajo de otra), cada una scrolleable
+       si hay muchos motivos. */
+    #motivoSelectorLista { max-height: 520px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+    #motivoSelectorLista .trz-grafica-caja { min-height: 160px; }
+
+    /* Gráficas de contexto al entrar a un caso de tipo Motivo (pedido por
+       Julio 04/09): tendencia mensual de ese motivo + top de referencias
+       donde más se presenta. Solo aplica a casos de Motivo -- para
+       Referencia no hay una gráfica equivalente todavía.
+       Rediseño 04/09 (3), confirmado con captura de pantalla: ancho
+       completo, apiladas una arriba de otra, por ENCIMA del cuadro de
+       causas/medidas (se probó ponerlas en una columna angosta al lado y no
+       le gustó). */
+    #trzGraficasSeccion { display: none; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+    .trz-grafica-caja { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
+    .trz-grafica-caja h5 { margin: 0 0 8px 0; font-size: 11.5px; color: #718096; font-weight: 700; text-transform: uppercase; }
+    .trz-grafica-caja canvas { max-height: 220px; }
+
+    #trzFormNuevo label { display: block; font-size: 12px; font-weight: 700; color: #4a5568; margin: 12px 0 5px; }
+    #trzFormNuevo label:first-child { margin-top: 0; }
+    #trzFormNuevo textarea, #trzFormNuevo input[type="text"], #trzFormNuevo select { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 13.5px; font-family: inherit; resize: vertical; }
+    #trzFormNuevo textarea:disabled, #trzFormNuevo input:disabled, #trzFormNuevo select:disabled { background: #f8fafc; color: #718096; }
+    .trz-form-row { display: flex; gap: 14px; }
+    .trz-form-row > div { flex: 1; }
+    .btn-trazabilidad-guardar { margin-top: 16px; background: #2C43A2; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-trazabilidad-guardar:hover { background: #24357f; }
+    .btn-trazabilidad-guardar:disabled { background: #cbd5e0; cursor: not-allowed; }
+    .trz-solo-lectura { display: none; background: #fffaf0; color: #b7791f; border: 1px solid #feebc8; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; margin-top: 14px; }
+
+    .trz-lista-seccion { margin-top: 20px; padding: 18px 20px 16px; background: #fbfbfe; border: 1px solid #e2e8f0; border-radius: 14px; }
+    .trz-lista-seccion h4 { margin: 0 0 14px 0; font-size: 14.5px; color: #2d3748; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .trz-item-lista { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; padding-right: 4px; }
+    .trz-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 13px; }
+    .trz-item-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: #a0aec0; margin-bottom: 4px; }
+    .trz-item-texto { font-size: 13.5px; line-height: 1.5; color: #2d3748; white-space: pre-wrap; }
+    .trz-item-nuevo { display: flex; gap: 10px; align-items: flex-start; }
+    .trz-item-nuevo textarea { flex: 1; box-sizing: border-box; padding: 9px 11px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; }
+    .trz-medida-estado { padding: 4px 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 11.5px; font-weight: 700; background: #fff; }
+    .trz-item-nuevo { flex-direction: column; }
+    .trz-item-nuevo-fila { display: flex; gap: 10px; align-items: center; }
+    .trz-item-nuevo-fila select { flex: 1; padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 12.5px; font-family: inherit; background: #fff; }
+    .trz-item-kind { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #a0aec0; }
+    .trz-item-kind.causa { color: #b7791f; }
+    .trz-item-resp { font-size: 11px; color: #718096; margin-top: 4px; }
+    .trz-item-resp b { color: #4a5568; }
+
+    /* Causas y medidas son dos listas separadas pero relacionadas: cada
+       tarjeta es UNA causa raíz, con sus propias medidas anidadas debajo
+       (indentadas, con una línea vertical) -- para que "esta causa tiene
+       estas medidas" se vea de un vistazo, sin mezclarlas todas en una sola
+       línea de tiempo. */
+    .trz-causa-card { border: 1px solid #e2e8f0; border-left: 4px solid #2C43A2; border-radius: 12px; padding: 14px 16px 16px; margin-bottom: 14px; background: #fff; box-shadow: 0 1px 3px rgba(17,27,67,0.06); }
+    .trz-causa-card > .trz-item-causa-info { padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px dashed #edf2f7; }
+    .trz-medidas-de-causa { margin-left: 16px; padding-left: 16px; border-left: 2px solid #edf2f7; display: flex; flex-direction: column; gap: 10px; }
+    .trz-medidas-sueltas { border-style: dashed; }
+    .trz-catalogo-select { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 12.5px; font-family: inherit; background: #fff; }
+    .trz-catalogo-otra { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 9px 11px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; }
+
+    /* AJUSTE 03/09: cuando el último caso para un contexto ya quedó
+       Implementado, se pregunta si esa solución falló antes de crear un
+       caso nuevo -- ver confirmarSolucionAnteriorFallo()/tratarComoCasoNuevo(). */
+    .trz-reapertura { display: none; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+    .trz-reapertura p { margin: 0 0 10px; font-size: 13px; color: #4a5568; }
+    .trz-medida-anterior { background: #fff; border: 1px solid #fed7d7; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: #742a2a; margin-bottom: 12px; }
+    .trz-reapertura-botones { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-trz-fallo { background: #c53030; color: #fff; border: none; border-radius: 8px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+    .btn-trz-fallo:hover { background: #9b2c2c; }
+    .btn-trz-otro { background: #fff; color: #4a5568; border: 1px solid #cbd5e0; border-radius: 8px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+    .btn-trz-otro:hover { background: #f8fafc; }
+
   </style>
 </head>
 <body>
@@ -102,19 +252,222 @@
       </div>
 
       <div class="prod-controls">
-        <div style="font-weight:700; color:#2d3748;"><i class="fa-solid fa-filter"></i> Ventana de tiempo (aplica a la pestaña activa)</div>
-        <div class="filtros">
-          <select id="filtroMeses" onchange="onCambioMeses()">
-            <option value="3">Últimos 3 meses</option>
-            <option value="6">Últimos 6 meses</option>
-            <option value="12" selected>Últimos 12 meses</option>
-            <option value="24">Últimos 24 meses</option>
-          </select>
+        <div style="font-weight:700; color:#2d3748;"><i class="fa-solid fa-filter"></i> Filtros (Ventana y Meta)</div>
+        <div class="filtros" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <div>
+            <label style="font-size: 11.5px; color: #718096; font-weight: 600; margin-right: 4px;">Tipo:</label>
+            <select id="tipoFiltroFecha" onchange="onCambioTipoFecha()">
+              <option value="meses" selected>Meses</option>
+              <option value="rango">Rango de fechas</option>
+            </select>
+          </div>
+          <div id="contenedorFiltroMeses">
+            <select id="filtroMeses" onchange="onCambioMeses()">
+              <option value="3">Últimos 3 meses</option>
+              <option value="6">Últimos 6 meses</option>
+              <option value="12" selected>Últimos 12 meses</option>
+              <option value="24">Últimos 24 meses</option>
+            </select>
+          </div>
+          <div id="contenedorFiltroRango" style="display: none; display: flex; gap: 6px; align-items: center;">
+            <input type="date" id="filtroDesde" onchange="onCambioRangoFechas()" style="padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px;">
+            <span style="font-size: 12px; color: #718096;">a</span>
+            <input type="date" id="filtroHasta" onchange="onCambioRangoFechas()" style="padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px;">
+          </div>
+          <div>
+            <label style="font-size: 11.5px; color: #718096; font-weight: 600; margin-right: 4px;">Meta %:</label>
+            <select id="selectMeta" onchange="onCambioMeta()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff;">
+              <option value="0.2">0.2%</option>
+              <option value="0.4">0.4%</option>
+              <option value="0.6">0.6%</option>
+              <option value="0.8">0.8%</option>
+              <option value="1">1%</option>
+              <option value="2">2%</option>
+              <option value="3" selected>3%</option>
+              <option value="4">4%</option>
+              <option value="5">5%</option>
+              <option value="6">6%</option>
+              <option value="7">7%</option>
+              <option value="8">8%</option>
+              <option value="9">9%</option>
+              <option value="10">10%</option>
+            </select>
+          </div>
+          <div>
+            <button onclick="refrescarHojasExcel()" style="background: #2C43A2; color: white; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-rotate"></i> Refrescar Hojas Excel
+            </button>
+          </div>
         </div>
       </div>
 
       <div class="tabs-nav" id="tabsNav"></div>
       <div id="tabsContent"></div>
+    </div>
+  </div>
+
+  <!-- ======================== MODAL DE TRAZABILIDAD DE SOLUCIONES ======================== -->
+  <div class="trz-modal-overlay" id="trzModalOverlay" onclick="if (event.target === this) cerrarModalTrazabilidad();">
+    <div class="trz-modal-panel">
+      <div class="trz-modal-header">
+        <h3 id="trzModalTitulo"><i class="fa-solid fa-wrench"></i> Registrar Solución</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalTrazabilidad()">&times;</button>
+      </div>
+      <div id="trzModalContexto" class="trz-contexto-grid"></div>
+      <div id="trzModalMensaje" class="trz-modal-mensaje error" style="display:none;"></div>
+
+      <!-- GRÁFICAS DE CONTEXTO (pedido por Julio 04/09): solo para casos de
+           tipo Motivo -- tendencia mensual de cuánto ha salido ese motivo, y
+           en qué referencias se presenta más (ver cargarGraficasMotivo).
+           Rediseño 04/09 (3), confirmado con captura de pantalla: ancho
+           completo, apiladas una arriba de otra, por ENCIMA del cuadro de
+           causas/medidas. -->
+      <div id="trzGraficasSeccion">
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-line"></i> Unidades por mes</h5>
+          <canvas id="trzChartMes"></canvas>
+        </div>
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-bar"></i> Top referencias donde más aparece</h5>
+          <canvas id="trzChartReferencias"></canvas>
+        </div>
+      </div>
+
+      <!-- REABRIR TRAS FALLO: el último caso para este contexto ya había
+           quedado "Implementado" -- se pregunta antes de asumir que es un
+           problema distinto (AJUSTE 03/09). -->
+      <div class="trz-reapertura" id="trzReaperturaBox">
+        <p><i class="fa-solid fa-triangle-exclamation"></i> El último caso para esto ya se había marcado como <strong>Implementado</strong>, con esta medida:</p>
+        <div class="trz-medida-anterior" id="trzMedidaAnteriorTexto"></div>
+        <p style="margin-bottom:8px; font-weight:700;">¿Esa solución no funcionó?</p>
+        <div class="trz-reapertura-botones">
+          <button type="button" class="btn-trz-fallo" onclick="confirmarSolucionAnteriorFallo()"><i class="fa-solid fa-rotate-left"></i> Sí, no funcionó — reabrir ese caso</button>
+          <button type="button" class="btn-trz-otro" onclick="tratarComoCasoNuevo()">No, es un problema distinto</button>
+        </div>
+      </div>
+
+      <!-- CASO NUEVO: no hay todavía ningún caso abierto para este contexto.
+           La causa raíz se elige del catálogo (o "Otra" para escribirla) --
+           el responsable ya no se elige, es automáticamente quien la esté
+           registrando. -->
+      <form id="trzFormNuevo" onsubmit="crearCasoTrazabilidad(event)">
+        <!-- Pedido por Julio (07/09, tercera vuelta): elegir "el problema"
+             (mismo catálogo de Defectos de Muestreos ISO 2859 que ya usa
+             Reportes por Áreas) es opcional -- si se elige uno, la Causa
+             Raíz de abajo se filtra para mostrar solo las ya ligadas a ESE
+             Defecto (para reusarlas); si se deja en blanco, se comporta
+             igual que siempre (todo el catálogo, sin filtrar). -->
+        <label for="trzDefectoInicialSelect">Problema / Defecto (opcional)</label>
+        <select id="trzDefectoInicialSelect" onchange="alCambiarDefectoTrazabilidad('inicial')">
+          <option value="">Sin problema asignado</option>
+        </select>
+        <label for="trzCausaInicialSelect" style="margin-top:10px;">Causa Raíz</label>
+        <select id="trzCausaInicialSelect" data-otra="trzCausaInicialOtra" onchange="alCambiarSelectCatalogo(this)">
+          <option value="">Elige una causa del catálogo...</option>
+          <option value="__otra__">Otra (escribir)</option>
+        </select>
+        <textarea id="trzCausaInicialOtra" rows="2" placeholder="¿Qué originó el problema?" style="display:none; margin-top:8px;"></textarea>
+        <button type="submit" class="btn-trazabilidad-guardar" id="trzBtnCrear"><i class="fa-solid fa-floppy-disk"></i> Crear Caso</button>
+      </form>
+
+      <!-- CASO EXISTENTE: ya hay un caso (nuevo recién creado, o uno reabierto).
+           Causas y medidas son DOS listas separadas pero relacionadas: cada
+           medida se agrega y se muestra debajo de SU causa raíz (para esta
+           causa, estas son las medidas que se han intentado). -->
+      <div id="trzCasoExistente" style="display:none;">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+            <span style="font-size:10.5px; color:#a0aec0; font-weight:700; text-transform:uppercase;">Estado del caso</span>
+            <span id="trzEstadoGeneral"></span>
+          </div>
+        </div>
+
+        <div class="trz-lista-seccion">
+          <h4>
+            <span><i class="fa-solid fa-diagram-project"></i> Causas raíz y sus medidas</span>
+            <span style="display:flex; gap:6px;">
+              <button type="button" class="btn-trz-agregar-causa" id="trzBtnMostrarCausaNueva" onclick="toggleCausaNuevaBox()" title="Agregar otra causa raíz"><i class="fa-solid fa-plus"></i></button>
+              <!-- MIGRACIÓN #37 (07/09, pedido por Julio): cuando la misma causa
+                   real ya está registrada en un Reporte por Áreas (u otro caso de
+                   Producción), en vez de escribirla de nuevo se busca y se
+                   vincula -- así comparten medidas y progreso. Nunca automático,
+                   siempre una búsqueda + elección del analista (ver
+                   abrirModalVincularCausa). -->
+              <button type="button" class="btn-trz-agregar-causa" id="trzBtnVincularCausa" onclick="abrirModalVincularCausa()" title="Vincular una causa que ya existe en otro caso o módulo"><i class="fa-solid fa-link"></i></button>
+            </span>
+          </h4>
+          <div id="trzCausasLista" class="trz-item-lista"></div>
+
+          <!-- Pedido por Julio (04/09): este formulario ya no queda siempre
+               visible como su propia sección -- ahora arranca oculto y se
+               abre/cierra con el botón "+" de arriba (ver
+               toggleCausaNuevaBox). -->
+          <div class="trz-item-nuevo" id="trzCausaNuevaBox" style="display:none; margin-top:12px;">
+            <!-- Pedido por Julio (07/09, tercera vuelta): mismo selector de
+                 Problema/Defecto opcional que en el formulario de "Crear Caso"
+                 (ver trzDefectoInicialSelect) -- filtra la Causa Raíz de abajo. -->
+            <label for="trzDefectoNuevaSelect" style="font-size:12px; color:#a0aec0;">Problema / Defecto (opcional)</label>
+            <select id="trzDefectoNuevaSelect" onchange="alCambiarDefectoTrazabilidad('nueva')" style="margin-bottom:8px;">
+              <option value="">Sin problema asignado</option>
+            </select>
+            <select id="trzCausaNuevaSelect" data-otra="trzCausaNuevaOtra" onchange="alCambiarSelectCatalogo(this)">
+              <option value="">Elige una causa del catálogo...</option>
+              <option value="__otra__">Otra (escribir)</option>
+            </select>
+            <textarea id="trzCausaNuevaOtra" rows="2" placeholder="Escribe la causa raíz..." style="display:none;"></textarea>
+            <div class="trz-item-nuevo-fila">
+              <button type="button" class="btn-secondary-trz" onclick="agregarCausaTrazabilidad()"><i class="fa-solid fa-plus"></i> Agregar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trz-solo-lectura" id="trzSoloLectura">No tienes permiso para crear o editar planes de acción de Producción. Puedes ver el detalle de este caso, pero no guardar cambios.</div>
+    </div>
+  </div>
+
+  <!-- ======================== SELECTOR DE MOTIVOS DE UNA REFERENCIA ========================
+       Pedido por Julio (04/09): al hacer clic en el 🛠️ de una fila de
+       Referencias, en vez de ir directo a registrar causa raíz para la
+       referencia, primero se elige CUÁL motivo de rechazo de esa referencia
+       se va a trabajar (ver abrirSelectorMotivosPorReferencia). Elegir uno
+       abre el modal de arriba con tipo_contexto 'motivo' -- es el mismo caso
+       que ya existe en la tabla de Motivos general, no uno nuevo.
+       Rediseño 04/09 (2): en vez de una lista de filas de texto, ahora son 2
+       gráficas de barras -- Cantidad (unidades rechazadas) y Concurrencia
+       (veces registrado) -- y se hace clic SOBRE LA BARRA del motivo para ir
+       a sus causas raíz (o a crear una), igual que antes con el botón 🛠️ de
+       cada fila (ver renderizarSelectorMotivos). -->
+  <div class="trz-modal-overlay" id="motivoSelectorOverlay" onclick="if (event.target === this) cerrarSelectorMotivos();">
+    <div class="trz-modal-panel" style="max-width: 620px;">
+      <div class="trz-modal-header">
+        <h3><i class="fa-solid fa-list-check"></i> Motivos de rechazo de <span id="motivoSelectorReferencia"></span></h3>
+        <button class="trz-modal-cerrar" onclick="cerrarSelectorMotivos()">&times;</button>
+      </div>
+      <p style="font-size:12.5px; color:#718096; margin-top:0;">Haz clic sobre la barra del motivo que quieres trabajar -- si ese motivo ya tiene causa raíz registrada (de esta u otra referencia), la vas a ver directo.</p>
+      <div id="motivoSelectorLista"></div>
+    </div>
+  </div>
+
+  <!-- ======================== VINCULAR CAUSA EXISTENTE (MIGRACIÓN #37) ========================
+       Pedido por Julio (07/09): buscar una causa raíz ya registrada (en este
+       mismo caso de Producción, en otro caso, o en un Reporte por Áreas) y
+       vincularla a este caso -- a partir de ahí comparten medidas y estado.
+       Siempre una búsqueda + elección manual, nunca automático (ver
+       data/causasRaiz.js: el mismo defecto puede tener causas distintas
+       según la fábrica/área). -->
+  <div class="trz-modal-overlay" id="vincularCausaOverlay" onclick="if (event.target === this) cerrarModalVincularCausa();">
+    <div class="trz-modal-panel" style="max-width: 560px;">
+      <div class="trz-modal-header">
+        <h3><i class="fa-solid fa-link"></i> Vincular una causa raíz existente</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalVincularCausa()">&times;</button>
+      </div>
+      <p style="font-size:12.5px; color:#718096; margin-top:0;">Busca por el texto de la causa. Antes de vincular, revisa en qué caso(s) ya está -- el mismo defecto puede tener causas distintas según la fábrica o el área, así que vincula solo si de verdad es el mismo problema real.</p>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <input type="text" id="vincularCausaInput" placeholder="Escribe parte del texto de la causa..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); buscarCausasParaVincular();}">
+        <button type="button" class="btn-secondary-trz" onclick="buscarCausasParaVincular()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+      </div>
+      <div id="vincularCausaResultados" class="trz-item-lista"></div>
     </div>
   </div>
 
@@ -125,7 +478,353 @@
     let usuarioActual = null;
     let permisosUsuario = [];
 
-    const META_DESPERDICIO = 10; // %, fijo por ahora (confirmado con Julio 31/08)
+    let metaDesperdicio = 3;
+    // key -> { mes, motivo, linea, proceso }. El mes es independiente y
+    // persistente (no se borra al elegir motivo/línea); motivo y línea son
+    // excluyentes entre sí pero ambos se COMBINAN con el mes activo -- así
+    // pidió Julio que funcionara, inspirado en cómo el tablero de garantías
+    // combina selectedMes/selectedProblema/selectedTipoSolicitud.
+    let filtrosActivos = {};
+    let subTabActiva = {}; // key -> 'graficos' | 'datos' (default 'graficos')
+
+    function onCambioMeta() {
+      metaDesperdicio = parseFloat(document.getElementById('selectMeta').value) || 10;
+      const info = pestañas.find(p => p.key === pestañaActiva);
+      if (info && cacheDatos[info.key]) {
+        const k = info.key;
+        const f = filtrosActivos[k] || {};
+        renderizarKpiDesperdicio(k, cacheDatos[k].desperdicio, cacheDatos[k].buenoVsMalo);
+        // La gráfica/tabla principal solo se repinta en modo normal (bueno
+        // vs. malo, que sí usa la meta) -- si hay un motivo/línea activo,
+        // esa gráfica está mostrando su evolución mensual y la meta no le
+        // aplica, así que se deja tal cual.
+        if (!f.motivo && !f.linea) {
+          renderizarChartDesperdicio(k, cacheDatos[k].buenoVsMalo, info.label);
+          renderizarTablaMeses(k, cacheDatos[k].buenoVsMalo);
+        }
+        renderizarRanking(k, cacheDatos[k].ranking);
+        renderizarMotivos(k, cacheDatos[k].motivos);
+        renderizarLineas(k, cacheDatos[k].lineas);
+        renderizarTablaMotivos(k, cacheDatos[k].motivos);
+        renderizarTablaLineas(k, cacheDatos[k].lineas);
+      }
+    }
+
+    function onCambioTipoFecha() {
+      const tipo = document.getElementById('tipoFiltroFecha').value;
+      if (tipo === 'meses') {
+        document.getElementById('contenedorFiltroMeses').style.display = 'block';
+        document.getElementById('contenedorFiltroRango').style.display = 'none';
+      } else {
+        document.getElementById('contenedorFiltroMeses').style.display = 'none';
+        document.getElementById('contenedorFiltroRango').style.display = 'flex';
+      }
+      onCambioMeses();
+    }
+
+    function onCambioRangoFechas() {
+      const desde = document.getElementById('filtroDesde').value;
+      const hasta = document.getElementById('filtroHasta').value;
+      if (desde && hasta) {
+        Object.keys(cacheDatos).forEach(k => { cacheDatos[k] = { ...cacheDatos[k], sucio: true }; });
+        filtrosActivos = {};
+        const info = pestañas.find(p => p.key === pestañaActiva);
+        if (info) cargarDatosPestaña(info);
+      }
+    }
+
+    function obtenerParametrosFiltro() {
+      const tipo = document.getElementById('tipoFiltroFecha').value;
+      if (tipo === 'rango') {
+        return {
+          desde: document.getElementById('filtroDesde').value,
+          hasta: document.getElementById('filtroHasta').value
+        };
+      }
+      return { meses: document.getElementById('filtroMeses').value };
+    }
+
+    // Mete la ventana de fechas (desde/hasta, o meses) en un URLSearchParams
+    // -- centraliza la lógica que antes se repetía en cada función que arma
+    // una petición al servidor.
+    function aplicarRangoAParams(params, rango) {
+      if (rango && rango.desde && rango.hasta) {
+        params.set('desde', rango.desde);
+        params.set('hasta', rango.hasta);
+      } else {
+        params.set('meses', (rango && rango.meses) || 12);
+      }
+    }
+
+    // Convierte un mes 'YYYY-MM' (como vienen las claves de bueno-vs-malo)
+    // en un rango {desde, hasta} que cubre exactamente ese mes completo.
+    function mesARango(mes) {
+      const [y, m] = String(mes).split('-').map(Number);
+      if (!y || !m) return {};
+      const ultimoDia = new Date(y, m, 0).getDate();
+      return { desde: `${mes}-01`, hasta: `${mes}-${String(ultimoDia).padStart(2, '0')}` };
+    }
+
+    // El rango "efectivo" para todo lo que depende del filtro combinado: si
+    // hay un mes seleccionado, ese mes manda (aunque la ventana general diga
+    // "últimos 12 meses"); si no, se usa la ventana general tal cual.
+    function obtenerRangoEfectivo(k) {
+      const f = filtrosActivos[k] || {};
+      if (f.mes) return mesARango(f.mes);
+      return obtenerParametrosFiltro();
+    }
+
+    const NOMBRES_MES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    function formatearMesLabel(mesStr) {
+      const [y, m] = String(mesStr || '').split('-').map(Number);
+      if (!y || !m || !NOMBRES_MES_CORTO[m - 1]) return mesStr;
+      return `${NOMBRES_MES_CORTO[m - 1]} ${y}`;
+    }
+
+    // El motivo y la línea son excluyentes entre sí (un clic activa uno y
+    // apaga el otro), pero el mes es independiente: se combina tanto con
+    // motivo como con línea sin borrarse. Ninguno de los tres se mezcla con
+    // el cuadro de texto de "buscar lote" -- son formas distintas de mirar
+    // la tabla (ver onEscribirBuscarLote). El filtro activo se ve en su
+    // propio recuadro con un "chip" quitable por cada filtro (ver
+    // actualizarFiltroActivoUI / actualizarFiltroChipsUI).
+    function filtrarPorMes(k, mes) {
+      const actual = filtrosActivos[k] || {};
+      const yaActivo = actual.mes === mes;
+      filtrosActivos[k] = yaActivo
+        ? { motivo: actual.motivo, linea: actual.linea, proceso: actual.proceso }
+        : { motivo: actual.motivo, linea: actual.linea, proceso: actual.proceso, mes };
+      aplicarFiltroActivo(k);
+    }
+
+    function quitarFiltroMes(k) {
+      const actual = filtrosActivos[k] || {};
+      filtrosActivos[k] = { motivo: actual.motivo, linea: actual.linea, proceso: actual.proceso };
+      aplicarFiltroActivo(k);
+    }
+
+    function filtrarPorMotivo(k, motivo) {
+      const actual = filtrosActivos[k] || {};
+      const yaActivo = actual.motivo === motivo;
+      filtrosActivos[k] = yaActivo ? { mes: actual.mes } : { mes: actual.mes, motivo };
+      aplicarFiltroActivo(k);
+    }
+
+    function filtrarPorLinea(k, linea, proceso) {
+      const actual = filtrosActivos[k] || {};
+      const yaActivo = actual.linea === linea && actual.proceso === proceso;
+      filtrosActivos[k] = yaActivo ? { mes: actual.mes } : { mes: actual.mes, linea, proceso };
+      aplicarFiltroActivo(k);
+    }
+
+    function quitarFiltroMotivoLinea(k) {
+      const actual = filtrosActivos[k] || {};
+      filtrosActivos[k] = { mes: actual.mes };
+      aplicarFiltroActivo(k);
+    }
+
+    function resetFiltrosTab(k) {
+      filtrosActivos[k] = {};
+      aplicarFiltroActivo(k);
+    }
+
+    // Único punto que reacciona a CUALQUIER cambio en el filtro combinado
+    // (mes y/o motivo/línea): resalta la barra de mes en la gráfica/tabla
+    // principal, y vuelve a pedir al servidor -- con el rango efectivo (el
+    // mes si está activo, si no la ventana general) -- todo lo que depende
+    // del filtro: el KPI de % de desperdicio, el ranking de referencias, los
+    // motivos (cruzados por línea si hay una activa), las líneas (cruzadas
+    // por motivo si hay uno activo) y la tabla de buscar lote. La gráfica
+    // principal y la tabla de meses NUNCA se recortan al mes -- son el punto
+    // de partida desde el que se hace clic, siempre muestran la ventana
+    // completa (solo cambian de pestaña de fábrica o de ventana general).
+    async function aplicarFiltroActivo(k) {
+      const info = pestañas.find(p => p.key === k);
+      if (!info) return;
+      const f = filtrosActivos[k] || {};
+      const rango = obtenerRangoEfectivo(k);
+      const hayMotivoOLinea = !!(f.motivo || f.linea);
+      const etiquetaFiltro = f.motivo ? `Motivo: ${f.motivo}` : (f.linea ? `Línea: ${f.linea} · ${f.proceso || ''}` : '');
+
+      // Repintado inmediato (sin esperar al servidor) SOLO cuando la
+      // gráfica/tabla principal va a quedar en modo normal (bueno vs. malo):
+      // esos datos ya están en caché. Si hay un motivo/línea activo, hace
+      // falta pedirle al servidor la evolución mensual de ESE motivo/línea
+      // (ver más abajo), así que se espera a esa respuesta.
+      if (!hayMotivoOLinea && cacheDatos[k]) {
+        renderizarChartDesperdicio(k, cacheDatos[k].buenoVsMalo, info.label);
+        renderizarTablaMeses(k, cacheDatos[k].buenoVsMalo);
+      }
+      actualizarFiltroChipsUI(k);
+
+      const params = new URLSearchParams();
+      aplicarRangoAParams(params, rango);
+      if (info.fabrica) params.set('fabrica', info.fabrica);
+
+      const paramsMotivos = new URLSearchParams({ ...Object.fromEntries(params), limite: 10 });
+      if (f.linea) { paramsMotivos.set('linea', f.linea); paramsMotivos.set('proceso', f.proceso || ''); }
+      const paramsLineas = new URLSearchParams({ ...Object.fromEntries(params), limite: 10 });
+      if (f.motivo) paramsLineas.set('motivo', f.motivo);
+
+      // La evolución mensual de un motivo/línea (pedido por Julio: "que la
+      // gráfica del mes también me diga en esos meses cuánto salió")
+      // siempre usa la VENTANA GENERAL completa (nunca el mes recortado que
+      // pueda estar activo) -- es el punto de partida para poder seguir
+      // haciendo clic en un mes desde ahí, ahora mirando ese motivo/línea.
+      let promesaPorMes = Promise.resolve(null);
+      if (hayMotivoOLinea) {
+        const rangoGeneral = obtenerParametrosFiltro();
+        const paramsPorMes = new URLSearchParams();
+        aplicarRangoAParams(paramsPorMes, rangoGeneral);
+        if (info.fabrica) paramsPorMes.set('fabrica', info.fabrica);
+        if (f.motivo) paramsPorMes.set('motivo', f.motivo);
+        if (f.linea) { paramsPorMes.set('linea', f.linea); paramsPorMes.set('proceso', f.proceso || ''); }
+        promesaPorMes = fetchJson(`/api/produccion/rechazos/por-mes?${paramsPorMes}`);
+      }
+
+      const [desperdicio, ranking, motivos, lineas, porMesFiltrado] = await Promise.all([
+        fetchJson(`/api/produccion/desperdicio?${params}`),
+        fetchJson(new URLSearchParams({ ...Object.fromEntries(params), limite: 10 }), '/api/produccion/lotes/desperdicio-por-referencia'),
+        fetchJson(paramsMotivos, '/api/produccion/rechazos/motivos'),
+        fetchJson(paramsLineas, '/api/produccion/rechazos/lineas'),
+        promesaPorMes,
+      ]);
+
+      // Por si el usuario ya cambió de filtro (o de pestaña) mientras estas
+      // peticiones estaban en camino: no pisar un resultado más nuevo.
+      const actual = filtrosActivos[k] || {};
+      if (actual.mes !== f.mes || actual.motivo !== f.motivo || actual.linea !== f.linea || actual.proceso !== f.proceso) return;
+
+      try { renderizarKpiDesperdicio(k, desperdicio, cacheDatos[k] ? cacheDatos[k].buenoVsMalo : null); } catch (e) { console.error('Error renderKpi:', e); }
+      try { renderizarRanking(k, ranking); } catch (e) { console.error('Error renderRanking:', e); }
+      try { renderizarMotivos(k, motivos); renderizarTablaMotivos(k, motivos); } catch (e) { console.error('Error renderMotivos:', e); }
+      try { renderizarLineas(k, lineas); renderizarTablaLineas(k, lineas); } catch (e) { console.error('Error renderLineas:', e); }
+      try {
+        if (hayMotivoOLinea) {
+          renderizarChartPorMesFiltrado(k, porMesFiltrado, info.label, etiquetaFiltro);
+          renderizarTablaMesesFiltrado(k, porMesFiltrado, etiquetaFiltro);
+        } else if (cacheDatos[k]) {
+          renderizarChartDesperdicio(k, cacheDatos[k].buenoVsMalo, info.label);
+          renderizarTablaMeses(k, cacheDatos[k].buenoVsMalo);
+        }
+      } catch (e) { console.error('Error render gráfica/tabla principal:', e); }
+
+      const busqueda = document.getElementById(`buscarInput-${k}`)?.value || '';
+      try {
+        await cargarLotesBuscar(k, info, busqueda, rango.meses, rango.desde, rango.hasta, f.motivo || null, f.linea || null, f.proceso || null);
+      } catch (e) { console.error('Error cargarLotesBuscar:', e); }
+
+      actualizarFiltroActivoUI(k);
+    }
+
+    // Escribir a mano en el buscador de lote quita cualquier filtro activo
+    // (mes, motivo o línea): son formas distintas de mirar la tabla, no
+    // tiene sentido combinarlas con una búsqueda puntual de lote.
+    function onEscribirBuscarLote(k) {
+      const f = filtrosActivos[k] || {};
+      if (f.mes || f.motivo || f.linea) {
+        filtrosActivos[k] = {};
+        aplicarFiltroActivo(k);
+      } else {
+        onCambioBuscarLote(k);
+      }
+    }
+
+    // Los "chips" quitables del recuadro de filtro activo: uno por el mes
+    // (si está activo) y uno por el motivo o línea (si está activo), más un
+    // botón "Quitar todos" cuando hay más de uno puesto a la vez.
+    function actualizarFiltroChipsUI(k) {
+      const cont = document.getElementById(`filtroChips-${k}`);
+      if (!cont) return;
+      const f = filtrosActivos[k] || {};
+      const chips = [];
+      if (f.mes) {
+        chips.push(`<span class="filtro-chip"><i class="fa-solid fa-calendar-days"></i> ${escapeHtml(formatearMesLabel(f.mes))}<button onclick="quitarFiltroMes('${k}')" title="Quitar filtro de mes"><i class="fa-solid fa-xmark"></i></button></span>`);
+      }
+      if (f.motivo) {
+        chips.push(`<span class="filtro-chip"><i class="fa-solid fa-triangle-exclamation"></i> Motivo: ${escapeHtml(f.motivo)}<button onclick="quitarFiltroMotivoLinea('${k}')" title="Quitar filtro de motivo"><i class="fa-solid fa-xmark"></i></button></span>`);
+      } else if (f.linea) {
+        chips.push(`<span class="filtro-chip"><i class="fa-solid fa-diagram-project"></i> Línea: ${escapeHtml(f.linea)} · ${escapeHtml(f.proceso || '')}<button onclick="quitarFiltroMotivoLinea('${k}')" title="Quitar filtro de línea"><i class="fa-solid fa-xmark"></i></button></span>`);
+      }
+      if (chips.length > 1) {
+        chips.push(`<button class="btn-quitar-todos" onclick="resetFiltrosTab('${k}')">Quitar todos</button>`);
+      }
+      cont.innerHTML = chips.join('');
+    }
+
+    // Recuadro que aparece cuando hay algún filtro activo (mes, motivo y/o
+    // línea): muestra los chips quitables y, pedido por Julio, el resumen
+    // concreto -- "salió X cantidad, se repitió X veces, en X referencias"
+    // -- para el rango efectivo (el mes si está activo) y la fábrica que
+    // esté seleccionada en ese momento.
+    async function actualizarFiltroActivoUI(k) {
+      const box = document.getElementById(`filtroActivo-${k}`);
+      const texto = document.getElementById(`filtroActivoTexto-${k}`);
+      if (!box || !texto) return;
+      const f = filtrosActivos[k] || {};
+      actualizarFiltroChipsUI(k);
+      if (!f.mes && !f.motivo && !f.linea) {
+        box.style.display = 'none';
+        return;
+      }
+      box.style.display = 'flex';
+      texto.innerHTML = '<span style="color:#718096;">Calculando resumen...</span>';
+
+      const info = pestañas.find(p => p.key === k);
+      const rango = obtenerRangoEfectivo(k);
+      const params = new URLSearchParams();
+      aplicarRangoAParams(params, rango);
+      if (info && info.fabrica) params.set('fabrica', info.fabrica);
+      if (f.motivo) params.set('motivo', f.motivo);
+      if (f.linea) { params.set('linea', f.linea); params.set('proceso', f.proceso || ''); }
+
+      const resumen = await fetchJson(`/api/produccion/rechazos/resumen-filtro?${params}`);
+      // Por si el usuario cambió de filtro (o de pestaña/ventana) mientras
+      // esta petición estaba en camino: no pisar un resultado más nuevo.
+      const actual = filtrosActivos[k] || {};
+      if (actual.mes !== f.mes || actual.motivo !== f.motivo || actual.linea !== f.linea || actual.proceso !== f.proceso) return;
+      if (!resumen) {
+        texto.innerHTML = '<span style="color:#c53030;">Error calculando el resumen.</span>';
+        return;
+      }
+      const periodoTxt = (rango.desde && rango.hasta) ? `${rango.desde} al ${rango.hasta}` : `en los últimos ${rango.meses} meses`;
+      texto.innerHTML = `${periodoTxt}: <strong>${resumen.unidades.toLocaleString('es-CO')}</strong> unidades rechazadas ·
+        se repitió <strong>${resumen.veces.toLocaleString('es-CO')}</strong> ${resumen.veces === 1 ? 'vez' : 'veces'} ·
+        en <strong>${resumen.referencias.toLocaleString('es-CO')}</strong> ${resumen.referencias === 1 ? 'referencia' : 'referencias'}.`;
+    }
+
+    async function refrescarHojasExcel() {
+      if (!confirm('¿Estás seguro de refrescar los datos desde Excel (Power Query)? Esto puede tardar unos segundos.')) return;
+      const btn = event.target.closest('button');
+      const txtOriginal = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Refrescando...';
+      try {
+        const res = await fetch('/api/produccion/refrescar', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al refrescar');
+        alert('¡Hojas de Excel refrescadas y sincronizadas con éxito!');
+        try {
+          const resFab = await fetch('/api/produccion/resumen-fabricas', { headers: { 'Authorization': 'Bearer ' + token } });
+          if (resFab.ok) resumenFabricasCache = await resFab.json();
+        } catch (e) {}
+        Object.keys(cacheDatos).forEach(k => { cacheDatos[k] = { ...cacheDatos[k], sucio: true }; });
+        filtrosActivos = {};
+        const info = pestañas.find(p => p.key === pestañaActiva);
+        if (info) {
+          renderizarKpisHistoricos(info);
+          cargarDatosPestaña(info);
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = txtOriginal;
+      }
+    }
 
     // Estado de las pestañas: 'general' (sin filtro de fábrica, siempre
     // presente) + una por cada fábrica que devuelva /produccion/resumen-fabricas
@@ -228,6 +927,9 @@
       resumenFabricasCache.forEach(f => {
         pestañas.push({ key: slug(f.fabrica) || 'sin-fabrica', label: nombreDisplay(f.fabrica), fabrica: f.fabrica });
       });
+      // Rediseño 04/09: la bitácora de todos los casos ("Seguimiento") ya no
+      // es una pestaña de esta pantalla -- Julio la pidió como su propio
+      // módulo dentro de Calidad (ver seguimiento_produccion.html).
 
       document.getElementById('tabsNav').innerHTML = pestañas.map(p => `
         <button class="tab-btn ${p.key === pestañaActiva ? 'activa' : ''}" id="tabBtn-${p.key}" onclick="activarPestaña('${p.key}')">${escapeHtml(p.label)}</button>
@@ -238,59 +940,141 @@
       await activarPestaña(pestañaActiva, true);
     }
 
+    // Cada pestaña de fábrica se divide en dos sub-pestañas que muestran la
+    // misma información de dos formas -- pedido por Julio, guiándose (solo
+    // en el comportamiento, no en el estilo visual) del tablero de
+    // garantías: "Gráficos" con las mismas gráficas de siempre, y "Datos"
+    // con esas mismas cifras en tablas (más fáciles de leer/copiar cifras
+    // exactas). Ambas comparten el mismo estado de filtros y de caché.
     function renderizarPlantillaPestaña(p) {
       const k = p.key;
       return `
         <div class="tab-pane ${k === pestañaActiva ? 'activa' : ''}" id="tabPane-${k}">
           <div class="kpis" id="kpis-${k}"><div class="empty-hint">Cargando...</div></div>
 
-          <div class="charts-row">
-            <div class="chart-box principal">
-              <h4><i class="fa-solid fa-chart-line"></i> % de desperdicio por mes — ${escapeHtml(p.label)} (buenas vs. malas por lote, meta ${META_DESPERDICIO}%)</h4>
-              <canvas id="chart-${k}"></canvas>
+          <div class="filtro-activo-box" id="filtroActivo-${k}">
+            <div class="filtro-chips" id="filtroChips-${k}"></div>
+            <div class="filtro-activo-texto" id="filtroActivoTexto-${k}"></div>
+          </div>
+
+          <div class="subtabs-nav">
+            <button class="subtab-btn activa" id="subtabBtn-graficos-${k}" onclick="activarSubTab('${k}','graficos')"><i class="fa-solid fa-chart-column"></i> Gráficos</button>
+            <button class="subtab-btn" id="subtabBtn-datos-${k}" onclick="activarSubTab('${k}','datos')"><i class="fa-solid fa-table-list"></i> Datos</button>
+          </div>
+
+          <div class="subtab-pane activa" id="subtabPane-graficos-${k}">
+            <div class="charts-row">
+              <div class="chart-box principal">
+                <h4 id="chartTitulo-${k}"><i class="fa-solid fa-chart-line"></i> % de desperdicio por mes — ${escapeHtml(p.label)} (buenas vs. malas por lote, meta ${metaDesperdicio}%). Clic en una columna para filtrar ese mes.</h4>
+                <canvas id="chart-${k}"></canvas>
+              </div>
+            </div>
+
+            <div class="charts-row">
+              <div class="chart-box">
+                <h4><i class="fa-solid fa-triangle-exclamation"></i> Motivos de rechazo — Cantidad (Unidades)</h4>
+                <canvas id="chartMotivosCant-${k}"></canvas>
+              </div>
+              <div class="chart-box">
+                <h4><i class="fa-solid fa-triangle-exclamation"></i> Motivos de rechazo — Frecuencia (Reportes)</h4>
+                <canvas id="chartMotivosFreq-${k}"></canvas>
+              </div>
+            </div>
+
+            <div class="charts-row">
+              <div class="chart-box">
+                <h4><i class="fa-solid fa-diagram-project"></i> Líneas de origen — Cantidad (Unidades)</h4>
+                <canvas id="chartLineasCant-${k}"></canvas>
+              </div>
+              <div class="chart-box">
+                <h4><i class="fa-solid fa-diagram-project"></i> Líneas de origen — Frecuencia (Reportes)</h4>
+                <canvas id="chartLineasFreq-${k}"></canvas>
+              </div>
             </div>
           </div>
 
-          <div class="feed-card">
-            <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-ranking-star"></i> Referencias con mayor % de desperdicio — ${escapeHtml(p.label)}</h4>
-            <div style="overflow-x:auto;">
-              <table class="admin-table">
-                <thead>
-                  <tr><th>Referencia</th><th>Producido</th><th>Rechazado</th><th>% Desperdicio</th></tr>
-                </thead>
-                <tbody id="ranking-${k}"><tr><td colspan="4" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
-              </table>
+          <div class="subtab-pane" id="subtabPane-datos-${k}">
+            <div class="feed-card">
+              <h4 id="tablaMesesTitulo-${k}" style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-calendar-days"></i> % de desperdicio por mes — ${escapeHtml(p.label)}. Clic en una fila para filtrar ese mes.</h4>
+              <div style="overflow-x:auto;">
+                <table class="admin-table">
+                  <thead id="tablaMesesThead-${k}"><tr><th>Mes</th><th>Producido</th><th>Rechazado</th><th>Bueno</th><th>% Desperdicio</th></tr></thead>
+                  <tbody id="tablaMeses-${k}"><tr><td colspan="5" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <div class="panel-grid">
-            <div class="panel-card">
-              <h4><i class="fa-solid fa-triangle-exclamation"></i> Motivos de rechazo más frecuentes</h4>
-              <div id="motivos-${k}"><div class="empty-hint">Cargando...</div></div>
+            <div class="feed-card">
+              <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-ranking-star"></i> Referencias con mayor % de desperdicio — ${escapeHtml(p.label)}</h4>
+              <div style="overflow-x:auto;">
+                <table class="admin-table">
+                  <thead><tr><th>Referencia</th><th>Producido</th><th>Rechazado</th><th>% Desperdicio</th><th></th></tr></thead>
+                  <tbody id="ranking-${k}"><tr><td colspan="5" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+                </table>
+              </div>
             </div>
-            <div class="panel-card">
-              <h4><i class="fa-solid fa-diagram-project"></i> Líneas/procesos de origen con más rechazos</h4>
-              <div id="lineas-${k}"><div class="empty-hint">Cargando...</div></div>
-            </div>
-          </div>
 
-          <div class="feed-card">
-            <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-magnifying-glass"></i> Buscar lote — cruce producido vs. rechazado</h4>
-            <div class="buscar-lote-controls">
-              <input type="text" id="buscarInput-${k}" placeholder="Buscar por número de lote, referencia o código..." oninput="onCambioBuscarLote('${k}')">
-              <div class="buscar-lote-hint" id="buscarHint-${k}"></div>
+            <div class="feed-card">
+              <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-triangle-exclamation"></i> Motivos de rechazo. Clic en una fila para filtrar.</h4>
+              <div style="overflow-x:auto;">
+                <table class="admin-table">
+                  <thead><tr><th>Motivo</th><th>Unidades</th><th>Frecuencia</th><th></th></tr></thead>
+                  <tbody id="tablaMotivos-${k}"><tr><td colspan="4" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+                </table>
+              </div>
             </div>
-            <div style="overflow-x:auto;">
-              <table class="admin-table">
-                <thead>
-                  <tr><th>Lote</th><th>Fecha</th><th>Referencia</th><th>Código</th><th>Producido</th><th>Rechazado</th><th>% Desperdicio</th></tr>
-                </thead>
-                <tbody id="buscarBody-${k}"><tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
-              </table>
+
+            <div class="feed-card">
+              <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-diagram-project"></i> Líneas de origen. Clic en una fila para filtrar.</h4>
+              <div style="overflow-x:auto;">
+                <table class="admin-table">
+                  <thead><tr><th>Línea</th><th>Proceso</th><th>Unidades</th><th>Frecuencia</th></tr></thead>
+                  <tbody id="tablaLineas-${k}"><tr><td colspan="4" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="feed-card">
+              <h4 style="margin:0 0 12px 0; font-size:14px; color:#4a5568;"><i class="fa-solid fa-magnifying-glass"></i> Buscar lote — cruce producido vs. rechazado</h4>
+              <div class="buscar-lote-controls">
+                <input type="text" id="buscarInput-${k}" placeholder="Buscar por número de lote, referencia o código..." oninput="onEscribirBuscarLote('${k}')">
+                <div class="buscar-lote-hint" id="buscarHint-${k}"></div>
+              </div>
+              <div style="overflow-x:auto;">
+                <table class="admin-table">
+                  <thead>
+                    <tr><th>Lote</th><th>Fecha</th><th>Referencia</th><th>Código</th><th>Producido</th><th>Rechazado</th><th>% Desperdicio</th></tr>
+                  </thead>
+                  <tbody id="buscarBody-${k}"><tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       `;
+    }
+
+    // Alterna entre las sub-pestañas Gráficos/Datos de una pestaña de
+    // fábrica. Al volver a "Gráficos" se fuerza un resize de sus gráficas
+    // Chart.js: si algo se recargó mientras esta sub-pestaña estaba oculta
+    // (display:none), el canvas quedó calculado con tamaño 0 y sin esto se
+    // vería en blanco hasta que la ventana se redimensionara sola.
+    function activarSubTab(k, cual) {
+      subTabActiva[k] = cual;
+      const btnG = document.getElementById(`subtabBtn-graficos-${k}`);
+      const btnD = document.getElementById(`subtabBtn-datos-${k}`);
+      const paneG = document.getElementById(`subtabPane-graficos-${k}`);
+      const paneD = document.getElementById(`subtabPane-datos-${k}`);
+      if (btnG) btnG.classList.toggle('activa', cual === 'graficos');
+      if (btnD) btnD.classList.toggle('activa', cual === 'datos');
+      if (paneG) paneG.classList.toggle('activa', cual === 'graficos');
+      if (paneD) paneD.classList.toggle('activa', cual === 'datos');
+      if (cual === 'graficos') {
+        requestAnimationFrame(() => {
+          [chartsInstancias[k], chartMotivosCantInstances[k], chartMotivosFreqInstances[k], chartLineasCantInstances[k], chartLineasFreqInstances[k]]
+            .forEach(c => { if (c) c.resize(); });
+        });
+      }
     }
 
     // ======================== NAVEGACIÓN ENTRE PESTAÑAS ========================
@@ -306,10 +1090,873 @@
       const info = pestañas.find(p => p.key === key);
       if (!info) return;
 
-      renderizarKpisHistoricos(info);
+      try {
+        const res = await fetch('/api/produccion/resumen-fabricas', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) resumenFabricasCache = await res.json();
+      } catch (e) {}
 
-      if (forzarRecarga || !cacheDatos[key] || cacheDatos[key].sucio) {
+      const necesitaRecarga = forzarRecarga || !cacheDatos[key] || cacheDatos[key].sucio;
+      if (necesitaRecarga) {
+        renderizarKpisHistoricos(info);
         await cargarDatosPestaña(info);
+      } else {
+        // Los datos de esta pestaña ya están en caché y siguen vigentes (no
+        // cambió la ventana de meses/rango desde la última vez que se
+        // cargaron), así que no hace falta volver a pedirlos al servidor.
+        // PERO las tarjetas de KPI sí hay que repintarlas aquí -- a
+        // diferencia de la gráfica y las tablas (que nunca se borran al
+        // cambiar de pestaña, solo se ocultan con CSS), renderizarKpisHistoricos
+        // las resetea a "Cargando..." cada vez. Bug real encontrado
+        // probando en vivo el 02/09: al volver a una pestaña ya visitada,
+        // las tarjetas de KPI se quedaban en "Cargando..." para siempre
+        // porque, al no hacer falta recargar, nadie las volvía a pintar.
+        renderizarKpiDesperdicio(key, cacheDatos[key].desperdicio, cacheDatos[key].buenoVsMalo);
+      }
+    }
+
+    // ======================== PESTAÑA "SEGUIMIENTO" (BITÁCORA DE TRAZABILIDAD) ========================
+    // Todos los casos de todas las fábricas juntos, filtrables -- para no
+    // tener que ir fábrica por fábrica buscando qué quedó pendiente.
+    // Rediseño 04/09: la bitácora de todos los casos ya no vive aquí --
+    // Julio la pidió como su propio módulo (ver seguimiento_produccion.html),
+    // no como una pestaña de esta pantalla de reportes de Producción.
+
+    function estadoPill(estado) {
+      const clase = { Pendiente: 'pill-warning', En_Proceso: 'pill-info', Implementado: 'pill-ok' }[estado] || 'pill-muted';
+      const texto = { Pendiente: 'Pendiente', En_Proceso: 'En Proceso', Implementado: 'Implementado' }[estado] || estado;
+      return `<span class="pill ${clase}">${texto}</span>`;
+    }
+
+    // ======================== MODAL DE TRAZABILIDAD DE SOLUCIONES ========================
+    // trzContextoActual: de dónde salió el clic (fábrica + referencia o
+    // motivo) -- se usa para crear un caso nuevo si todavía no hay ninguno
+    // abierto. trzProblemaActual: el caso ya guardado que se está viendo o
+    // editando (null si el formulario está vacío para crear uno nuevo).
+    // trzUltimoImplementado: si NO hay caso activo pero el último caso para
+    // este contexto quedó "Implementado", se guarda acá mientras se pregunta
+    // si esa solución falló (AJUSTE 03/09) -- null en cualquier otro caso.
+    let trzContextoActual = null;
+    let trzProblemaActual = null;
+    let trzUltimoImplementado = null;
+
+    // Rediseño 04/09: el catálogo de causas raíz (cada una con sus medidas
+    // ya ligadas -- ver data/trazabilidadCatalogo.js) reemplaza la vieja
+    // lista de usuarios/responsable: ahora el responsable siempre es quien
+    // esté conectado (el backend lo llena solo), y lo que sí hay que elegir
+    // es de qué causa/medida del catálogo se trata (o "Otra" para escribir
+    // una nueva, que el servidor agrega sola al catálogo). Se guarda en
+    // caché igual que resumenFabricasCache: una sola consulta por sesión de
+    // modal, y se refresca (forzar=true) después de cualquier "Otra" que
+    // pueda haber agregado algo nuevo al catálogo.
+    let trzCatalogoCache = null;
+    const ETIQUETAS_ESTADO_MEDIDA = { En_Proceso: 'En Proceso', Funciono: 'Funcionó', No_Funciono: 'No funcionó' };
+
+    async function cargarCatalogoTrazabilidad(forzar) {
+      if (trzCatalogoCache && !forzar) return trzCatalogoCache;
+      try {
+        const res = await fetch('/api/produccion/trazabilidad/catalogo', { headers: { 'Authorization': 'Bearer ' + token } });
+        trzCatalogoCache = res.ok ? await res.json() : [];
+      } catch (e) {
+        trzCatalogoCache = [];
+      }
+      return trzCatalogoCache;
+    }
+
+    function causasCatalogoActivas() {
+      return (trzCatalogoCache || []).filter(c => c.activo === 'Activo');
+    }
+
+    function medidasCatalogoDeCausa(causaCatalogoId) {
+      const causa = (trzCatalogoCache || []).find(c => String(c.id) === String(causaCatalogoId));
+      return causa ? (causa.medidas || []).filter(m => m.activo === 'Activo') : [];
+    }
+
+    function poblarSelectCausasCatalogo(select) {
+      if (!select) return;
+      const valorPrevio = select.value;
+      select.innerHTML = '<option value="">Elige una causa del catálogo...</option>' +
+        causasCatalogoActivas().map(c => `<option value="${c.id}">${escapeHtml(c.texto)}</option>`).join('') +
+        '<option value="__otra__">Otra (escribir)</option>';
+      if (valorPrevio) select.value = valorPrevio;
+    }
+
+    // Genérico para cualquier select de catálogo (causa o medida): muestra
+    // el textarea "Otra" cuando se elige esa opción -- cada select dice cuál
+    // es su textarea con el atributo data-otra (así sirve igual para los
+    // selects fijos del modal y para los que se crean solos, uno por cada
+    // causa, al agregar su medida).
+    function alCambiarSelectCatalogo(select) {
+      if (!select) return;
+      const textarea = document.getElementById(select.dataset.otra);
+      if (!textarea) return;
+      textarea.style.display = select.value === '__otra__' ? 'block' : 'none';
+      if (select.value === '__otra__') textarea.focus();
+    }
+
+    // Pedido por Julio (07/09, tercera vuelta): catálogo de "el problema"
+    // (mismo catálogo de Defectos de Muestreos ISO 2859 que ya usa Reportes
+    // por Áreas) -- se carga una sola vez por sesión de modal (igual que
+    // trzCatalogoCache) y sirve para poblar los dos selects "Problema /
+    // Defecto (opcional)" (al crear el caso, y al agregar otra causa).
+    let trzDefectosCache = null;
+
+    async function cargarDefectosTrazabilidad(forzar) {
+      if (trzDefectosCache && !forzar) return trzDefectosCache;
+      try {
+        const res = await fetch('/api/produccion/trazabilidad/defectos', { headers: { 'Authorization': 'Bearer ' + token } });
+        trzDefectosCache = res.ok ? await res.json() : [];
+      } catch (e) {
+        trzDefectosCache = [];
+      }
+      return trzDefectosCache;
+    }
+
+    function poblarSelectDefectos(select) {
+      if (!select) return;
+      const valorPrevio = select.value;
+      select.innerHTML = '<option value="">Sin problema asignado</option>' +
+        (trzDefectosCache || []).map(d => `<option value="${d.id}">${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
+      if (valorPrevio) select.value = valorPrevio;
+    }
+
+    // Al elegir (o quitar) un Defecto en cualquiera de los dos selects
+    // "Problema / Defecto (opcional)", refiltra la Causa Raíz emparejada:
+    // con un Defecto elegido, solo muestra las causas del catálogo ya
+    // ligadas a ESE Defecto (para reusarlas) + "Otra"; sin Defecto, vuelve a
+    // mostrar todo el catálogo, igual que siempre (cambio opcional, no
+    // rompe el comportamiento de quien no lo use).
+    async function alCambiarDefectoTrazabilidad(cual) {
+      const causaSelect = document.getElementById(cual === 'inicial' ? 'trzCausaInicialSelect' : 'trzCausaNuevaSelect');
+      const defectoSelect = document.getElementById(cual === 'inicial' ? 'trzDefectoInicialSelect' : 'trzDefectoNuevaSelect');
+      if (!causaSelect || !defectoSelect) return;
+      const otraTextarea = document.getElementById(causaSelect.dataset.otra);
+      const defectoId = defectoSelect.value;
+      if (!defectoId) {
+        poblarSelectCausasCatalogo(causaSelect);
+        causaSelect.value = '';
+        if (otraTextarea) otraTextarea.style.display = 'none';
+        return;
+      }
+      causaSelect.innerHTML = '<option value="">Cargando causas...</option>';
+      let causas = [];
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/catalogo-causas?defecto_id=${defectoId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        causas = res.ok ? await res.json() : [];
+      } catch (e) {
+        causas = [];
+      }
+      causaSelect.innerHTML = '<option value="">Elige una causa del catálogo...</option>' +
+        causas.map(c => `<option value="${c.id}">${escapeHtml(c.texto)}</option>`).join('') +
+        '<option value="__otra__">Otra (escribir)</option>';
+      causaSelect.value = '';
+      if (otraTextarea) otraTextarea.style.display = 'none';
+    }
+
+    // Lee un par select(catálogo)+textarea("Otra") y arma lo que hay que
+    // mandarle al servidor: {causa_catalogo_id} si se eligió una causa ya
+    // existente, o {[campoTexto]: texto} si se escribió "Otra" -- el
+    // servidor la agrega sola al catálogo (ver resolverCausaConCatalogo en
+    // routes/produccion.js), sin duplicar si ya existía con otras
+    // mayúsculas/tildes.
+    // `defectoSelectId` (pedido por Julio, 07/09, tercera vuelta): opcional --
+    // si se pasa el id de un select de Defecto (trzDefectoInicialSelect o
+    // trzDefectoNuevaSelect) y tiene un valor elegido, se manda `defecto_id`
+    // junto con la causa, para que quede ligada a ese mismo Defecto en el
+    // catálogo compartido (ver resolverCausaConCatalogo en
+    // routes/produccion.js). Sin defectoSelectId (o sin elegir uno), se
+    // comporta exactamente igual que siempre.
+    function leerSelectCausa(selectId, otraId, campoTexto, defectoSelectId) {
+      const select = document.getElementById(selectId);
+      const valor = select ? select.value : '';
+      if (!valor) return { error: 'Elige una causa raíz del catálogo, o "Otra" para escribirla.' };
+      const defectoSelect = defectoSelectId ? document.getElementById(defectoSelectId) : null;
+      const defectoExtra = (defectoSelect && defectoSelect.value) ? { defecto_id: defectoSelect.value } : {};
+      if (valor === '__otra__') {
+        const texto = (document.getElementById(otraId)?.value || '').trim();
+        if (!texto) return { error: 'Escribe la causa raíz.' };
+        return { body: { [campoTexto]: texto, ...defectoExtra } };
+      }
+      return { body: { causa_catalogo_id: valor, ...defectoExtra } };
+    }
+
+    // Igual que leerSelectCausa, pero para la medida de una causa puntual
+    // (cada causa raíz del caso tiene su propio select+textarea, con ids
+    // trzMedidaSelect-<causaId>/trzMedidaOtra-<causaId>).
+    function leerSelectMedida(causaId) {
+      const select = document.getElementById(`trzMedidaSelect-${causaId}`);
+      const valor = select ? select.value : '';
+      if (!valor) return { error: 'Elige una medida del catálogo, o "Otra" para escribirla.' };
+      if (valor === '__otra__') {
+        const texto = (document.getElementById(`trzMedidaOtra-${causaId}`)?.value || '').trim();
+        if (!texto) return { error: 'Escribe la medida.' };
+        return { body: { texto } };
+      }
+      return { body: { medida_catalogo_id: valor } };
+    }
+
+    async function abrirModalTrazabilidad(fabricaValor, tipoContexto, valorContexto, pctODesperdicioInicial) {
+      trzContextoActual = { fabrica: fabricaValor, tipo_contexto: tipoContexto, valor_contexto: valorContexto, pct_desperdicio_inicial: pctODesperdicioInicial };
+      trzProblemaActual = null;
+      trzUltimoImplementado = null;
+      document.getElementById('trzModalOverlay').style.display = 'flex';
+      document.getElementById('trzModalMensaje').style.display = 'none';
+      document.getElementById('trzModalContexto').innerHTML = '<div class="empty-hint">Cargando...</div>';
+      await cargarCatalogoTrazabilidad();
+      await cargarDefectosTrazabilidad();
+
+      // Gráficas de contexto (pedido por Julio 04/09): solo para casos de
+      // tipo Motivo -- se cargan una sola vez al entrar, no en cada
+      // re-render (agregar/borrar una causa no cambia esta información).
+      if (tipoContexto === 'motivo') {
+        document.getElementById('trzGraficasSeccion').style.display = 'flex';
+        cargarGraficasMotivo(fabricaValor, valorContexto);
+      } else {
+        document.getElementById('trzGraficasSeccion').style.display = 'none';
+      }
+
+      try {
+        const params = new URLSearchParams({ fabrica: fabricaValor, tipo_contexto: tipoContexto, valor_contexto: valorContexto });
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/activo?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        trzProblemaActual = await res.json();
+        if (!trzProblemaActual) {
+          // No hay caso activo -- si el último para este contexto ya quedó
+          // Implementado, se pregunta antes de crear uno nuevo (AJUSTE 03/09,
+          // ver confirmarSolucionAnteriorFallo()/tratarComoCasoNuevo()).
+          const res2 = await fetch(`/api/produccion/trazabilidad/problemas/ultimo?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+          if (res2.ok) {
+            const ultimo = await res2.json();
+            if (ultimo && ultimo.estado === 'Implementado') trzUltimoImplementado = ultimo;
+          }
+        }
+        renderizarModalTrazabilidad();
+      } catch (e) {
+        console.error('Error consultando caso activo de trazabilidad:', e);
+        document.getElementById('trzModalContexto').innerHTML = '';
+        const msg = document.getElementById('trzModalMensaje');
+        msg.textContent = 'No se pudo consultar si ya había un caso registrado. Puedes seguir e intentar crear uno de todas formas.';
+        msg.style.display = 'block';
+        renderizarModalTrazabilidad();
+      }
+    }
+
+    // ======================== GRÁFICAS DE CONTEXTO (solo casos de Motivo) ========================
+    // Pedido por Julio (04/09): al entrar a un problema de tipo Motivo, ver
+    // su cronología -- cuánto ha salido por mes, y en qué referencias se
+    // presenta más. Van con el permiso de "poder ver este caso"
+    // (puedeVerBitacora en el backend), no con calidad.ver, para que
+    // funcionen igual desde Seguimiento de Producción.
+    let trzChartMesInstancia = null;
+    let trzChartReferenciasInstancia = null;
+
+    async function cargarGraficasMotivo(fabricaValor, motivoValor) {
+      if (trzChartMesInstancia) { trzChartMesInstancia.destroy(); trzChartMesInstancia = null; }
+      if (trzChartReferenciasInstancia) { trzChartReferenciasInstancia.destroy(); trzChartReferenciasInstancia = null; }
+
+      try {
+        const paramsMes = new URLSearchParams({ fabrica: fabricaValor, motivo: motivoValor, meses: 24 });
+        const paramsRef = new URLSearchParams({ fabrica: fabricaValor, motivo: motivoValor, meses: 24, limite: 10 });
+        const [resMes, resRef] = await Promise.all([
+          fetch(`/api/produccion/trazabilidad/graficas/por-mes?${paramsMes}`, { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch(`/api/produccion/trazabilidad/graficas/referencias-por-motivo?${paramsRef}`, { headers: { 'Authorization': 'Bearer ' + token } }),
+        ]);
+        const datosMes = resMes.ok ? await resMes.json() : [];
+        const datosRef = resRef.ok ? await resRef.json() : [];
+
+        // El canvas puede no estar listo para dibujar (p.ej. en pruebas
+        // automáticas sin soporte real de <canvas>) -- eso no debe impedir
+        // que los datos se hayan pedido; solo se salta el dibujado.
+        const ctxMes = document.getElementById('trzChartMes')?.getContext('2d');
+        const ctxRef = document.getElementById('trzChartReferencias')?.getContext('2d');
+        if (!ctxMes || !ctxRef) return;
+
+        trzChartMesInstancia = new Chart(ctxMes, {
+          type: 'line',
+          data: {
+            labels: datosMes.map(d => formatearMesLabel(d.mes)),
+            datasets: [{ label: 'Unidades rechazadas', data: datosMes.map(d => d.unidades), borderColor: '#2C43A2', backgroundColor: 'rgba(44,67,162,0.12)', fill: true, tension: 0.25 }],
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+
+        // Pedido por Julio (04/09, 3): barras verticales (no horizontales) y
+        // top 10 referencias (ver el límite en paramsRef arriba).
+        trzChartReferenciasInstancia = new Chart(ctxRef, {
+          type: 'bar',
+          data: {
+            labels: datosRef.map(d => d.referencia),
+            datasets: [{ label: 'Veces reportado', data: datosRef.map(d => d.cantidad), backgroundColor: '#38a169' }],
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+      } catch (e) {
+        console.error('Error cargando gráficas de contexto del motivo:', e);
+      }
+    }
+
+    // ======================== SELECTOR DE MOTIVOS DE UNA REFERENCIA ========================
+    // Pedido por Julio (04/09): el 🛠️ de una Referencia ya no va directo a
+    // registrar causa raíz -- primero se elige cuál motivo de rechazo de esa
+    // referencia se va a trabajar (reutiliza el mismo caso de tipo Motivo
+    // que ya existe en la tabla de Motivos general).
+    let motivoSelectorFabrica = null;
+
+    async function abrirSelectorMotivosPorReferencia(fabricaValor, referencia) {
+      motivoSelectorFabrica = fabricaValor;
+      document.getElementById('motivoSelectorReferencia').textContent = referencia;
+      document.getElementById('motivoSelectorLista').innerHTML = '<div class="empty-hint">Cargando...</div>';
+      document.getElementById('motivoSelectorOverlay').style.display = 'flex';
+      try {
+        const params = new URLSearchParams({ fabrica: fabricaValor, referencia, limite: 50, meses: 24 });
+        const res = await fetch(`/api/produccion/rechazos/motivos?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const motivos = await res.json();
+        renderizarSelectorMotivos(motivos);
+      } catch (e) {
+        console.error('Error cargando motivos de la referencia:', e);
+        document.getElementById('motivoSelectorLista').innerHTML = '<div class="empty-hint" style="color:red;">No se pudieron cargar los motivos de esta referencia.</div>';
+      }
+    }
+
+    // Rediseño 04/09 (2), pedido por Julio: en vez de una lista de filas de
+    // texto, ahora son 2 gráficas de barras -- "Cantidad" (unidades
+    // rechazadas) y "Concurrencia" (veces registrado) -- y se hace clic
+    // SOBRE LA BARRA del motivo para ir a sus causas raíz (o crear una),
+    // igual que antes con el botón 🛠️ de cada fila.
+    let motivoSelectorChartCantidad = null;
+    let motivoSelectorChartConcurrencia = null;
+    // Antes las 2 gráficas compartían una sola lista (motivoSelectorMotivosActuales),
+    // en el mismo orden que mandaba el backend (por concurrencia). Con
+    // referencias que tienen 20+ motivos distintos eso traía 2 problemas
+    // (pedido por Julio 04/09, 4): (a) Chart.js dibujaba una barra por cada
+    // motivo pero escondía la mitad de los nombres del eje por falta de
+    // espacio (autoSkip), dando la sensación de "el doble de barras que de
+    // nombres"; y (b) la gráfica de Cantidad (unidades) no quedaba ordenada
+    // de mayor a menor porque usaba el orden de Concurrencia (veces), que es
+    // un criterio distinto. Ahora cada gráfica arma y ordena SU PROPIO top
+    // 10, cada una por su propio valor.
+    let motivoSelectorDatosCantidad = [];
+    let motivoSelectorDatosConcurrencia = [];
+    const MOTIVO_SELECTOR_TOPE = 10;
+
+    // Función aparte (declaración de función de nivel superior, no un
+    // closure adentro de renderizarSelectorMotivos) para que tanto el
+    // onClick de las 2 gráficas como las pruebas puedan invocarla
+    // directamente, sin depender de que Chart.js/canvas esté disponible.
+    // "cual" indica de qué gráfica viene el clic ('cantidad' o
+    // 'concurrencia'), porque cada una tiene su propio top 10 y por lo tanto
+    // su propio orden de índices.
+    function irACausaDesdeMotivoSelector(idx, cual) {
+      const lista = cual === 'concurrencia' ? motivoSelectorDatosConcurrencia : motivoSelectorDatosCantidad;
+      const m = lista[idx];
+      if (!m) return;
+      // Ojo: hay que guardar la fábrica ANTES de cerrar el selector --
+      // cerrarSelectorMotivos() limpia motivoSelectorFabrica.
+      const fabricaValor = motivoSelectorFabrica;
+      cerrarSelectorMotivos();
+      abrirModalTrazabilidad(fabricaValor, 'motivo', m.motivo, m.unidades);
+    }
+    function alHacerClicEnBarraMotivo(evt, elements, cual) {
+      if (elements.length) irACausaDesdeMotivoSelector(elements[0].index, cual);
+    }
+    function alPasarElMouseSobreBarra(evt, elements) {
+      evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+    }
+
+    function renderizarSelectorMotivos(motivos) {
+      const cont = document.getElementById('motivoSelectorLista');
+      if (motivoSelectorChartCantidad) { motivoSelectorChartCantidad.destroy(); motivoSelectorChartCantidad = null; }
+      if (motivoSelectorChartConcurrencia) { motivoSelectorChartConcurrencia.destroy(); motivoSelectorChartConcurrencia = null; }
+      if (!motivos.length) {
+        motivoSelectorDatosCantidad = [];
+        motivoSelectorDatosConcurrencia = [];
+        cont.innerHTML = '<div class="empty-hint">No se encontraron motivos de rechazo registrados para esta referencia en este período.</div>';
+        return;
+      }
+      motivoSelectorDatosCantidad = [...motivos].sort((a, b) => b.unidades - a.unidades).slice(0, MOTIVO_SELECTOR_TOPE);
+      motivoSelectorDatosConcurrencia = [...motivos].sort((a, b) => b.cantidad - a.cantidad).slice(0, MOTIVO_SELECTOR_TOPE);
+      cont.innerHTML = `
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-bar"></i> Cantidad (unidades rechazadas)</h5>
+          <canvas id="motivoSelectorChartCantidadCanvas"></canvas>
+        </div>
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-bar"></i> Concurrencia (veces registrado)</h5>
+          <canvas id="motivoSelectorChartConcurrenciaCanvas"></canvas>
+        </div>
+      `;
+
+      const ctxCantidad = document.getElementById('motivoSelectorChartCantidadCanvas')?.getContext('2d');
+      const ctxConcurrencia = document.getElementById('motivoSelectorChartConcurrenciaCanvas')?.getContext('2d');
+      if (!ctxCantidad || !ctxConcurrencia) return;
+
+      // Pedido por Julio (04/09, 4): barras verticales (no horizontales),
+      // top 10 (no todos los motivos) y cada gráfica ordenada de mayor a
+      // menor por su propio valor (ver comentario arriba).
+      motivoSelectorChartCantidad = new Chart(ctxCantidad, {
+        type: 'bar',
+        data: { labels: motivoSelectorDatosCantidad.map(m => m.motivo), datasets: [{ label: 'Unidades', data: motivoSelectorDatosCantidad.map(m => m.unidades), backgroundColor: '#2C43A2' }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } }, onClick: (evt, els) => alHacerClicEnBarraMotivo(evt, els, 'cantidad'), onHover: alPasarElMouseSobreBarra },
+      });
+      motivoSelectorChartConcurrencia = new Chart(ctxConcurrencia, {
+        type: 'bar',
+        data: { labels: motivoSelectorDatosConcurrencia.map(m => m.motivo), datasets: [{ label: 'Veces', data: motivoSelectorDatosConcurrencia.map(m => m.cantidad), backgroundColor: '#38a169' }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } }, onClick: (evt, els) => alHacerClicEnBarraMotivo(evt, els, 'concurrencia'), onHover: alPasarElMouseSobreBarra },
+      });
+    }
+
+    function cerrarSelectorMotivos() {
+      document.getElementById('motivoSelectorOverlay').style.display = 'none';
+      motivoSelectorFabrica = null;
+    }
+
+    function renderizarModalTrazabilidad() {
+      const ctx = trzContextoActual;
+      const p = trzProblemaActual;
+      if (!ctx) return;
+      const etiquetaTipo = ctx.tipo_contexto === 'referencia' ? 'Referencia' : 'Motivo';
+      const valorNumerico = p ? p.pct_desperdicio_inicial : ctx.pct_desperdicio_inicial;
+      const etiquetaValor = ctx.tipo_contexto === 'referencia' ? '% Desperdicio' : 'Unidades rechazadas';
+      const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+
+      document.getElementById('trzModalTitulo').innerHTML = p
+        ? '<i class="fa-solid fa-wrench"></i> Seguimiento del Problema'
+        : '<i class="fa-solid fa-wrench"></i> Registrar Problema';
+
+      document.getElementById('trzModalContexto').innerHTML = `
+        <div><span>Fábrica</span><strong>${escapeHtml(nombreDisplay(ctx.fabrica))}</strong></div>
+        <div><span>${etiquetaTipo}</span><strong>${escapeHtml(ctx.valor_contexto)}</strong></div>
+        <div><span>Semana</span><strong>${p ? escapeHtml(p.semana) : 'Se calcula al crear'}</strong></div>
+        <div><span>${etiquetaValor}</span><strong>${valorNumerico != null ? valorNumerico + (ctx.tipo_contexto === 'referencia' ? '%' : '') : '--'}</strong></div>
+      `;
+
+      document.getElementById('trzSoloLectura').style.display = puedeGestionar ? 'none' : 'block';
+
+      if (!p) {
+        document.getElementById('trzCasoExistente').style.display = 'none';
+
+        if (trzUltimoImplementado) {
+          // El último caso para este contexto ya quedó Implementado -- se
+          // pregunta antes de asumir que es un problema nuevo (AJUSTE 03/09).
+          document.getElementById('trzFormNuevo').style.display = 'none';
+          const reapertura = document.getElementById('trzReaperturaBox');
+          if (puedeGestionar) {
+            reapertura.style.display = 'block';
+            const medidasOk = (trzUltimoImplementado.medidas || []).filter(m => m.estado === 'Funciono');
+            document.getElementById('trzMedidaAnteriorTexto').innerHTML = medidasOk.length
+              ? medidasOk.map(m => escapeHtml(m.texto)).join('<br>')
+              : '(no quedó registrada la medida)';
+          } else {
+            reapertura.style.display = 'none';
+            document.getElementById('trzSoloLectura').style.display = 'block';
+            document.getElementById('trzSoloLectura').textContent = 'El último caso para esto ya quedó Implementado. No tienes permiso para decidir si esa solución falló ni para crear uno nuevo.';
+          }
+          return;
+        }
+
+        document.getElementById('trzReaperturaBox').style.display = 'none';
+        // Todavía no existe ningún caso para este contexto -- se muestra el
+        // formulario mínimo para crearlo (causa raíz elegida del catálogo,
+        // u "Otra" para escribirla). El responsable ya no se elige: lo pone
+        // el servidor solo, con quien esté conectado.
+        document.getElementById('trzFormNuevo').style.display = puedeGestionar ? 'block' : 'none';
+        const defInicial = document.getElementById('trzDefectoInicialSelect');
+        poblarSelectDefectos(defInicial);
+        if (defInicial) defInicial.value = '';
+        const selInicial = document.getElementById('trzCausaInicialSelect');
+        poblarSelectCausasCatalogo(selInicial);
+        if (selInicial) selInicial.value = '';
+        const otraInicial = document.getElementById('trzCausaInicialOtra');
+        if (otraInicial) { otraInicial.value = ''; otraInicial.style.display = 'none'; }
+        if (!puedeGestionar) {
+          document.getElementById('trzSoloLectura').textContent = 'No tienes permiso para crear planes de acción de Producción. Pídele a un administrador que registre este problema, o que te dé el permiso.';
+        }
+        return;
+      }
+
+      document.getElementById('trzReaperturaBox').style.display = 'none';
+      document.getElementById('trzFormNuevo').style.display = 'none';
+      document.getElementById('trzCasoExistente').style.display = 'block';
+      document.getElementById('trzSoloLectura').textContent = 'No tienes permiso para crear o editar planes de acción de Producción. Puedes ver el detalle de este caso, pero no guardar cambios.';
+
+      document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(p.estado);
+
+      renderizarCausasYMedidas(p.causas || [], p.medidas || [], puedeGestionar);
+
+      // Pedido por Julio (04/09): el formulario para agregar otra causa raíz
+      // ya no queda siempre visible -- arranca colapsado y se abre con el
+      // botón "+" de arriba (ver toggleCausaNuevaBox). Solo el botón "+" en
+      // sí depende del permiso de gestionar; si no se tiene, ni se ofrece.
+      const btnMostrarCausaNueva = document.getElementById('trzBtnMostrarCausaNueva');
+      if (btnMostrarCausaNueva) btnMostrarCausaNueva.style.display = puedeGestionar ? 'inline-flex' : 'none';
+      document.getElementById('trzCausaNuevaBox').style.display = 'none';
+      if (puedeGestionar) {
+        const defNueva = document.getElementById('trzDefectoNuevaSelect');
+        poblarSelectDefectos(defNueva);
+        if (defNueva) defNueva.value = '';
+        const selNueva = document.getElementById('trzCausaNuevaSelect');
+        poblarSelectCausasCatalogo(selNueva);
+        if (selNueva) selNueva.value = '';
+        const otraNueva = document.getElementById('trzCausaNuevaOtra');
+        if (otraNueva) { otraNueva.value = ''; otraNueva.style.display = 'none'; }
+      }
+    }
+
+    // Pedido por Julio (04/09): el botón "+" arriba del cuadro de causas
+    // abre/cierra el formulario para agregar otra causa raíz (antes quedaba
+    // siempre visible como su propia sección al final).
+    function toggleCausaNuevaBox() {
+      const box = document.getElementById('trzCausaNuevaBox');
+      if (!box) return;
+      const estaAbierta = box.style.display === 'flex';
+      box.style.display = estaAbierta ? 'none' : 'flex';
+      if (!estaAbierta) {
+        const defNueva = document.getElementById('trzDefectoNuevaSelect');
+        if (defNueva) { poblarSelectDefectos(defNueva); defNueva.value = ''; }
+        const selNueva = document.getElementById('trzCausaNuevaSelect');
+        if (selNueva) { poblarSelectCausasCatalogo(selNueva); selNueva.value = ''; }
+        const otraNueva = document.getElementById('trzCausaNuevaOtra');
+        if (otraNueva) { otraNueva.value = ''; otraNueva.style.display = 'none'; }
+      }
+    }
+
+    // ======================== VINCULAR CAUSA EXISTENTE (MIGRACIÓN #37) ========================
+    function abrirModalVincularCausa() {
+      if (!trzProblemaActual) return;
+      document.getElementById('vincularCausaInput').value = '';
+      document.getElementById('vincularCausaResultados').innerHTML = '<div class="empty-hint">Escribe algo y presiona Buscar.</div>';
+      document.getElementById('vincularCausaOverlay').style.display = 'flex';
+      document.getElementById('vincularCausaInput').focus();
+    }
+
+    function cerrarModalVincularCausa() {
+      document.getElementById('vincularCausaOverlay').style.display = 'none';
+    }
+
+    // Describe en qué caso(s) ya está una causa encontrada -- ayuda al
+    // analista a decidir si de verdad es el mismo problema real antes de
+    // vincular (ver el porqué en data/causasRaiz.js).
+    function describirCasosVinculados(casos) {
+      if (!casos || casos.length === 0) return 'Sin ningún caso vinculado todavía.';
+      return casos.map(c => c.tipo_caso === 'problema'
+        ? `Producción, caso #${c.caso_id}`
+        : `Reporte por Áreas #${c.caso_id}`).join(' · ');
+    }
+
+    async function buscarCausasParaVincular() {
+      const q = document.getElementById('vincularCausaInput').value.trim();
+      const cont = document.getElementById('vincularCausaResultados');
+      cont.innerHTML = '<div class="empty-hint">Buscando...</div>';
+      try {
+        const params = new URLSearchParams({ q, limite: 20 });
+        const res = await fetch(`/api/produccion/trazabilidad/causas/buscar?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const causas = await res.json();
+        if (causas.length === 0) {
+          cont.innerHTML = '<div class="empty-hint">No se encontró ninguna causa con ese texto.</div>';
+          return;
+        }
+        cont.innerHTML = causas.map(c => `
+          <div class="trz-item">
+            <div class="trz-item-texto">${escapeHtml(c.texto)}</div>
+            <div class="trz-item-resp" style="margin-bottom:8px;">${escapeHtml(describirCasosVinculados(c.casos_vinculados))}</div>
+            <button type="button" class="btn-secondary-trz" onclick="vincularCausaExistenteTrazabilidad(${c.id})"><i class="fa-solid fa-link"></i> Vincular a este caso</button>
+          </div>`).join('');
+      } catch (e) {
+        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error al buscar.</div>';
+      }
+    }
+
+    async function vincularCausaExistenteTrazabilidad(causaId) {
+      if (!trzProblemaActual) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/causas/vincular`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ causa_id: causaId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al vincular la causa');
+        trzProblemaActual = data;
+        cerrarModalVincularCausa();
+        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
+        document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // Rediseño 04/09: causas y medidas son dos listas relacionadas, no una
+    // sola línea de tiempo mezclada -- para cada causa raíz del caso se ven,
+    // debajo de ella, las medidas que se han intentado para esa causa en
+    // concreto ("para esta causa raíz, estas son las medidas").
+    //
+    // Ajuste 04/09 (mismo día): las "medidas sueltas" (datos de antes de la
+    // MIGRACIÓN #28, sin causa_id) se quitaron -- Julio pidió borrar esos
+    // datos viejos directamente (ver MIGRACIÓN #31 en db/init.js) en vez de
+    // seguir mostrándolos aparte, así que ya no puede haber ninguna.
+    function renderizarCausasYMedidas(causas, medidas, puedeGestionar) {
+      const cont = document.getElementById('trzCausasLista');
+      if (!cont) return;
+
+      if (causas.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Todavía no hay ninguna causa raíz registrada.</div>';
+        return;
+      }
+
+      cont.innerHTML = causas.map(c => renderizarCausaCard(c, medidas.filter(m => m.causa_id === c.id), puedeGestionar, causas.length)).join('');
+
+      if (puedeGestionar) {
+        cont.querySelectorAll('select.trz-medida-estado').forEach(sel => {
+          sel.onchange = () => cambiarEstadoMedidaTrazabilidad(sel.dataset.medidaId, sel.value);
+        });
+      }
+    }
+
+    function renderizarCausaCard(causa, medidasDeCausa, puedeGestionar, totalCausas) {
+      const medidasCatalogo = causa.causa_catalogo_id ? medidasCatalogoDeCausa(causa.causa_catalogo_id) : [];
+      // Eliminar una causa raíz pide su propio permiso, aparte del de
+      // agregar -- y no se puede dejar un caso sin ninguna causa raíz, así
+      // que si es la única, ni se ofrece el botón (el servidor lo rechazaría
+      // igual, pero así se evita el viaje al servidor para nada).
+      const puedeEliminar = tienePermiso('produccion.trazabilidad.eliminar') && totalCausas > 1;
+      return `
+        <div class="trz-causa-card" data-causa-id="${causa.id}">
+          <div class="trz-item-causa-info">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind causa">Causa raíz</span>
+              <span style="display:flex; align-items:center; gap:8px;">
+                ${escapeHtml(causa.fecha || '')}
+                ${puedeEliminar ? `<button type="button" class="btn-eliminar-trz" title="Eliminar esta causa raíz y sus medidas" onclick="eliminarCausaTrazabilidad(${causa.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+              </span>
+            </div>
+            <div class="trz-item-texto">${escapeHtml(causa.texto)}</div>
+            <div class="trz-item-resp">Registrada por <b>${escapeHtml(causa.autor_nombre || causa.responsable_nombre || 'Usuario')}</b></div>
+            ${causa.compartida_con && causa.compartida_con.length ? `<div class="pill pill-muted" style="margin-top:6px; display:inline-block;" title="Las medidas de esta causa se ven y editan igual desde el otro caso"><i class="fa-solid fa-link"></i> También vinculada a: ${escapeHtml(describirCasosVinculados(causa.compartida_con))}</div>` : ''}
+          </div>
+          <div class="trz-medidas-de-causa">
+            ${medidasDeCausa.length
+              ? medidasDeCausa.map(m => renderizarMedidaItem(m, puedeGestionar)).join('')
+              : '<div class="empty-hint" style="margin:0;">Todavía no hay medidas para esta causa.</div>'}
+          </div>
+          ${puedeGestionar ? `
+          <div class="trz-item-nuevo" style="margin-top:10px;">
+            <select class="trz-catalogo-select" id="trzMedidaSelect-${causa.id}" data-otra="trzMedidaOtra-${causa.id}" onchange="alCambiarSelectCatalogo(this)">
+              <option value="">Elige una medida del catálogo...</option>
+              ${medidasCatalogo.map(m => `<option value="${m.id}">${escapeHtml(m.texto)}</option>`).join('')}
+              <option value="__otra__">Otra (escribir)</option>
+            </select>
+            <textarea class="trz-catalogo-otra" id="trzMedidaOtra-${causa.id}" rows="2" placeholder="Escribe la medida..." style="display:none;"></textarea>
+            <div class="trz-item-nuevo-fila">
+              <button type="button" class="btn-secondary-trz" onclick="agregarMedidaTrazabilidad(${causa.id}, this)"><i class="fa-solid fa-plus"></i> Agregar medida</button>
+            </div>
+          </div>` : ''}
+        </div>`;
+    }
+
+    function renderizarMedidaItem(m, puedeGestionar) {
+      const puedeEliminar = tienePermiso('produccion.trazabilidad.eliminar');
+      return `
+        <div class="trz-item" data-medida-id="${m.id}">
+          <div class="trz-item-meta">
+            <span class="trz-item-kind">Medida</span>
+            <span style="display:flex; align-items:center; gap:8px;">
+              <select class="trz-medida-estado" data-medida-id="${m.id}" ${puedeGestionar ? '' : 'disabled'}>
+                ${Object.entries(ETIQUETAS_ESTADO_MEDIDA).map(([valor, texto]) => `<option value="${valor}" ${m.estado === valor ? 'selected' : ''}>${texto}</option>`).join('')}
+              </select>
+              ${puedeEliminar ? `<button type="button" class="btn-eliminar-trz" title="Eliminar esta medida" onclick="eliminarMedidaTrazabilidad(${m.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </span>
+          </div>
+          <div class="trz-item-texto">${escapeHtml(m.texto)}</div>
+          <div class="trz-item-resp">Registrada por <b>${escapeHtml(m.autor_nombre || m.responsable_nombre || 'Usuario')}</b> el ${escapeHtml(m.creado_en || '')}</div>
+        </div>`;
+    }
+
+    function cerrarModalTrazabilidad() {
+      document.getElementById('trzModalOverlay').style.display = 'none';
+      const otraInicial = document.getElementById('trzCausaInicialOtra');
+      if (otraInicial) otraInicial.value = '';
+      const otraNueva = document.getElementById('trzCausaNuevaOtra');
+      if (otraNueva) otraNueva.value = '';
+      trzContextoActual = null;
+      trzProblemaActual = null;
+      trzUltimoImplementado = null;
+    }
+
+    async function crearCasoTrazabilidad(event) {
+      event.preventDefault();
+      const lectura = leerSelectCausa('trzCausaInicialSelect', 'trzCausaInicialOtra', 'causa_raiz', 'trzDefectoInicialSelect');
+      if (lectura.error) { alert(lectura.error); return; }
+      const btn = document.getElementById('trzBtnCrear');
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creando...';
+      const msg = document.getElementById('trzModalMensaje');
+      msg.style.display = 'none';
+      try {
+        const res = await fetch('/api/produccion/trazabilidad/problemas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ ...trzContextoActual, ...lectura.body }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al crear el caso');
+        trzProblemaActual = data;
+        trzUltimoImplementado = null;
+        await cargarCatalogoTrazabilidad(true);
+        renderizarModalTrazabilidad();
+      } catch (e) {
+        msg.textContent = 'Error: ' + e.message;
+        msg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
+    }
+
+    // AJUSTE 03/09: el usuario confirmó que la solución del caso anterior (el
+    // que ya estaba Implementado) no funcionó -- esa medida pasa a "No
+    // funcionó" y el caso se reabre solo (mismo id), sin perder su historial.
+    async function confirmarSolucionAnteriorFallo() {
+      if (!trzUltimoImplementado) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzUltimoImplementado.id}/marcar-fallo`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al reabrir el caso');
+        trzProblemaActual = data;
+        trzUltimoImplementado = null;
+        renderizarModalTrazabilidad();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // El usuario dijo que es un problema distinto -- se sigue con el
+    // formulario normal de "crear caso nuevo"; el caso anterior no se toca.
+    function tratarComoCasoNuevo() {
+      trzUltimoImplementado = null;
+      renderizarModalTrazabilidad();
+    }
+
+    async function agregarCausaTrazabilidad() {
+      if (!trzProblemaActual) return;
+      const lectura = leerSelectCausa('trzCausaNuevaSelect', 'trzCausaNuevaOtra', 'texto', 'trzDefectoNuevaSelect');
+      if (lectura.error) { alert(lectura.error); return; }
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/causas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(lectura.body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al agregar la causa raíz');
+        trzProblemaActual = data;
+        await cargarCatalogoTrazabilidad(true);
+        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
+        const defSelect = document.getElementById('trzDefectoNuevaSelect');
+        if (defSelect) { poblarSelectDefectos(defSelect); defSelect.value = ''; }
+        const select = document.getElementById('trzCausaNuevaSelect');
+        poblarSelectCausasCatalogo(select);
+        if (select) select.value = '';
+        const textarea = document.getElementById('trzCausaNuevaOtra');
+        if (textarea) { textarea.value = ''; textarea.style.display = 'none'; }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function agregarMedidaTrazabilidad(causaId) {
+      if (!trzProblemaActual) return;
+      const lectura = leerSelectMedida(causaId);
+      if (lectura.error) { alert(lectura.error); return; }
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/medidas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ ...lectura.body, causa_id: causaId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al agregar la medida');
+        trzProblemaActual = data;
+        await cargarCatalogoTrazabilidad(true);
+        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
+        document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function cambiarEstadoMedidaTrazabilidad(medidaId, estado) {
+      if (!trzProblemaActual) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/medidas/${medidaId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ estado }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al actualizar la medida');
+        trzProblemaActual = data;
+        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
+        document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
+      } catch (e) {
+        alert('Error: ' + e.message);
+        renderizarModalTrazabilidad(); // revertir el selector a lo que de verdad quedó guardado
+      }
+    }
+
+    // Pedido por Julio (04/09): poder borrar una causa raíz o una medida ya
+    // registrada (por ejemplo, si se agregó por error) -- pide su propio
+    // permiso 'produccion.trazabilidad.eliminar', separado del de agregar
+    // ('produccion.trazabilidad.gestionar') y del de solo ver
+    // ('produccion.trazabilidad.ver'), así se puede dar a alguien la
+    // capacidad de borrar sin también darle la de agregar, o viceversa.
+    // Borrar una causa raíz borra también sus medidas (recalcularEstadoProblema
+    // en el servidor ajusta el estado general del caso solo); el servidor
+    // rechaza borrar la última causa raíz de un caso (ver DELETE
+    // .../causas/:causaId en routes/produccion.js).
+    async function eliminarCausaTrazabilidad(causaId) {
+      if (!trzProblemaActual) return;
+      if (!confirm('¿Eliminar esta causa raíz? También se eliminarán todas sus medidas. Esta acción no se puede deshacer.')) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/causas/${causaId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar la causa raíz');
+        trzProblemaActual = data;
+        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
+        document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function eliminarMedidaTrazabilidad(medidaId) {
+      if (!trzProblemaActual) return;
+      if (!confirm('¿Eliminar esta medida? Esta acción no se puede deshacer.')) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/medidas/${medidaId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al eliminar la medida');
+        trzProblemaActual = data;
+        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
+        document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
+      } catch (e) {
+        alert('Error: ' + e.message);
       }
     }
 
@@ -318,6 +1965,7 @@
     // una vez la que está activa ahora mismo.
     function onCambioMeses() {
       Object.keys(cacheDatos).forEach(k => { cacheDatos[k] = { ...cacheDatos[k], sucio: true }; });
+      filtrosActivos = {};
       const info = pestañas.find(p => p.key === pestañaActiva);
       if (info) cargarDatosPestaña(info);
     }
@@ -327,26 +1975,7 @@
       const cont = document.getElementById(`kpis-${info.key}`);
       if (!cont) return;
 
-      let filas = resumenFabricasCache;
-      if (info.fabrica) filas = filas.filter(f => f.fabrica === info.fabrica);
-
-      const totalRechazos = filas.reduce((a, f) => a + f.total_rechazos, 0);
-      const unidadesRechazadas = filas.reduce((a, f) => a + f.unidades_rechazadas, 0);
-      const ultimos30 = filas.reduce((a, f) => a + f.rechazos_ultimos_30_dias, 0);
-      const color = colorAcento(info.key);
-      const estiloAcento = color ? `style="border-left:4px solid ${color};"` : '';
-
       let html = `
-        <div class="kpi-tile" ${estiloAcento}>
-          <div class="kpi-num">${totalRechazos}</div>
-          <div class="kpi-label">Rechazos totales (histórico)</div>
-          <div class="kpi-sub">${unidadesRechazadas} unidades · ${ultimos30} en los últimos 30 días</div>
-        </div>
-        <div class="kpi-tile" id="kpiDesperdicio-${info.key}">
-          <div class="kpi-num">--</div>
-          <div class="kpi-label">% de desperdicio (ventana seleccionada)</div>
-          <div class="kpi-sub">Cargando...</div>
-        </div>
         <div class="kpi-tile" id="kpiProducido-${info.key}">
           <div class="kpi-num">--</div>
           <div class="kpi-label">Unidades producidas (ventana)</div>
@@ -355,15 +1984,29 @@
           <div class="kpi-num">--</div>
           <div class="kpi-label">Unidades rechazadas (ventana)</div>
         </div>
+        <div class="kpi-tile" id="kpiDesperdicio-${info.key}">
+          <div class="kpi-num">--</div>
+          <div class="kpi-label">% de desperdicio (ventana seleccionada)</div>
+          <div class="kpi-sub">Cargando...</div>
+        </div>
       `;
       cont.innerHTML = html;
     }
 
     // ======================== CARGA DE DATOS DE UNA PESTAÑA ========================
+    // Siempre trae la ventana general completa (sin recortar por mes/motivo/
+    // línea) -- es el punto de partida "sin filtro" del que se hace clic
+    // para filtrar. Por eso, aquí se resetea cualquier filtro combinado que
+    // hubiera quedado activo: esta función solo se llama al entrar por
+    // primera vez a una pestaña, al forzar recarga o al cambiar la ventana
+    // general, momentos en los que un filtro de mes/motivo/línea anterior ya
+    // no tiene por qué seguir vigente.
     async function cargarDatosPestaña(info) {
-      const meses = document.getElementById('filtroMeses').value;
+      const pFiltro = obtenerParametrosFiltro();
       const k = info.key;
-      const params = new URLSearchParams({ meses });
+      filtrosActivos[k] = {};
+      const params = new URLSearchParams();
+      aplicarRangoAParams(params, pFiltro);
       if (info.fabrica) params.set('fabrica', info.fabrica);
 
       const [desperdicio, buenoVsMalo, ranking, motivos, lineas] = await Promise.all([
@@ -376,12 +2019,16 @@
 
       cacheDatos[k] = { desperdicio, buenoVsMalo, ranking, motivos, lineas, sucio: false };
 
-      renderizarKpiDesperdicio(k, desperdicio, buenoVsMalo);
-      renderizarChartDesperdicio(k, buenoVsMalo, info.label);
-      renderizarRanking(k, ranking);
-      renderizarMotivos(k, motivos);
-      renderizarLineas(k, lineas);
-      await cargarLotesBuscar(k, info, document.getElementById(`buscarInput-${k}`)?.value || '', meses);
+      try { renderizarKpiDesperdicio(k, desperdicio, buenoVsMalo); } catch (e) { console.error('Error renderKpi:', e); }
+      try { renderizarChartDesperdicio(k, buenoVsMalo, info.label); } catch (e) { console.error('Error renderChart:', e); }
+      try { renderizarTablaMeses(k, buenoVsMalo); } catch (e) { console.error('Error renderTablaMeses:', e); }
+      try { renderizarRanking(k, ranking); } catch (e) { console.error('Error renderRanking:', e); }
+      try { renderizarMotivos(k, motivos); renderizarTablaMotivos(k, motivos); } catch (e) { console.error('Error renderMotivos:', e); }
+      try { renderizarLineas(k, lineas); renderizarTablaLineas(k, lineas); } catch (e) { console.error('Error renderLineas:', e); }
+      try {
+        await cargarLotesBuscar(k, info, document.getElementById(`buscarInput-${k}`)?.value || '', pFiltro.meses, pFiltro.desde, pFiltro.hasta, null, null, null);
+      } catch (e) { console.error('Error cargarLotesBuscar:', e); }
+      actualizarFiltroActivoUI(k);
     }
 
     async function fetchJson(paramsOrUrl, base) {
@@ -411,7 +2058,7 @@
 
       const pct = desperdicio.pct_desperdicio;
       tile.className = 'kpi-tile';
-      if (pct !== null) tile.classList.add(pct > META_DESPERDICIO ? 'danger' : 'ok');
+      if (pct !== null) tile.classList.add(pct > metaDesperdicio ? 'danger' : 'ok');
       tile.querySelector('.kpi-num').textContent = pct === null ? '--' : pct + '%';
 
       // Comparación mes actual vs. mes anterior y vs. promedio histórico de la
@@ -434,14 +2081,15 @@
           }
         }
       }
-      tile.querySelector('.kpi-sub').innerHTML = `Meta: ${META_DESPERDICIO}% · últimos ${desperdicio.meses} meses`;
+      const periodoTxt = desperdicio.desde && desperdicio.hasta ? `${desperdicio.desde} al ${desperdicio.hasta}` : `últimos ${desperdicio.meses} meses`;
+      tile.querySelector('.kpi-sub').innerHTML = `Meta: ${metaDesperdicio}% · ${periodoTxt}`;
       let cmpDiv = tile.querySelector('.kpi-cmp');
       if (!cmpDiv) {
         cmpDiv = document.createElement('div');
         cmpDiv.className = 'kpi-cmp';
         tile.appendChild(cmpDiv);
       }
-      cmpDiv.innerHTML = cmpHtml || '<span class="cmp-flat">Sin suficientes meses para comparar todavía.</span>';
+      cmpDiv.innerHTML = cmpHtml || '<span class="cmp-flat">Sin suficientes períodos para comparar todavía.</span>';
 
       if (tileProd) tileProd.querySelector('.kpi-num').textContent = desperdicio.unidades_producidas.toLocaleString('es-CO');
       if (tileRech) tileRech.querySelector('.kpi-num').textContent = desperdicio.unidades_rechazadas.toLocaleString('es-CO');
@@ -456,32 +2104,165 @@
     }
 
     // ======================== GRÁFICA PRINCIPAL: BUENAS/MALAS + % DESPERDICIO + META ========================
+    // El clic en cualquier punto de una columna de mes (buena o mala, da
+    // igual cuál -- el modo "index" hace que cuente toda la columna) filtra
+    // ese mes en el resto de gráficas/tablas de la pestaña (ver
+    // filtrarPorMes). El mes activo se resalta con un color más oscuro.
     function renderizarChartDesperdicio(k, data, etiquetaFabrica) {
       const canvas = document.getElementById(`chart-${k}`);
       if (!canvas || !Array.isArray(data)) return;
+      const titulo = document.getElementById(`chartTitulo-${k}`);
+      if (titulo) titulo.innerHTML = `<i class="fa-solid fa-chart-line"></i> % de desperdicio por mes — ${escapeHtml(etiquetaFabrica)} (buenas vs. malas por lote, meta ${metaDesperdicio}%). Clic en una columna para filtrar ese mes.`;
       const ctx = canvas.getContext('2d');
       if (chartsInstancias[k]) chartsInstancias[k].destroy();
 
+      const mesActivo = (filtrosActivos[k] || {}).mes;
+      const bgColorsBuena = data.map(x => x.mes === mesActivo ? '#1a7a4c' : '#38a169');
+      const bgColorsMala = data.map(x => x.mes === mesActivo ? '#9b2c2c' : '#c53030');
+
       chartsInstancias[k] = new Chart(ctx, {
         data: {
-          labels: data.map(x => x.mes),
+          labels: data.map(x => formatearMesLabel(x.mes)),
           datasets: [
-            { type: 'bar', label: 'Buenas', data: data.map(x => x.bueno), backgroundColor: '#38a169', stack: 'unidades', yAxisID: 'y' },
-            { type: 'bar', label: 'Malas', data: data.map(x => x.rechazado), backgroundColor: '#c53030', stack: 'unidades', yAxisID: 'y' },
-            { type: 'line', label: '% Desperdicio', data: data.map(x => x.pct_desperdicio), borderColor: '#2C43A2', backgroundColor: 'rgba(44,67,162,0.1)', tension: 0.25, yAxisID: 'y1' },
-            { type: 'line', label: `Meta ${META_DESPERDICIO}%`, data: data.map(() => META_DESPERDICIO), borderColor: '#b7791f', borderDash: [6, 4], pointRadius: 0, yAxisID: 'y1' },
+            { type: 'bar', label: 'Unidades Buenas', data: data.map(x => x.bueno), backgroundColor: bgColorsBuena, yAxisID: 'y' },
+            { type: 'bar', label: 'Unidades Malas (Rechazadas)', data: data.map(x => x.rechazado), backgroundColor: bgColorsMala, yAxisID: 'y1' },
+            { type: 'line', label: '% Desperdicio', data: data.map(x => x.pct_desperdicio), borderColor: '#2C43A2', backgroundColor: 'rgba(44,67,162,0.1)', tension: 0.25, yAxisID: 'y2' },
+            { type: 'line', label: `Meta ${metaDesperdicio}%`, data: data.map(() => metaDesperdicio), borderColor: '#b7791f', borderDash: [6, 4], pointRadius: 0, yAxisID: 'y2' },
           ]
         },
         options: {
           responsive: true,
           interaction: { mode: 'index', intersect: false },
           plugins: { legend: { display: true } },
+          onClick: (evt, elements, chart) => clickearColumnaMes(k, evt, chart, data),
           scales: {
-            x: { stacked: true },
-            y: { type: 'linear', position: 'left', stacked: true, beginAtZero: true, title: { display: true, text: 'Unidades' } },
-            y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: '% Desperdicio' } }
+            x: { stacked: false },
+            y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Unidades Buenas' } },
+            y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Unidades Malas' } },
+            y2: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: '% Desperdicio' } }
           }
         }
+      });
+    }
+
+    // Bug real reportado por Julio (02/09): al hacer clic en la barra de
+    // "Unidades Malas" salían datos de OTRO mes distinto al que salía
+    // cliceando la de "Unidades Buenas" del mismo mes. Causa: con
+    // elements[0].index (modo 'index' de Chart.js), el "índice más cercano"
+    // se calcula por la distancia en píxeles al CENTRO de la barra de cada
+    // dataset -- y como "Buenas" y "Malas" son barras agrupadas una al lado
+    // de la otra dentro del mismo mes, la barra de la derecha (Malas) queda
+    // más cerca, en píxeles, del centro de la barra "Buenas" del mes
+    // SIGUIENTE que del centro de su propia columna de mes, sobre todo con
+    // 12+ meses apretados en el mismo ancho de gráfica. La forma correcta y
+    // sin ambigüedad de saber en qué mes se hizo clic es preguntarle
+    // directamente al eje X (categórico) en qué categoría cae ese píxel --
+    // eso sí cubre el ancho completo de la columna del mes, sin importar
+    // cuál de las dos barras se haya clicado.
+    function clickearColumnaMes(k, evt, chart, data) {
+      const pos = Chart.helpers.getRelativePosition(evt, chart);
+      const idx = Math.round(chart.scales.x.getValueForPixel(pos.x));
+      if (data[idx]) filtrarPorMes(k, data[idx].mes);
+    }
+
+    // ======================== TABLA DE % DE DESPERDICIO POR MES (sub-pestaña Datos) ========================
+    // Misma información que la gráfica principal, en tabla -- pedido por
+    // Julio ("una pestaña de gráficos y otra de datos, mismos datos"). Cada
+    // fila es clicable y filtra ese mes igual que la barra de la gráfica.
+    function renderizarTablaMeses(k, data) {
+      const tbody = document.getElementById(`tablaMeses-${k}`);
+      if (!tbody) return;
+      const info = pestañas.find(p => p.key === k);
+      const thead = document.getElementById(`tablaMesesThead-${k}`);
+      if (thead) thead.innerHTML = '<tr><th>Mes</th><th>Producido</th><th>Rechazado</th><th>Bueno</th><th>% Desperdicio</th></tr>';
+      const titulo = document.getElementById(`tablaMesesTitulo-${k}`);
+      if (titulo) titulo.innerHTML = `<i class="fa-solid fa-calendar-days"></i> % de desperdicio por mes — ${escapeHtml(info ? info.label : '')}. Clic en una fila para filtrar ese mes.`;
+      if (!Array.isArray(data)) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Error cargando datos. Si acabas de actualizar la app, reinicia el servidor.</td></tr>';
+        return;
+      }
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#a0aec0;">Sin datos en este período.</td></tr>';
+        return;
+      }
+      const mesActivo = (filtrosActivos[k] || {}).mes;
+      tbody.innerHTML = data.map((m, idx) => `
+        <tr class="fila-clicable ${m.mes === mesActivo ? 'fila-activa' : ''}" data-idx="${idx}">
+          <td><strong>${escapeHtml(formatearMesLabel(m.mes))}</strong></td>
+          <td>${(m.producido || 0).toLocaleString('es-CO')}</td>
+          <td>${(m.rechazado || 0).toLocaleString('es-CO')}</td>
+          <td>${(m.bueno || 0).toLocaleString('es-CO')}</td>
+          <td>${pctDesperdicioPill(m.pct_desperdicio)}</td>
+        </tr>`).join('');
+      tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+        tr.onclick = () => filtrarPorMes(k, data[Number(tr.dataset.idx)].mes);
+      });
+    }
+
+    // ======================== GRÁFICA/TABLA PRINCIPAL EN MODO "EVOLUCIÓN DE UN MOTIVO/LÍNEA" ========================
+    // Cuando hay un motivo o línea activo, la gráfica y tabla de arriba
+    // (normalmente "buenas vs. malas") cambian a mostrar, mes a mes, cuánto
+    // salió de ESE motivo/línea -- pedido por Julio: "cuando clic en la
+    // barra de incompleto, [que] la gráfica del mes [también] me diga en
+    // esos meses cuánto salió". Siempre en toda la ventana general (nunca
+    // recortada a un solo mes): es el punto de partida para poder seguir
+    // haciendo clic en un mes desde acá, ahora mirando solo ese motivo/línea.
+    function renderizarChartPorMesFiltrado(k, data, etiquetaFabrica, etiquetaFiltro) {
+      const canvas = document.getElementById(`chart-${k}`);
+      if (!canvas || !Array.isArray(data)) return;
+      const titulo = document.getElementById(`chartTitulo-${k}`);
+      if (titulo) titulo.innerHTML = `<i class="fa-solid fa-chart-line"></i> ${escapeHtml(etiquetaFiltro)} por mes — ${escapeHtml(etiquetaFabrica)}. Clic en una columna para filtrar ese mes.`;
+      const ctx = canvas.getContext('2d');
+      if (chartsInstancias[k]) chartsInstancias[k].destroy();
+
+      const mesActivo = (filtrosActivos[k] || {}).mes;
+      const bgColors = data.map(x => x.mes === mesActivo ? '#9b2c2c' : '#c53030');
+
+      chartsInstancias[k] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(x => formatearMesLabel(x.mes)),
+          datasets: [
+            { label: `Unidades rechazadas — ${etiquetaFiltro}`, data: data.map(x => x.unidades), backgroundColor: bgColors },
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: true } },
+          onClick: (evt, elements, chart) => clickearColumnaMes(k, evt, chart, data),
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Unidades rechazadas' } }
+          }
+        }
+      });
+    }
+
+    function renderizarTablaMesesFiltrado(k, data, etiquetaFiltro) {
+      const tbody = document.getElementById(`tablaMeses-${k}`);
+      if (!tbody) return;
+      const thead = document.getElementById(`tablaMesesThead-${k}`);
+      if (thead) thead.innerHTML = '<tr><th>Mes</th><th>Unidades</th><th>Frecuencia</th></tr>';
+      const titulo = document.getElementById(`tablaMesesTitulo-${k}`);
+      const info = pestañas.find(p => p.key === k);
+      if (titulo) titulo.innerHTML = `<i class="fa-solid fa-calendar-days"></i> ${escapeHtml(etiquetaFiltro)} por mes — ${escapeHtml(info ? info.label : '')}. Clic en una fila para filtrar ese mes.`;
+      if (!Array.isArray(data)) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Error cargando datos.</td></tr>';
+        return;
+      }
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#a0aec0;">Sin datos en este período.</td></tr>';
+        return;
+      }
+      const mesActivo = (filtrosActivos[k] || {}).mes;
+      tbody.innerHTML = data.map((m, idx) => `
+        <tr class="fila-clicable ${m.mes === mesActivo ? 'fila-activa' : ''}" data-idx="${idx}">
+          <td><strong>${escapeHtml(formatearMesLabel(m.mes))}</strong></td>
+          <td>${(m.unidades || 0).toLocaleString('es-CO')}</td>
+          <td>${(m.cantidad || 0).toLocaleString('es-CO')}</td>
+        </tr>`).join('');
+      tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+        tr.onclick = () => filtrarPorMes(k, data[Number(tr.dataset.idx)].mes);
       });
     }
 
@@ -490,53 +2271,226 @@
       const tbody = document.getElementById(`ranking-${k}`);
       if (!tbody) return;
       if (!Array.isArray(data)) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error cargando datos. Si acabas de actualizar la app, reinicia el servidor.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Error cargando datos. Si acabas de actualizar la app, reinicia el servidor.</td></tr>';
         return;
       }
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin datos suficientes en este período.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#a0aec0;">Sin datos suficientes en este período.</td></tr>';
         return;
       }
-      tbody.innerHTML = data.map(r => `
+      // El botón de trazabilidad solo aparece en las pestañas de una fábrica
+      // puntual -- en "General" (fabrica: null) no hay una sola fábrica a la
+      // que atribuirle el problema, así que ahí la columna queda vacía.
+      const info = pestañas.find(p => p.key === k);
+      const fabricaCtx = info ? info.fabrica : null;
+      tbody.innerHTML = data.map((r, idx) => `
         <tr>
           <td><strong>${escapeHtml(r.referencia)}</strong></td>
           <td>${r.producido}</td>
           <td>${r.rechazado}</td>
           <td>${pctDesperdicioPill(r.pct_desperdicio)}</td>
+          <td>${fabricaCtx ? `<button type="button" class="btn-trazabilidad" data-idx="${idx}" title="Registrar/ver solución para esta referencia"><i class="fa-solid fa-wrench"></i></button>` : ''}</td>
         </tr>`).join('');
+      if (fabricaCtx) {
+        tbody.querySelectorAll('button.btn-trazabilidad').forEach(btn => {
+          btn.onclick = (ev) => {
+            ev.stopPropagation();
+            const r = data[Number(btn.dataset.idx)];
+            // Pedido por Julio (04/09): en vez de ir directo a registrar
+            // causa raíz PARA LA REFERENCIA, primero se elige cuál motivo de
+            // rechazo de esa referencia se va a trabajar (ver
+            // abrirSelectorMotivosPorReferencia).
+            abrirSelectorMotivosPorReferencia(fabricaCtx, r.referencia);
+          };
+        });
+      }
     }
 
-    // ======================== MOTIVOS Y LÍNEAS ========================
+    // ======================== MOTIVOS Y LÍNEAS (Gráficas de Barras Cantidad vs Frecuencia) ========================
+    let chartMotivosCantInstances = {};
+    let chartMotivosFreqInstances = {};
+    let chartLineasCantInstances = {};
+    let chartLineasFreqInstances = {};
+
     function renderizarMotivos(k, data) {
-      const cont = document.getElementById(`motivos-${k}`);
-      if (!cont) return;
+      const ctxCant = document.getElementById(`chartMotivosCant-${k}`)?.getContext('2d');
+      const ctxFreq = document.getElementById(`chartMotivosFreq-${k}`)?.getContext('2d');
+      if (!ctxCant || !ctxFreq) return;
+
+      if (chartMotivosCantInstances[k]) chartMotivosCantInstances[k].destroy();
+      if (chartMotivosFreqInstances[k]) chartMotivosFreqInstances[k].destroy();
+
+      if (!Array.isArray(data) || data.length === 0) return;
+
+      const activeMotivo = (filtrosActivos[k] || {}).motivo;
+      const bgColorsCant = data.map(m => m.motivo === activeMotivo ? '#1d4ed8' : '#2C43A2');
+      const bgColorsFreq = data.map(m => m.motivo === activeMotivo ? '#047857' : '#38a169');
+
+      chartMotivosCantInstances[k] = new Chart(ctxCant, {
+        type: 'bar',
+        data: {
+          labels: data.map(m => m.motivo),
+          datasets: [{ label: 'Unidades rechazadas', data: data.map(m => m.unidades), backgroundColor: bgColorsCant }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          plugins: { legend: { display: false } },
+          onClick: (e, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              filtrarPorMotivo(k, data[idx].motivo);
+            }
+          },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+
+      chartMotivosFreqInstances[k] = new Chart(ctxFreq, {
+        type: 'bar',
+        data: {
+          labels: data.map(m => m.motivo),
+          datasets: [{ label: 'Frecuencia (Reportes)', data: data.map(m => m.cantidad), backgroundColor: bgColorsFreq }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          plugins: { legend: { display: false } },
+          onClick: (e, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              filtrarPorMotivo(k, data[idx].motivo);
+            }
+          },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+    }
+
+    // Misma información que las dos gráficas de motivos, en tabla (sub-pestaña Datos).
+    function renderizarTablaMotivos(k, data) {
+      const tbody = document.getElementById(`tablaMotivos-${k}`);
+      if (!tbody) return;
       if (!Array.isArray(data)) {
-        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error cargando motivos. Si acabas de actualizar la app, reinicia el servidor.</div>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error cargando datos.</td></tr>';
         return;
       }
       if (data.length === 0) {
-        cont.innerHTML = '<div class="empty-hint">Sin rechazos registrados en este período.</div>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin datos en este período.</td></tr>';
         return;
       }
-      cont.innerHTML = '<ul class="mini-list">' +
-        data.map(m => `<li><span>${escapeHtml(m.motivo)}</span><strong>${m.cantidad} (${m.unidades} un.)</strong></li>`).join('') +
-        '</ul>';
+      const activo = (filtrosActivos[k] || {}).motivo;
+      const info = pestañas.find(p => p.key === k);
+      const fabricaCtx = info ? info.fabrica : null;
+      tbody.innerHTML = data.map((m, idx) => `
+        <tr class="fila-clicable ${m.motivo === activo ? 'fila-activa' : ''}" data-idx="${idx}">
+          <td><strong>${escapeHtml(m.motivo)}</strong></td>
+          <td>${(m.unidades || 0).toLocaleString('es-CO')}</td>
+          <td>${(m.cantidad || 0).toLocaleString('es-CO')}</td>
+          <td>${fabricaCtx ? `<button type="button" class="btn-trazabilidad" data-idx="${idx}" title="Registrar/ver solución para este motivo"><i class="fa-solid fa-wrench"></i></button>` : ''}</td>
+        </tr>`).join('');
+      tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+        tr.onclick = () => filtrarPorMotivo(k, data[Number(tr.dataset.idx)].motivo);
+      });
+      if (fabricaCtx) {
+        tbody.querySelectorAll('button.btn-trazabilidad').forEach(btn => {
+          btn.onclick = (ev) => {
+            ev.stopPropagation();
+            const m = data[Number(btn.dataset.idx)];
+            abrirModalTrazabilidad(fabricaCtx, 'motivo', m.motivo, m.unidades);
+          };
+        });
+      }
     }
 
     function renderizarLineas(k, data) {
-      const cont = document.getElementById(`lineas-${k}`);
-      if (!cont) return;
+      const ctxCant = document.getElementById(`chartLineasCant-${k}`)?.getContext('2d');
+      const ctxFreq = document.getElementById(`chartLineasFreq-${k}`)?.getContext('2d');
+      if (!ctxCant || !ctxFreq) return;
+
+      if (chartLineasCantInstances[k]) chartLineasCantInstances[k].destroy();
+      if (chartLineasFreqInstances[k]) chartLineasFreqInstances[k].destroy();
+
+      if (!Array.isArray(data) || data.length === 0) return;
+
+      // Ojo: "linea" sola no identifica una barra -- varias líneas distintas
+      // (ej. 3 procesos distintos) pueden compartir el mismo valor de línea,
+      // sobre todo "Sin línea registrada" (frecuente en los datos reales).
+      // Por eso el resaltado y el filtro usan la pareja línea+proceso.
+      const activeLinea = (filtrosActivos[k] || {}).linea;
+      const activeProceso = (filtrosActivos[k] || {}).proceso;
+      const esActivo = (l) => l.linea === activeLinea && l.proceso === activeProceso;
+      const bgColorsCant = data.map(l => esActivo(l) ? '#b91c1c' : '#c53030');
+      const bgColorsFreq = data.map(l => esActivo(l) ? '#b45309' : '#b7791f');
+
+      const labels = data.map(l => `${l.linea} · ${l.proceso}`);
+
+      chartLineasCantInstances[k] = new Chart(ctxCant, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: 'Unidades rechazadas', data: data.map(l => l.unidades), backgroundColor: bgColorsCant }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          plugins: { legend: { display: false } },
+          onClick: (e, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              filtrarPorLinea(k, data[idx].linea, data[idx].proceso);
+            }
+          },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+
+      chartLineasFreqInstances[k] = new Chart(ctxFreq, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: 'Frecuencia (Reportes)', data: data.map(l => l.cantidad), backgroundColor: bgColorsFreq }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          plugins: { legend: { display: false } },
+          onClick: (e, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              filtrarPorLinea(k, data[idx].linea, data[idx].proceso);
+            }
+          },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+    }
+
+    // Misma información que las dos gráficas de líneas, en tabla (sub-pestaña Datos).
+    function renderizarTablaLineas(k, data) {
+      const tbody = document.getElementById(`tablaLineas-${k}`);
+      if (!tbody) return;
       if (!Array.isArray(data)) {
-        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error cargando líneas. Si acabas de actualizar la app, reinicia el servidor.</div>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Error cargando datos.</td></tr>';
         return;
       }
       if (data.length === 0) {
-        cont.innerHTML = '<div class="empty-hint">Sin rechazos registrados en este período.</div>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin datos en este período.</td></tr>';
         return;
       }
-      cont.innerHTML = '<ul class="mini-list">' +
-        data.map(l => `<li><span>${escapeHtml(l.linea)} · ${escapeHtml(l.proceso)}</span><strong>${l.cantidad} (${l.unidades} un.)</strong></li>`).join('') +
-        '</ul>';
+      const activoLinea = (filtrosActivos[k] || {}).linea;
+      const activoProceso = (filtrosActivos[k] || {}).proceso;
+      tbody.innerHTML = data.map((l, idx) => `
+        <tr class="fila-clicable ${l.linea === activoLinea && l.proceso === activoProceso ? 'fila-activa' : ''}" data-idx="${idx}">
+          <td><strong>${escapeHtml(l.linea)}</strong></td>
+          <td>${escapeHtml(l.proceso)}</td>
+          <td>${(l.unidades || 0).toLocaleString('es-CO')}</td>
+          <td>${(l.cantidad || 0).toLocaleString('es-CO')}</td>
+        </tr>`).join('');
+      tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+        const idx = Number(tr.dataset.idx);
+        tr.onclick = () => filtrarPorLinea(k, data[idx].linea, data[idx].proceso);
+      });
     }
 
     // ======================== BUSCAR LOTE (por pestaña) ========================
@@ -546,7 +2500,7 @@
 
     function pctDesperdicioPill(pct) {
       if (pct === null || pct === undefined) return '<span class="pill pill-muted">N/D</span>';
-      const clase = pct > META_DESPERDICIO ? 'pill-danger' : (pct > META_DESPERDICIO / 2 ? 'pill-warning' : 'pill-ok');
+      const clase = pct > metaDesperdicio ? 'pill-danger' : (pct > metaDesperdicio / 2 ? 'pill-warning' : 'pill-ok');
       return `<span class="pill ${clase}">${pct}%</span>`;
     }
 
@@ -557,20 +2511,31 @@
       clearTimeout(timeoutsBuscar[k]);
       timeoutsBuscar[k] = setTimeout(() => {
         const info = pestañas.find(p => p.key === k);
-        const meses = document.getElementById('filtroMeses').value;
-        cargarLotesBuscar(k, info, document.getElementById(`buscarInput-${k}`).value, meses);
+        const pFiltro = obtenerParametrosFiltro();
+        const activeFiltros = filtrosActivos[k] || {};
+        cargarLotesBuscar(k, info, document.getElementById(`buscarInput-${k}`).value, pFiltro.meses, pFiltro.desde, pFiltro.hasta, activeFiltros.motivo, activeFiltros.linea, activeFiltros.proceso);
       }, 350);
     }
 
-    async function cargarLotesBuscar(k, info, busqueda, meses) {
+    async function cargarLotesBuscar(k, info, busqueda, meses, desde, hasta, filtroMotivo, filtroLinea, filtroProceso) {
       const tbody = document.getElementById(`buscarBody-${k}`);
       const hint = document.getElementById(`buscarHint-${k}`);
       if (!tbody) return;
       const params = new URLSearchParams({ limite: 50 });
       if (info.fabrica) params.set('fabrica', info.fabrica);
       const q = (busqueda || '').trim();
-      if (q) params.set('q', q);
-      else params.set('meses', meses);
+      if (q) {
+        params.set('q', q);
+      } else {
+        if (desde && hasta) {
+          params.set('desde', desde);
+          params.set('hasta', hasta);
+        } else {
+          params.set('meses', meses || 12);
+        }
+      }
+      if (filtroMotivo) params.set('motivo', filtroMotivo);
+      if (filtroLinea) { params.set('linea', filtroLinea); params.set('proceso', filtroProceso || ''); }
 
       const data = await fetchJson(`/api/produccion/lotes/buscar?${params}`);
       if (!Array.isArray(data)) {
@@ -578,9 +2543,9 @@
         return;
       }
 
-      hint.textContent = q
-        ? `${data.length} lote(s) encontrados para "${q}".`
-        : `Mostrando los lotes con más unidades rechazadas en la ventana de tiempo seleccionada arriba.`;
+      hint.textContent = q || filtroMotivo || filtroLinea
+        ? `${data.length} lote(s) encontrados con los filtros aplicados.`
+        : `Mostrando los lotes con más unidades rechazadas en el período seleccionado.`;
 
       if (data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">Sin resultados.</td></tr>';

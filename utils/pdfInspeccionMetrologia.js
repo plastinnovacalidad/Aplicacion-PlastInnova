@@ -209,4 +209,155 @@ function generarPdfInspeccionMetrologia(codigo, inspeccion, medidas, planoRuta) 
   });
 }
 
-module.exports = { generarPdfInspeccionMetrologia };
+// Versión corta para WhatsApp: el destinatario debe poder saber en segundos
+// si libera o no la referencia. El plano, las fotos y la tabla de cotas
+// completas siguen disponibles en el módulo; aquí solo se enumeran las
+// desviaciones con el estándar, la tolerancia, la medida y la diferencia.
+function estadoReporteRapido(medidas) {
+  if (!medidas || medidas.length === 0) return 'REQUIERE SEGUIMIENTO';
+  return medidas.every(m => (m.estado || '').toUpperCase() === 'CONFORME')
+    ? 'CONFORME'
+    : 'NO CONFORME';
+}
+
+function estiloEstadoRapido(estado) {
+  if (estado === 'CONFORME') return { color: pdf.COLORES.verde, fondo: pdf.COLORES.verdeBg };
+  if (estado === 'NO CONFORME') return { color: pdf.COLORES.rojo, fondo: pdf.COLORES.rojoBg };
+  return { color: pdf.COLORES.naranja, fondo: pdf.COLORES.naranjaBg };
+}
+
+function diferenciaFueraDeTolerancia(medida) {
+  const real = Number(medida.medida_real);
+  const minimo = Number(medida.tolerancia_minima);
+  const maximo = Number(medida.tolerancia_maxima);
+  if ([real, minimo, maximo].some(Number.isNaN)) return '-';
+  if (real > maximo) return `+${formatearNumero(real - maximo)}`;
+  if (real < minimo) return `-${formatearNumero(minimo - real)}`;
+  return '0';
+}
+
+function dibujarResultadoRapido(doc, y, estado, detalle) {
+  const ancho = pdf.anchoUtil(doc);
+  const estilo = estiloEstadoRapido(estado);
+  const alto = 64;
+  doc.roundedRect(pdf.MARGEN, y, ancho, alto, 7).fill(estilo.fondo);
+  doc.rect(pdf.MARGEN, y, 6, alto).fill(estilo.color);
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(pdf.COLORES.gris)
+    .text('DECISIÓN DE INSPECCIÓN', pdf.MARGEN + 18, y + 12);
+  doc.font('Helvetica-Bold').fontSize(22).fillColor(estilo.color)
+    .text(estado, pdf.MARGEN + 18, y + 24, { lineBreak: false });
+  doc.font('Helvetica').fontSize(9).fillColor(pdf.COLORES.texto)
+    .text(detalle, pdf.MARGEN + 220, y + 28, { width: ancho - 238, align: 'right' });
+  return y + alto + 14;
+}
+
+function dibujarAccionRapida(doc, y, texto) {
+  const ancho = pdf.anchoUtil(doc);
+  const alto = 34;
+  doc.roundedRect(pdf.MARGEN, y, ancho, alto, 6).fill('#F5F9FC');
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(pdf.COLORES.azul)
+    .text('ACCIÓN:', pdf.MARGEN + 12, y + 12, { lineBreak: false });
+  doc.font('Helvetica').fontSize(9).fillColor(pdf.COLORES.texto)
+    .text(texto, pdf.MARGEN + 58, y + 12, { width: ancho - 70, lineBreak: false });
+  return y + alto + 16;
+}
+
+function dibujarPieMetrologiaRapido(doc) {
+  const ancho = pdf.anchoUtil(doc);
+  const y = doc.page.height - 46;
+  const margenInferiorOriginal = doc.page.margins.bottom;
+  doc.page.margins.bottom = 0;
+  doc.moveTo(pdf.MARGEN, y).lineTo(pdf.MARGEN + ancho, y).strokeColor(pdf.COLORES.grisBorde).lineWidth(0.5).stroke();
+  doc.font('Helvetica').fontSize(8).fillColor(pdf.COLORES.gris);
+  doc.text('Plast-Innova S.A.  ·  Sistema de Calidad  ·  Metrología', pdf.MARGEN, y + 8, { width: ancho / 2, lineBreak: false });
+  doc.text('Documento generado automáticamente', pdf.MARGEN + ancho / 2, y + 8, { width: ancho / 2, align: 'right', lineBreak: false });
+  doc.page.margins.bottom = margenInferiorOriginal;
+}
+
+function generarPdfInspeccionMetrologiaRapido(codigo, inspeccion, medidas, planoRuta) {
+  return new Promise((resolve, reject) => {
+    try {
+      const idInspeccion = inspeccion && inspeccion.id ? inspeccion.id : Date.now();
+      const referenciaArchivo = sanitizeFilename(codigo || 'SinReferencia');
+      const rutaArchivo = path.join(os.tmpdir(), `ReporteInspeccion-${idInspeccion}-${referenciaArchivo}.pdf`);
+      const doc = new PDFDocument({ margin: pdf.MARGEN, size: 'A4', bufferPages: true });
+      const stream = fs.createWriteStream(rutaArchivo);
+      doc.pipe(stream);
+      stream.on('finish', () => resolve(rutaArchivo));
+      stream.on('error', reject);
+      doc.on('error', reject);
+
+      const titulo = `Reporte rápido de inspección — ${codigo}`;
+      dibujarPieMetrologiaRapido(doc);
+      doc.on('pageAdded', () => dibujarPieMetrologiaRapido(doc));
+      let y = pdf.dibujarEncabezado(doc, titulo);
+
+      const noConformes = (medidas || []).filter(m => (m.estado || '').toUpperCase() !== 'CONFORME');
+      const estado = estadoReporteRapido(medidas);
+      const detalleEstado = estado === 'CONFORME'
+        ? `Las ${medidas.length} medidas cumplen el plano vigente.`
+        : estado === 'NO CONFORME'
+          ? `${noConformes.length} cota(s) requieren corrección antes de liberar producción.`
+          : 'No hay medidas registradas para tomar una decisión de liberación.';
+      y = dibujarResultadoRapido(doc, y, estado, detalleEstado);
+
+      y = pdf.dibujarPanelInfo(doc, y, [
+        { label: 'Referencia / Molde', value: codigo, alturaExtra: 20 },
+        { label: 'Fecha de inspección', value: inspeccion.fecha, alturaExtra: 20 },
+        { label: 'Inspector', value: inspeccion.responsable, alturaExtra: 20 },
+        { label: 'Lote', value: inspeccion.lote || '-', alturaExtra: 20 },
+      ]);
+
+      const conformes = Math.max(0, (medidas || []).length - noConformes.length);
+      y = pdf.dibujarTarjetasResumen(doc, y, [
+        { etiqueta: 'MEDIDAS', valor: medidas.length, color: pdf.COLORES.azul },
+        { etiqueta: 'CONFORMES', valor: conformes, color: pdf.COLORES.verde },
+        { etiqueta: 'DESVIACIONES', valor: noConformes.length, color: noConformes.length ? pdf.COLORES.rojo : pdf.COLORES.verde },
+      ]);
+
+      const accion = estado === 'CONFORME'
+        ? 'Liberar la referencia y conservar este reporte como evidencia de inspección.'
+        : estado === 'NO CONFORME'
+          ? 'No liberar producción. Ajustar el molde y repetir las medidas señaladas.'
+          : 'Registrar las medidas para definir si la referencia se puede liberar.';
+      y = dibujarAccionRapida(doc, y, accion);
+
+      if (noConformes.length > 0) {
+        y = pdf.dibujarTituloSeccion(doc, y, `Desviaciones (${noConformes.length})`);
+        const columnas = [
+          { label: 'Cota', ancho: 75 },
+          { label: 'Estándar', ancho: 92, align: 'right' },
+          { label: 'Tolerancia', ancho: 120, align: 'right' },
+          { label: 'Medida', ancho: 90, align: 'right' },
+          { label: 'Diferencia', ancho: 95, align: 'right' },
+        ];
+        y = pdf.dibujarTablaEncabezado(doc, y, columnas);
+        noConformes.forEach((m, indice) => {
+          y = pdf.saltoPaginaSiNecesario(doc, y, 20, (doc2) => {
+            const yy = pdf.dibujarEncabezado(doc2, `${titulo} (continuación)`);
+            return pdf.dibujarTablaEncabezado(doc2, yy, columnas);
+          });
+          y = pdf.dibujarTablaFila(doc, y, columnas, [
+            m.cota,
+            formatearNumero(m.medida_estandar),
+            `${formatearNumero(m.tolerancia_minima)} a ${formatearNumero(m.tolerancia_maxima)}`,
+            formatearNumero(m.medida_real),
+            diferenciaFueraDeTolerancia(m),
+          ], indice);
+        });
+        y += 12;
+      }
+
+      const fotos = (medidas || []).filter(m => m.imagen_evidencia).length;
+      const plano = planoRuta ? 'Plano activo disponible' : 'Sin plano activo';
+      doc.font('Helvetica').fontSize(8.5).fillColor(pdf.COLORES.gris)
+        .text(`Evidencia en el sistema: ${plano} · ${fotos} archivo(s) de evidencia.`, pdf.MARGEN, y, { width: pdf.anchoUtil(doc) });
+
+      doc.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+module.exports = { generarPdfInspeccionMetrologia: generarPdfInspeccionMetrologiaRapido };

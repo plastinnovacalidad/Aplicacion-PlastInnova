@@ -21,12 +21,13 @@ router.get('/usuarios', validarToken, requerirPermiso('usuarios.gestionar'), asy
 }));
 
 router.post('/usuarios', validarToken, requerirPermiso('usuarios.gestionar'), async (req, res) => {
-  const { nombre, usuario, contrasena, rol_id } = req.body;
+  const { nombre, usuario, contrasena, rol_id, telefono } = req.body;
   if (!nombre || !usuario || !contrasena) return res.status(400).json({ error: 'Nombre, usuario y contraseña requeridos' });
 
   try {
     const contrasenaHash = await bcrypt.hash(contrasena, SALT_ROUNDS);
-    const result = await usuariosData.crearUsuario(nombre, usuario, contrasenaHash, rol_id, ahoraISO());
+    const telefonoLimpio = (telefono || '').trim() || null;
+    const result = await usuariosData.crearUsuario(nombre, usuario, contrasenaHash, rol_id, ahoraISO(), telefonoLimpio);
     await registrarCambio({
       modulo: 'Roles y Usuarios', entidad: 'usuarios', entidadId: result.lastID, accion: 'Creación',
       detalle: `Usuario "${usuario}" (${nombre}) creado.`,
@@ -41,7 +42,7 @@ router.post('/usuarios', validarToken, requerirPermiso('usuarios.gestionar'), as
 
 router.put('/usuarios/:id', validarToken, requerirPermiso('usuarios.gestionar'), async (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { nombre, usuario, contrasena, rol_id } = req.body;
+  const { nombre, usuario, contrasena, rol_id, telefono } = req.body;
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
 
   try {
@@ -55,6 +56,10 @@ router.put('/usuarios/:id', validarToken, requerirPermiso('usuarios.gestionar'),
     if (usuario) { sets.push('usuario = ?'); vals.push(usuario); }
     if (contrasena) { sets.push('contrasena = ?'); vals.push(await bcrypt.hash(contrasena, SALT_ROUNDS)); }
     if (rol_id !== undefined) { sets.push('rol_id = ?'); vals.push(rol_id); }
+    // telefono se compara con undefined (no con falsy) para poder mandarlo
+    // vacío a propósito y borrarlo -- mismo criterio que ya usa el campo
+    // "encargado" de Áreas de Inspección.
+    if (telefono !== undefined) { sets.push('telefono = ?'); vals.push((telefono || '').trim() || null); }
     if (sets.length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
     vals.push(id);
 
@@ -64,6 +69,7 @@ router.put('/usuarios/:id', validarToken, requerirPermiso('usuarios.gestionar'),
     if (usuario) camposCambiados.push('usuario (login)');
     if (contrasena) camposCambiados.push('contraseña');
     if (rol_id !== undefined) camposCambiados.push('rol');
+    if (telefono !== undefined) camposCambiados.push('teléfono');
     await registrarCambio({
       modulo: 'Roles y Usuarios', entidad: 'usuarios', entidadId: id, accion: 'Edición',
       detalle: `Usuario editado. Campos modificados: ${camposCambiados.join(', ') || 'ninguno'}.`,

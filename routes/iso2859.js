@@ -39,6 +39,18 @@ router.get('/iso2859/catalogos/referencias', validarToken, puedeLeer, asyncHandl
   res.json(await iso.buscarReferencias((req.query.q || '').trim()));
 }));
 
+// A diferencia de la de arriba (catálogo completo, para elegir referencia
+// al CREAR un lote), estas dos alimentan el autocompletado de la pantalla
+// de Reportes: solo referencias/lotes que YA tienen al menos un muestreo
+// registrado, para no dejar pedir un reporte de algo que todavía no existe.
+router.get('/iso2859/catalogos/referencias-con-muestreos', validarToken, puedeLeer, asyncHandler(async (req, res) => {
+  res.json(await iso.buscarReferenciasConMuestreos((req.query.q || '').trim()));
+}));
+
+router.get('/iso2859/catalogos/lotes-con-muestreos', validarToken, puedeLeer, asyncHandler(async (req, res) => {
+  res.json(await iso.buscarLotesConMuestreos((req.query.q || '').trim()));
+}));
+
 router.get('/iso2859/catalogos/defectos', validarToken, puedeLeer, asyncHandler(async (req, res) => {
   res.json(await iso.buscarDefectos((req.query.q || '').trim()));
 }));
@@ -116,12 +128,13 @@ router.get('/iso2859/catalogos/areas/todas', validarToken, puedeGestionarCatalog
 }));
 
 router.post('/iso2859/catalogos/areas', validarToken, puedeGestionarCatalogos, asyncHandler(async (req, res) => {
-  const { nombre, modulo } = req.body;
+  const { nombre, modulo, encargado } = req.body;
   if (!nombre || !modulo) return res.status(400).json({ error: 'Nombre y módulo son obligatorios' });
-  const result = await iso.crearAreaCatalogo(nombre.trim(), modulo);
+  const encargadoLimpio = (encargado || '').trim() || null;
+  const result = await iso.crearAreaCatalogo(nombre.trim(), modulo, encargadoLimpio);
   await registrarCambio({
     modulo: 'Catálogos', entidad: 'areas_iso', entidadId: result.lastID, accion: 'Creación',
-    detalle: `Área "${nombre}" (${modulo}) creada.`,
+    detalle: `Área "${nombre}" (${modulo}) creada.${encargadoLimpio ? ` Encargado: ${encargadoLimpio}.` : ''}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre
   });
   res.json({ success: true, id: result.lastID });
@@ -130,13 +143,14 @@ router.post('/iso2859/catalogos/areas', validarToken, puedeGestionarCatalogos, a
 router.put('/iso2859/catalogos/areas/:id', validarToken, puedeGestionarCatalogos, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
-  const { nombre, modulo } = req.body;
+  const { nombre, modulo, encargado } = req.body;
   const estado = req.body.estado === 'Inactivo' ? 'Inactivo' : 'Activo';
   if (!nombre || !modulo) return res.status(400).json({ error: 'Nombre y módulo son obligatorios' });
-  await iso.actualizarAreaCatalogo(id, nombre.trim(), modulo, estado);
+  const encargadoLimpio = (encargado || '').trim() || null;
+  await iso.actualizarAreaCatalogo(id, nombre.trim(), modulo, estado, encargadoLimpio);
   await registrarCambio({
     modulo: 'Catálogos', entidad: 'areas_iso', entidadId: id, accion: 'Edición',
-    detalle: `Área "${nombre}" (${modulo}) editada. Estado: ${estado}.`,
+    detalle: `Área "${nombre}" (${modulo}) editada. Estado: ${estado}.${encargadoLimpio ? ` Encargado: ${encargadoLimpio}.` : ''}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre
   });
   res.json({ success: true });
@@ -299,9 +313,27 @@ router.get('/iso2859/lotes', validarToken, puedeLeer, asyncHandler(async (req, r
 
 // ======================== MUESTREOS ========================
 router.post('/iso2859/muestreos', validarToken, puedeMuestrear, asyncHandler(async (req, res) => {
-  const { id_lote, tipo, cantidad_muestreada, observaciones, defectos, turno, area, operario, piezas_reclasificadas, piezas_reparadas } = req.body;
+  const { id_lote, tipo, cantidad_muestreada, observaciones, defectos, turno, area, operario, piezas_reclasificadas, piezas_reparadas, piezas_rechazadas } = req.body;
   if (!id_lote || !tipo || !cantidad_muestreada) {
     return res.status(400).json({ error: 'id_lote, tipo y cantidad_muestreada son obligatorios' });
+  }
+
+  // "En Proceso" es el único tipo que pregunta qué se hizo con las piezas
+  // defectuosas (reclasificarlas/repararlas/rechazarlas) — Julio pidió que
+  // las 3 sumen exactamente el total de hallazgos, para que no se pueda
+  // guardar un muestreo donde esas piezas "desaparecen" (o sobran) contra
+  // lo que de verdad se encontró. El frontend (muestreo.js) ya valida esto
+  // antes de mandar la petición, pero se vuelve a validar acá para no
+  // confiar solo en el frontend (una llamada directa a la API, o un bug en
+  // pantalla, no debería poder guardar un muestreo inconsistente).
+  if (tipo === 'En_Proceso') {
+    const totalHallazgos = (defectos || []).reduce((suma, d) => suma + (parseInt(d.cantidad, 10) || 0), 0);
+    const totalPiezas = (parseInt(piezas_reclasificadas, 10) || 0) + (parseInt(piezas_reparadas, 10) || 0) + (parseInt(piezas_rechazadas, 10) || 0);
+    if (totalPiezas !== totalHallazgos) {
+      return res.status(400).json({
+        error: `La suma de piezas reclasificadas + reparadas + rechazadas (${totalPiezas}) debe ser igual al total de hallazgos (${totalHallazgos}).`
+      });
+    }
   }
 
   const lote = await iso.obtenerLotePorId(id_lote);
@@ -360,15 +392,17 @@ router.post('/iso2859/muestreos', validarToken, puedeMuestrear, asyncHandler(asy
     decisionFinal = req.body.decision || 'Aceptado';
   }
 
-  // piezas_reclasificadas/piezas_reparadas solo aplican de verdad a
-  // "En_Proceso" (qué se hizo con las piezas defectuosas encontradas en
-  // ese muestreo), pero se guardan tal cual vengan — si no vienen,
+  // piezas_reclasificadas/piezas_reparadas/piezas_rechazadas solo aplican
+  // de verdad a "En_Proceso" (qué se hizo con las piezas defectuosas
+  // encontradas en ese muestreo, ya validado arriba que sumen el total de
+  // hallazgos), pero se guardan tal cual vengan — si no vienen,
   // crearMuestreo ya las deja en 0 por defecto.
   const idMuestreo = await iso.crearMuestreo({
     id_lote, tipo, analista, cantidad_muestreada, decision: decisionFinal,
     observaciones, turno, area, operario, defectos,
     piezas_reclasificadas: parseInt(piezas_reclasificadas, 10) || 0,
     piezas_reparadas: parseInt(piezas_reparadas, 10) || 0,
+    piezas_rechazadas: parseInt(piezas_rechazadas, 10) || 0,
   });
 
   if (tipo === 'Final') {
@@ -608,24 +642,35 @@ router.get('/iso2859/reportes/trazabilidad/:referencia', validarToken, puedeVerR
     { etiqueta: 'CERRADOS', valor: totales.cerrados, color: pdf.COLORES.grisEstado },
   ]);
 
-  y = pdf.dibujarTituloSeccion(doc, y, 'Historial de Lotes');
-  const columnas = [
-    { label: 'LOTE', ancho: 135 },
-    { label: 'FECHA', ancho: 110 },
-    { label: 'CANTIDAD', ancho: 80, align: 'right' },
-    { label: 'PLAN', ancho: 75 },
-    { label: 'ESTADO', ancho: 75, badge: true },
-  ];
-  y = pdf.dibujarTablaEncabezado(doc, y, columnas);
-  lotes.forEach((l, i) => {
-    y = pdf.saltoPaginaSiNecesario(doc, y, 20, (doc2) => {
-      const yy = pdf.dibujarEncabezado(doc2, `${subtitulo} (continuación)`);
-      return pdf.dibujarTablaEncabezado(doc2, yy, columnas);
+  // Julio pidió que acá se listen TODOS los muestreos hechos a esta
+  // referencia sin importar en qué lote, mostrando a cuál lote pertenece
+  // cada uno -- antes esta sección listaba un resumen por LOTE (una fila por
+  // lote, sin desglosar), y un lote con varios muestreos aparecía como una
+  // sola fila.
+  const muestreos = await iso.obtenerMuestreosPorReferencia(ref);
+  y = pdf.dibujarTituloSeccion(doc, y, `Muestreos Realizados (${muestreos.length})`);
+  if (muestreos.length > 0) {
+    const columnas = [
+      { label: 'LOTE', ancho: 85 },
+      { label: 'TIPO', ancho: 70 },
+      { label: 'FECHA', ancho: 100 },
+      { label: 'INSPECTOR', ancho: 100 },
+      { label: 'MUESTRA', ancho: 50, align: 'right' },
+      { label: 'DECISIÓN', ancho: 70, badge: true },
+    ];
+    y = pdf.dibujarTablaEncabezado(doc, y, columnas);
+    muestreos.forEach((m, i) => {
+      y = pdf.saltoPaginaSiNecesario(doc, y, 20, (doc2) => {
+        const yy = pdf.dibujarEncabezado(doc2, `${subtitulo} (continuación)`);
+        return pdf.dibujarTablaEncabezado(doc2, yy, columnas);
+      });
+      y = pdf.dibujarTablaFila(doc, y, columnas, [
+        m.id_lote, (m.tipo || '').replace('_', ' '), m.fecha_hora, m.analista, m.cantidad_muestreada, m.decision || 'Pendiente',
+      ], i);
     });
-    y = pdf.dibujarTablaFila(doc, y, columnas, [
-      l.id_lote, l.fecha_creacion, l.cantidad_total, l.plan_actual || 'Normal', l.estado_final || 'Pendiente',
-    ], i);
-  });
+  } else {
+    doc.font('Helvetica').fontSize(9.5).fillColor(pdf.COLORES.gris).text('Sin muestreos registrados todavía.', pdf.MARGEN, y);
+  }
 
   doc.end();
 }));

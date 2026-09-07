@@ -168,9 +168,12 @@ const Iso2859Historial = {
     let muestreosHtml = '';
     if (lote.muestreos && lote.muestreos.length > 0) {
       muestreosHtml = lote.muestreos.map(m => {
-        const piezasHtml = (m.piezas_reclasificadas > 0 || m.piezas_reparadas > 0)
-          ? `<br>${m.piezas_reclasificadas > 0 ? `🔄 ${m.piezas_reclasificadas} pieza(s) reclasificada(s)` : ''}${m.piezas_reclasificadas > 0 && m.piezas_reparadas > 0 ? ' | ' : ''}${m.piezas_reparadas > 0 ? `🔧 ${m.piezas_reparadas} pieza(s) reparada(s)` : ''}`
-          : '';
+        const partesPiezas = [
+          m.piezas_reclasificadas > 0 ? `🔄 ${m.piezas_reclasificadas} pieza(s) reclasificada(s)` : '',
+          m.piezas_reparadas > 0 ? `🔧 ${m.piezas_reparadas} pieza(s) reparada(s)` : '',
+          m.piezas_rechazadas > 0 ? `🗑️ ${m.piezas_rechazadas} pieza(s) rechazada(s)` : '',
+        ].filter(Boolean);
+        const piezasHtml = partesPiezas.length > 0 ? `<br>${partesPiezas.join(' | ')}` : '';
         return `
         <div class="timeline-item ${['Alerta', 'Rechazado', 'Parar', 'Rechazar'].includes(m.decision) ? 'alerta' : (['Aceptado', 'Seguir', 'Aprobado', 'Liberar'].includes(m.decision) ? 'ok' : '')}">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
@@ -222,20 +225,36 @@ const Iso2859Historial = {
       `;
     }
 
+    // Antes esto se pintaba debajo de la tabla (había que bajar para verlo)
+    // — Julio pidió que "Ver" abra una ventana flotante en su lugar, con la
+    // misma información. Cierra con la X, haciendo clic fuera del recuadro,
+    // o con Escape (ver cerrarDetalle()/_onEscapeDetalle más abajo).
     container.innerHTML = `
-      <div class="card" style="margin-top:1rem; border:2px solid var(--brand-primary);">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h3>📋 Lote ${escapeHtml(lote.id_lote)}</h3>
-          <button onclick="document.getElementById('hi-detalle-lote-container').innerHTML=''" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#a0aec0;">&times;</button>
+      <div class="hi-modal-overlay" onclick="if (event.target === this) Iso2859Historial.cerrarDetalle();">
+        <div class="hi-modal-panel card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>📋 Lote ${escapeHtml(lote.id_lote)}</h3>
+            <button onclick="Iso2859Historial.cerrarDetalle()" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#a0aec0;">&times;</button>
+          </div>
+          <p><strong>Ref:</strong> ${escapeHtml(lote.referencia)} | <strong>Cant:</strong> ${lote.cantidad_total} | <strong>Estado:</strong> ${lote.estado_final === 'Reparacion' ? 'En reparación' : (lote.estado_final || 'Pendiente').replace(/_/g, ' ')}</p>
+          ${avisoPrimeraPiezaHtml}
+          ${cierreHtml}
+          <hr style="border:none; border-top:1px solid #e2e8f0; margin:1rem 0;">
+          <h4>Muestreos (${lote.muestreos ? lote.muestreos.length : 0})</h4>
+          ${muestreosHtml}
         </div>
-        <p><strong>Ref:</strong> ${escapeHtml(lote.referencia)} | <strong>Cant:</strong> ${lote.cantidad_total} | <strong>Estado:</strong> ${lote.estado_final === 'Reparacion' ? 'En reparación' : (lote.estado_final || 'Pendiente').replace(/_/g, ' ')}</p>
-        ${avisoPrimeraPiezaHtml}
-        ${cierreHtml}
-        <hr style="border:none; border-top:1px solid #e2e8f0; margin:1rem 0;">
-        <h4>Muestreos (${lote.muestreos ? lote.muestreos.length : 0})</h4>
-        ${muestreosHtml}
       </div>
     `;
+    document.addEventListener('keydown', this._onEscapeDetalle);
+  },
+
+  cerrarDetalle() {
+    document.getElementById('hi-detalle-lote-container').innerHTML = '';
+    document.removeEventListener('keydown', this._onEscapeDetalle);
+  },
+
+  _onEscapeDetalle(e) {
+    if (e.key === 'Escape') Iso2859Historial.cerrarDetalle();
   },
 
   _filtrados() {

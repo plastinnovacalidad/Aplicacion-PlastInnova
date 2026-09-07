@@ -32,6 +32,8 @@
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: #f0f0f0; color: #555; border: none; padding: 10px 24px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
     .btn-secondary:hover { background: #e0e0e0; }
+    .btn-danger { background: #e03131; color: white; border: none; padding: 10px 24px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .btn-danger:hover { background: #c92a2a; }
     .form-msg { padding: 12px 16px; border-radius: 8px; margin-top: 15px; font-size: 14px; display: none; }
     .form-msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
     .form-msg.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
@@ -164,6 +166,8 @@
     .valores-foto-info small { color: #999; font-size: 11px; }
     .valores-foto-upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f0f3ff; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--brand-primary); cursor: pointer; transition: background 0.15s; }
     .valores-foto-upload-btn:hover { background: #e0e7ff; }
+    .valores-foto-quitar-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 8px; font-size: 12px; font-weight: 600; color: #e03131; cursor: pointer; transition: background 0.15s; }
+    .valores-foto-quitar-btn:hover { background: #ffe3e3; }
     .valores-check-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #555; cursor: pointer; }
 
     /* Foto actual de la versión que se está editando (pestaña "Modificación
@@ -272,6 +276,20 @@
         </div>
         <div class="edit-ref-list" id="editRefList"></div>
 
+        <!-- Papelera de referencias eliminadas (borrado suave): oculto por
+             defecto, solo lo ve quien tiene 'referencias.eliminar' (ver
+             checkSession). No se mezcla con la lista normal de arriba para
+             no confundir el buscador del día a día con referencias que ya
+             no deberían aparecer ahí. -->
+        <div id="papeleraToggle" style="display:none; margin: 10px 0 15px;">
+          <a href="javascript:void(0)" onclick="togglePapelera()" id="papeleraToggleLink" style="font-size:13px;color:#888;text-decoration:none;">
+            <i class="fa-solid fa-trash-can"></i> Ver referencias eliminadas
+          </a>
+        </div>
+        <div id="papeleraBox" style="display:none; margin-bottom:15px; padding:10px; background:#fff5f5; border:1px solid #ffc9c9; border-radius:8px;">
+          <div id="papeleraLista"></div>
+        </div>
+
         <div id="editFormContainer" style="display:none;">
           <div class="edit-tabs-header">
             <button class="edit-tab-btn active" onclick="switchEditTab('info')" id="editTabInfo"><i class="fa-solid fa-clipboard-list"></i> Información</button>
@@ -299,7 +317,20 @@
               <div class="readonly" id="infoCreadoPor">--</div>
               <label>Fecha creación</label>
               <div class="readonly" id="infoFecha">--</div>
+              <label>Estado de la referencia</label>
+              <div class="readonly" id="infoActiva">Activa</div>
             </div>
+
+            <!-- Borrado suave: la referencia se oculta de las listas y
+                 búsquedas del día a día y no se le puede subir/reemplazar
+                 versión mientras esté así, pero nada de su historial,
+                 versiones o fotos se borra -- se puede restaurar cuando
+                 sea. Solo lo ve quien tiene 'referencias.eliminar'. -->
+            <div class="form-actions" style="margin-top:15px;" id="accionesReferenciaBox">
+              <button class="btn-danger" id="btnEliminarRef" onclick="eliminarReferenciaActual()" style="display:none;"><i class="fa-solid fa-trash"></i> Eliminar referencia</button>
+              <button class="btn-secondary" id="btnRestaurarRef" onclick="restaurarReferenciaActual()" style="display:none;"><i class="fa-solid fa-clock-rotate-left"></i> Restaurar referencia</button>
+            </div>
+            <div class="form-msg" id="eliminarMsg"></div>
           </div>
 
           <div class="edit-tab-content" id="editContentModif">
@@ -450,6 +481,12 @@
 
       document.getElementById('editTabAuditoria').classList.toggle('hidden', !tienePermiso('referencias.ver'));
 
+      // Papelera de referencias eliminadas (borrado suave) — mismo permiso
+      // que eliminar/restaurar, ya que solo tiene sentido para quien puede
+      // hacer algo con lo que encuentre ahí.
+      const papeleraToggleEl = document.getElementById('papeleraToggle');
+      if (papeleraToggleEl) papeleraToggleEl.style.display = tienePermiso('referencias.eliminar') ? 'block' : 'none';
+
       // Cotas eléctricas y especificaciones de cableado: permiso propio
       // ('valores_cableado.gestion'), separado de poder crear/editar la
       // referencia y su foto — quien no lo tenga simplemente no ve esta
@@ -592,7 +629,11 @@
                   <i class="fa-solid fa-file-arrow-up"></i> Subir / cambiar foto
                   <input type="file" accept="image/*" id="${prefix}_foto_cableado_file" style="display:none;" onchange="onFotoCableadoSeleccionada('${prefix}', event)">
                 </label>
-                <small>Reemplaza la foto guardada para la forma elegida arriba.</small>
+                <small>Reemplaza la foto guardada para la forma elegida arriba (la foto vieja de esa forma se archiva, no se borra).</small>
+                <button type="button" class="valores-foto-quitar-btn" onclick="quitarFormaCableadoDeReferencia('${prefix}')">
+                  <i class="fa-solid fa-link-slash"></i> Quitar de esta referencia
+                </button>
+                <small>Solo desasigna la forma de ESTA referencia — el nombre y la foto siguen intactos para las demás referencias que los usan.</small>
               </div>
             </div>
           </div>
@@ -637,6 +678,41 @@
         }
       } catch (e) {
         box.innerHTML = '<span class="valores-foto-placeholder">Sin foto todavía</span>';
+      }
+    }
+
+    // Quita la forma de cableado asignada a ESTA referencia/versión, sin
+    // tocar el nombre ni la foto compartida: 'forma_cableado' vive en
+    // elec_config_cableado por version_id (una fila por versión), así que
+    // limpiar esta fila no afecta ninguna otra versión que use el mismo
+    // nombre — Julio lo pidió explícitamente así ("que se quite solamente
+    // de esa referencia pero no del resto si la están usando otras
+    // imágenes"). En "Modificación de versión" (prefix 'editVal', con una
+    // versión ya guardada) esto se guarda de inmediato; en Crear/Nueva
+    // versión (todavía sin guardar nada) alcanza con limpiar la selección
+    // en pantalla, el propio formulario se encarga de guardarlo cuando el
+    // usuario lo envíe.
+    async function quitarFormaCableadoDeReferencia(prefix) {
+      const formaActual = obtenerFormaCableadoActual(prefix);
+      if (!formaActual) { alert('Esta referencia no tiene ninguna forma de cableado asignada.'); return; }
+      if (!confirm(`¿Quitar la forma de cableado "${formaActual}" de esta referencia?\n\nSolo se quita de ESTA referencia — el nombre "${formaActual}" y su foto siguen intactos para las demás referencias que los usan.`)) return;
+
+      const sel = document.getElementById(`${prefix}_forma_cableado_select`);
+      const txt = document.getElementById(`${prefix}_forma_cableado_nueva`);
+      const wrap = document.getElementById(`${prefix}_forma_cableado_nueva_wrap`);
+      if (sel) sel.value = '';
+      if (txt) txt.value = '';
+      if (wrap) wrap.style.display = 'none';
+      await cargarPreviewFotoCableado(prefix);
+
+      if (prefix === 'editVal' && datosEditando && datosEditando.version_id) {
+        const ok = await guardarValoresParaVersion(datosEditando.version_id, 'editVal');
+        const msg = document.getElementById('editValoresMsg');
+        if (msg) {
+          msg.className = ok ? 'form-msg success' : 'form-msg error';
+          msg.style.display = 'block';
+          msg.textContent = ok ? 'Forma de cableado quitada de esta referencia.' : 'No se pudo guardar el cambio — intenta de nuevo desde "Guardar valores y cableado".';
+        }
       }
     }
 
@@ -1064,6 +1140,27 @@
         document.getElementById('infoCreadoPor').textContent = datosEditando.creado_por || '--';
         document.getElementById('infoFecha').textContent = datosEditando.fecha_creacion || '--';
 
+        // Borrado suave: activa===0 es lo único que cuenta como "eliminada"
+        // (cualquier otro valor, incluyendo undefined en una respuesta muy
+        // vieja, se trata como activa).
+        const refActiva = datosEditando.activa !== 0;
+        const infoActivaEl = document.getElementById('infoActiva');
+        infoActivaEl.textContent = refActiva ? 'Activa' : 'Eliminada';
+        infoActivaEl.style.color = refActiva ? '' : '#e03131';
+        infoActivaEl.style.fontWeight = refActiva ? '' : '700';
+        const puedeEliminarRef = tienePermiso('referencias.eliminar');
+        document.getElementById('btnEliminarRef').style.display = (puedeEliminarRef && refActiva) ? 'inline-block' : 'none';
+        document.getElementById('btnRestaurarRef').style.display = (puedeEliminarRef && !refActiva) ? 'inline-block' : 'none';
+        document.getElementById('eliminarMsg').style.display = 'none';
+        // Mientras esté eliminada, el backend rechaza reemplazar/crear
+        // versión (409) -- se deshabilitan los botones acá para que se note
+        // de una vez en vez de que el usuario llene el formulario y recién
+        // ahí se entere.
+        const btnModifVerEl = document.getElementById('btnModifVer');
+        const btnNuevaVersionEl = document.getElementById('btnNuevaVersion');
+        if (btnModifVerEl) btnModifVerEl.disabled = !refActiva;
+        if (btnNuevaVersionEl) btnNuevaVersionEl.disabled = !refActiva;
+
         document.getElementById('fotoActualVersionLabel').textContent = datosEditando.version_actual || 'Sin versión';
         await cargarFotoActualEdicion(datosEditando.version_id, codigoBase);
         if (referenciaEditando !== codigoBase) return;
@@ -1088,6 +1185,137 @@
       } catch (e) {
         if (referenciaEditando === codigoBase) alert('Error cargando detalles');
       }
+    }
+
+    // ========== BORRADO SUAVE (eliminar/restaurar referencia) ==========
+    // La referencia se marca inactiva: desaparece de la lista de búsqueda
+    // de la izquierda y de cualquier selector que use /api/referencias, y
+    // el backend rechaza reemplazar/crear versión mientras esté así. Pero
+    // no se borra nada de verdad: la fila, sus versiones, sus fotos y su
+    // historial de auditoría quedan intactos, y se puede restaurar en
+    // cualquier momento desde acá o desde la papelera (ver más abajo).
+    async function eliminarReferenciaActual() {
+      if (!datosEditando || !datosEditando.codigo_base) return;
+      const codigo = datosEditando.codigo_base;
+      const motivo = prompt(`Motivo para eliminar la referencia "${codigo}":\n\n(No se borra nada de verdad: se oculta de las listas y búsquedas, pero su historial, versiones y fotos se conservan, y se puede restaurar cuando quieras.)`);
+      if (motivo === null) return;
+      if (!motivo.trim()) { alert('Debe indicar un motivo'); return; }
+      if (!confirm(`¿Confirma eliminar la referencia "${codigo}"?`)) return;
+
+      const msg = document.getElementById('eliminarMsg');
+      msg.style.display = 'none';
+      try {
+        const res = await fetch(`/api/referencias/${encodeURIComponent(codigo)}/eliminar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ motivo: motivo.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const codigoEliminado = codigo;
+          referenciaEditando = null;
+          datosEditando = null;
+          document.getElementById('editFormContainer').style.display = 'none';
+          await cargarReferencias();
+          alert(`Referencia "${codigoEliminado}" eliminada correctamente.`);
+        } else {
+          msg.className = 'form-msg error'; msg.style.display = 'block';
+          msg.textContent = data.error || 'Error al eliminar la referencia';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error'; msg.style.display = 'block';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+
+    async function restaurarReferenciaActual() {
+      if (!datosEditando || !datosEditando.codigo_base) return;
+      const codigo = datosEditando.codigo_base;
+      if (!confirm(`¿Restaurar la referencia "${codigo}"? Volverá a aparecer en las listas y búsquedas normales.`)) return;
+
+      const msg = document.getElementById('eliminarMsg');
+      msg.style.display = 'none';
+      try {
+        const res = await fetch(`/api/referencias/${encodeURIComponent(codigo)}/restaurar`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          await cargarReferencias();
+          await cargarDatosEdicion(codigo, true);
+          alert(`Referencia "${codigo}" restaurada correctamente.`);
+        } else {
+          msg.className = 'form-msg error'; msg.style.display = 'block';
+          msg.textContent = data.error || 'Error al restaurar la referencia';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error'; msg.style.display = 'block';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+
+    // ========== PAPELERA (lista de referencias eliminadas) ==========
+    let papeleraAbierta = false;
+    async function togglePapelera() {
+      papeleraAbierta = !papeleraAbierta;
+      const box = document.getElementById('papeleraBox');
+      const link = document.getElementById('papeleraToggleLink');
+      if (papeleraAbierta) {
+        box.style.display = 'block';
+        link.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Ocultar referencias eliminadas';
+        await cargarPapelera();
+      } else {
+        box.style.display = 'none';
+        link.innerHTML = '<i class="fa-solid fa-trash-can"></i> Ver referencias eliminadas';
+      }
+    }
+
+    async function cargarPapelera() {
+      const lista = document.getElementById('papeleraLista');
+      lista.innerHTML = '<div class="rec-empty" style="padding:8px;">Cargando…</div>';
+      try {
+        const res = await fetch('/api/referencias-eliminadas', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        const eliminadas = (res.ok && data.referencias) ? data.referencias : [];
+        if (eliminadas.length === 0) {
+          lista.innerHTML = '<div class="rec-empty" style="padding:8px;">No hay referencias eliminadas.</div>';
+          return;
+        }
+        lista.innerHTML = '';
+        eliminadas.forEach(r => {
+          const fila = document.createElement('div');
+          fila.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #ffe3e3;';
+          const detalle = 'Eliminada el ' + escapeHtml(r.eliminado_en || '--') + (r.eliminado_por_nombre ? ' por ' + escapeHtml(r.eliminado_por_nombre) : '');
+          fila.innerHTML = `
+            <div>
+              <strong>${escapeHtml(r.codigo_base)}</strong>
+              <div style="font-size:12px;color:#888;">${detalle}</div>
+            </div>
+            <button class="btn-secondary" style="padding:6px 16px;font-size:12px;white-space:nowrap;"><i class="fa-solid fa-clock-rotate-left"></i> Restaurar</button>
+          `;
+          fila.querySelector('button').onclick = () => restaurarReferenciaDesdePapelera(r.codigo_base);
+          lista.appendChild(fila);
+        });
+      } catch (e) {
+        lista.innerHTML = '<div class="rec-empty" style="padding:8px;">Error al cargar la papelera.</div>';
+      }
+    }
+
+    async function restaurarReferenciaDesdePapelera(codigoBase) {
+      if (!confirm(`¿Restaurar la referencia "${codigoBase}"? Volverá a aparecer en las listas normales.`)) return;
+      try {
+        const res = await fetch(`/api/referencias/${encodeURIComponent(codigoBase)}/restaurar`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          await cargarReferencias();
+          await cargarPapelera();
+          alert(`Referencia "${codigoBase}" restaurada correctamente.`);
+        } else {
+          alert(data.error || 'Error al restaurar la referencia');
+        }
+      } catch (e) { alert('Error de conexión'); }
     }
 
     // ========== AUDITORÍA DE CAMBIOS (Editar Referencia) ==========

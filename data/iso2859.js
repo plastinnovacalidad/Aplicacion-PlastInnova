@@ -51,6 +51,40 @@ function obtenerPlanPorProducto(producto) {
   return getDb().get(`SELECT * FROM iso_planes_muestreo WHERE producto = ?`, [producto]);
 }
 
+// A diferencia de buscarReferencias() (arriba, el catálogo completo de
+// iso_referencias — 17.000+ nombres, usado al CREAR un lote nuevo, donde
+// justamente puede no haber muestreo todavía), esto es para la pantalla de
+// Reportes: ahí Julio pidió que el autocompletado de referencia/lote solo
+// ofrezca lo que YA tiene al menos un muestreo registrado, para no dejar
+// elegir algo que después da un reporte vacío. Se filtra con EXISTS contra
+// iso_muestreos (no alcanza con que el lote exista en iso_lotes — puede
+// haberse creado y no haberse muestreado todavía).
+function buscarReferenciasConMuestreos(q) {
+  const db = getDb();
+  const condicion = q ? 'AND l.referencia LIKE ?' : '';
+  const params = q ? [`%${q}%`] : [];
+  return db.all(
+    `SELECT DISTINCT l.referencia AS nombre
+     FROM iso_lotes l
+     WHERE EXISTS (SELECT 1 FROM iso_muestreos m WHERE m.id_lote = l.id_lote) ${condicion}
+     ORDER BY l.referencia LIMIT 20`,
+    params
+  );
+}
+
+function buscarLotesConMuestreos(q) {
+  const db = getDb();
+  const condicion = q ? 'AND l.id_lote LIKE ?' : '';
+  const params = q ? [`%${q}%`] : [];
+  return db.all(
+    `SELECT DISTINCT l.id_lote, l.referencia
+     FROM iso_lotes l
+     WHERE EXISTS (SELECT 1 FROM iso_muestreos m WHERE m.id_lote = l.id_lote) ${condicion}
+     ORDER BY l.id_lote DESC LIMIT 20`,
+    params
+  );
+}
+
 // ======================== CATÁLOGOS — administración (pestaña "Catálogos") ========================
 // A diferencia de buscarDefectos/listarAreas/obtenerPlanPorProducto (que
 // alimentan las pantallas operativas de todos los días), estas funciones
@@ -80,15 +114,25 @@ function eliminarDefectoCatalogo(id) {
 }
 
 function listarAreasCatalogo() {
-  return getDb().all(`SELECT id, nombre, modulo, estado FROM iso_areas ORDER BY nombre`);
+  return getDb().all(`SELECT id, nombre, modulo, estado, encargado FROM iso_areas ORDER BY nombre`);
 }
 
-function crearAreaCatalogo(nombre, modulo) {
-  return getDb().run(`INSERT INTO iso_areas (nombre, modulo, estado) VALUES (?, ?, 'Activo')`, [nombre, modulo]);
+// "encargado" (MIGRACIÓN #32, pedido por Julio 04/09): quién avisar cuando
+// pasa algo en esa área -- se reusa este mismo catálogo desde el nuevo
+// módulo de Reportes por Áreas. Texto libre y opcional: no todas las áreas
+// necesitan tener uno definido todavía.
+function crearAreaCatalogo(nombre, modulo, encargado) {
+  return getDb().run(
+    `INSERT INTO iso_areas (nombre, modulo, estado, encargado) VALUES (?, ?, 'Activo', ?)`,
+    [nombre, modulo, encargado || null]
+  );
 }
 
-function actualizarAreaCatalogo(id, nombre, modulo, estado) {
-  return getDb().run(`UPDATE iso_areas SET nombre = ?, modulo = ?, estado = ? WHERE id = ?`, [nombre, modulo, estado, id]);
+function actualizarAreaCatalogo(id, nombre, modulo, estado, encargado) {
+  return getDb().run(
+    `UPDATE iso_areas SET nombre = ?, modulo = ?, estado = ?, encargado = ? WHERE id = ?`,
+    [nombre, modulo, estado, encargado || null, id]
+  );
 }
 
 function eliminarAreaCatalogo(id) {
@@ -272,12 +316,12 @@ function obtenerSeveridadesDefectos(codigos) {
 // Inserta el muestreo + sus defectos encontrados (si los hay) en una sola
 // transacción, para que un muestreo nunca quede guardado sin sus defectos
 // (o viceversa) si algo falla a la mitad.
-async function crearMuestreo({ id_lote, tipo, analista, cantidad_muestreada, decision, observaciones, turno, area, operario, defectos, piezas_reclasificadas, piezas_reparadas }) {
+async function crearMuestreo({ id_lote, tipo, analista, cantidad_muestreada, decision, observaciones, turno, area, operario, defectos, piezas_reclasificadas, piezas_reparadas, piezas_rechazadas }) {
   return enTransaccion(async (db) => {
     const result = await db.run(
-      `INSERT INTO iso_muestreos (id_lote, tipo, analista, cantidad_muestreada, decision, observaciones, turno, area, operario, piezas_reclasificadas, piezas_reparadas)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id_lote, tipo, analista, cantidad_muestreada, decision, observaciones || null, turno || null, area || null, operario || null, piezas_reclasificadas || 0, piezas_reparadas || 0]
+      `INSERT INTO iso_muestreos (id_lote, tipo, analista, cantidad_muestreada, decision, observaciones, turno, area, operario, piezas_reclasificadas, piezas_reparadas, piezas_rechazadas)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id_lote, tipo, analista, cantidad_muestreada, decision, observaciones || null, turno || null, area || null, operario || null, piezas_reclasificadas || 0, piezas_reparadas || 0, piezas_rechazadas || 0]
     );
     const idMuestreo = result.lastID;
     if (defectos && defectos.length > 0) {
@@ -445,6 +489,24 @@ function obtenerLotesPorReferencia(referencia) {
   return getDb().all(`SELECT * FROM iso_lotes WHERE referencia = ? ORDER BY fecha_creacion DESC`, [referencia]);
 }
 
+// Usado por el reporte "Trazabilidad por Referencia": Julio pidió que en vez
+// de listar un resumen por LOTE (una fila por lote, sin importar cuántos
+// muestreos tuviera adentro), se listen TODOS los muestreos hechos a esa
+// referencia sin importar en qué lote quedaron, mostrando a cuál lote
+// pertenece cada uno. Antes, un lote con 3 muestreos aparecía como una sola
+// fila en el reporte por referencia, y solo se veían los 3 por separado
+// entrando al informe de ese lote puntual.
+function obtenerMuestreosPorReferencia(referencia) {
+  return getDb().all(
+    `SELECT m.*
+     FROM iso_muestreos m
+     JOIN iso_lotes l ON m.id_lote = l.id_lote
+     WHERE l.referencia = ?
+     ORDER BY m.fecha_hora DESC`,
+    [referencia]
+  );
+}
+
 // ======================== MODO CONSULTA — COMANDOS FIJOS (Roadmap Bot WhatsApp) ========================
 // Julio pidió comandos simples sin tener que escribir una referencia
 // ("ultimos muestreos realizados", "ultimos muestreos rechazados") —
@@ -477,6 +539,8 @@ function consultarUltimosMuestreos(n, { soloRechazados, orden } = {}) {
 module.exports = {
   listarAreas,
   buscarReferencias,
+  buscarReferenciasConMuestreos,
+  buscarLotesConMuestreos,
   buscarDefectos,
   obtenerPlanPorProducto,
   obtenerPlanActualPorReferencia,
@@ -503,6 +567,7 @@ module.exports = {
   obtenerMuestreoConLote,
   obtenerDefectosDeMuestreo,
   obtenerLotesPorReferencia,
+  obtenerMuestreosPorReferencia,
   consultarUltimosMuestreos,
   listarDefectosCatalogo,
   crearDefectoCatalogo,

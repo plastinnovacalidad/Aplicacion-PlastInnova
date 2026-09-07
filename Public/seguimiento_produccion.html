@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seguimiento de Producción - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Rediseño 04/09: este módulo es la bitácora de TODOS los casos de
+       Trazabilidad de Soluciones de Producción (causa raíz + medidas de
+       cada problema registrado desde Referencias/Motivos), de todas las
+       fábricas juntas -- antes era la pestaña "Seguimiento" de la pantalla
+       de reportes de Producción; Julio pidió que fuera su propio módulo
+       dentro de Calidad en vez de una pestaña más. Crear y editar casos
+       sigue haciéndose desde Producción (al hacer clic en una referencia o
+       motivo); acá solo se ve la bitácora completa y, quien tenga permiso
+       para gestionar trazabilidad, puede además marcar el estado de una
+       medida sin tener que ir a buscar esa fábrica/referencia puntual.
+    */
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; flex-direction: column; }
+    #appHeader { flex-shrink: 0; }
+    #appMain { flex: 1; min-height: 0; overflow-y: auto; }
+
+    .seg-content { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    .feed-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 25px; }
+    .feed-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; }
+
+    .seg-filtros { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .seg-filtros select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; }
+    .seg-filtros label { font-size: 11.5px; color: #718096; font-weight: 600; margin-right: 4px; }
+    .btn-refrescar-seg { background: #2C43A2; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+    .btn-refrescar-seg:hover { background: #23348a; }
+
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; }
+    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .admin-table tr:hover td { background: #f9f9f9; }
+
+    .empty-hint { color: #a0aec0; text-align: center; padding: 14px 0; font-size: 12.5px; }
+
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .pill-warning { background: #fffaf0; color: #b7791f; }
+    .pill-ok { background: #f0fff4; color: #38a169; }
+    .pill-muted { background: #f0f0f0; color: #888; }
+    .pill-info { background: #ebf8ff; color: #1B4FC4; }
+
+    .btn-secondary-trz { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; border-radius: 6px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-secondary-trz:hover { background: #edf2f7; }
+    .btn-eliminar-trz { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-eliminar-trz:hover { background: #fed7d7; }
+    .btn-trz-agregar-causa { background: #ebf4ff; border: 1px solid #c3dafe; color: #2C43A2; border-radius: 6px; padding: 3px 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0; }
+    .btn-trz-agregar-causa:hover { background: #c3dafe; }
+    .btn-primario-trz { background: #2C43A2; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-primario-trz:hover { background: #23348a; }
+
+    /* Sub-pestañas "Casos" / "Catálogo" (pedido por Julio 04/09): el
+       catálogo de causas raíz y medidas se administraba antes desde Gestión
+       → Catálogos, pero eso queda mejor acá, junto al seguimiento real de
+       los casos -- mismo patrón visual que las sub-pestañas de Producción. */
+    .subtabs-nav { display: flex; gap: 8px; margin-bottom: 16px; }
+    .subtab-btn { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .15s, color .15s; }
+    .subtab-btn:hover { background: #edf2f7; }
+    .subtab-btn.activa { background: #2C43A2; border-color: #2C43A2; color: #fff; }
+    .subtab-pane { display: none; }
+    .subtab-pane.activa { display: block; }
+    .feed-card h4.con-boton { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    /* Modal de detalle (solo lectura, salvo el estado de la medida si se
+       tiene permiso de gestionar trazabilidad) -- mismo look que el modal
+       de Producción para que se sienta como la misma funcionalidad. */
+    .trz-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(23,32,53,0.55); align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; z-index: 1000; }
+    /* Rediseño 04/09 (3), pedido por Julio con captura de pantalla: mismo
+       ancho más grande que en Producción, para que el cuadro de causas y
+       las gráficas tengan más espacio para respirar. */
+    .trz-modal-panel { max-width: 920px; width: 100%; margin: 0; background: #fff; border-radius: 14px; padding: 26px 32px; box-shadow: 0 12px 40px rgba(17,27,67,0.25); }
+    .trz-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .trz-modal-header h3 { margin: 0; font-size: 17px; color: #2d3748; }
+    .trz-modal-cerrar { background: none; border: none; font-size: 22px; line-height: 1; color: #a0aec0; cursor: pointer; padding: 2px 6px; }
+    .trz-modal-cerrar:hover { color: #4a5568; }
+
+    .trz-contexto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+    .trz-contexto-grid > div { display: flex; flex-direction: column; gap: 2px; }
+    .trz-contexto-grid span { font-size: 10.5px; color: #a0aec0; font-weight: 700; text-transform: uppercase; }
+    .trz-contexto-grid strong { font-size: 13.5px; color: #2d3748; }
+
+    .trz-item-lista { max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
+    .trz-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 13px; }
+    .trz-item-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: #a0aec0; margin-bottom: 4px; }
+    .trz-item-texto { font-size: 13.5px; line-height: 1.5; color: #2d3748; white-space: pre-wrap; }
+    .trz-item-kind { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #a0aec0; }
+    .trz-item-kind.causa { color: #b7791f; }
+    .trz-item-resp { font-size: 11px; color: #718096; margin-top: 4px; }
+    .trz-item-resp b { color: #4a5568; }
+    .trz-medida-estado { padding: 3px 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 11px; font-family: inherit; background: #fff; }
+
+    .trz-causa-card { border: 1px solid #e2e8f0; border-left: 4px solid #2C43A2; border-radius: 12px; padding: 14px 16px 16px; margin-bottom: 14px; background: #fff; box-shadow: 0 1px 3px rgba(17,27,67,0.06); }
+    .trz-causa-card > .trz-item-causa-info { padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px dashed #edf2f7; }
+    .trz-medidas-de-causa { margin-left: 16px; padding-left: 16px; border-left: 2px solid #edf2f7; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Gráficas de contexto al entrar a un caso de tipo Motivo (pedido por
+       Julio 04/09) -- mismo look que en Producción, para que se sienta como
+       la misma funcionalidad. Solo aplica a casos de Motivo.
+       Rediseño 04/09 (3), pedido por Julio con captura de pantalla: volvió a
+       ser una sola columna, ancho completo, las 2 gráficas apiladas una
+       arriba de otra por ENCIMA del cuadro de causas/medidas (no partiéndolo
+       ni yéndose a un costado angosto -- eso se probó y no le gustó). */
+    #segGraficasSeccion { display: none; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+    .trz-grafica-caja { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
+    .trz-grafica-caja h5 { margin: 0 0 8px 0; font-size: 11.5px; color: #718096; font-weight: 700; text-transform: uppercase; }
+    .trz-grafica-caja canvas { max-height: 220px; }
+  </style>
+</head>
+<body>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-clipboard-list"></i> Seguimiento de Producción</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1><i class="fa-solid fa-clipboard-list"></i> Seguimiento de Producción</h1>
+        <p>Bitácora de causa raíz y medidas de solución de todos los problemas registrados desde Referencias y Motivos</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal"><i class="fa-solid fa-arrow-left"></i> Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div id="appMain" style="display:none;">
+    <div class="seg-content">
+      <div class="subtabs-nav">
+        <button class="subtab-btn activa" id="segSubtabBtn-casos" onclick="activarSubTabSeguimiento('casos')"><i class="fa-solid fa-clipboard-list"></i> Casos</button>
+        <button class="subtab-btn" id="segSubtabBtn-catalogo" onclick="activarSubTabSeguimiento('catalogo')"><i class="fa-solid fa-diagram-project"></i> Catálogo</button>
+      </div>
+
+      <div class="subtab-pane activa" id="segSubtabPane-casos">
+        <div class="feed-card">
+          <h4><i class="fa-solid fa-clipboard-list"></i> Todos los casos</h4>
+          <p style="color:#718096; font-size:12.5px; margin:-6px 0 14px;">Solo se listan los problemas en seguimiento activo y los que ya tienen causa raíz registrada (los casos "Implementado" quedan igual disponibles con el filtro de Estado).</p>
+          <div class="seg-filtros">
+            <div>
+              <label>Fábrica:</label>
+              <select id="segFiltroFabrica" onchange="renderizarTablaSeguimiento()">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div>
+              <label>Estado:</label>
+              <select id="segFiltroEstado" onchange="renderizarTablaSeguimiento()">
+                <option value="en_curso" selected>En curso (Pendiente + En Proceso)</option>
+                <option value="">Todos</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En_Proceso">En Proceso</option>
+                <option value="Implementado">Implementado</option>
+              </select>
+            </div>
+            <button type="button" class="btn-refrescar-seg" onclick="cargarSeguimiento(true)"><i class="fa-solid fa-rotate"></i> Refrescar</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="admin-table">
+              <thead><tr><th>Semana</th><th>Fábrica</th><th>Contexto</th><th>Estado</th><th>Última actualización</th><th></th></tr></thead>
+              <tbody id="segTablaBody"><tr><td colspan="6" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pedido por Julio (04/09): la administración de causas raíz y
+           medidas (antes en Gestión → Catálogos) se mueve para acá, junto al
+           seguimiento real de los casos. Cualquiera que entre a este módulo
+           puede VER el catálogo; agregar/editar/eliminar sigue pidiendo el
+           permiso catalogos.gestionar (ver renderizarCatalogoTraz). -->
+      <div class="subtab-pane" id="segSubtabPane-catalogo">
+        <div class="feed-card">
+          <h4 class="con-boton">
+            <span><i class="fa-solid fa-diagram-project"></i> Causas raíz y medidas</span>
+            <button type="button" class="btn-trz-agregar-causa" id="catBtnAgregarCausa" onclick="abrirModalCausaCatalogo()" style="display:none;" title="Agregar causa raíz"><i class="fa-solid fa-plus"></i></button>
+          </h4>
+          <p style="color:#718096; font-size:12.5px; margin:-4px 0 14px;">Estas son las causas raíz y medidas que se pueden elegir al registrar un caso desde Producción.</p>
+          <div id="catLimpiezaBox" style="display:none; margin:-4px 0 14px;">
+            <button type="button" class="btn-eliminar-trz" id="catBtnLimpiar" onclick="borrarCausasSinProblema()"><i class="fa-solid fa-broom"></i> Borrar causas sin problema asignado</button>
+            <span style="font-size:11.5px; color:#a0aec0; margin-left:8px;">Limpieza de una sola vez del catálogo que quedó de antes del módulo Reportes por Áreas.</span>
+          </div>
+          <div id="catTrazContainer" class="trz-item-lista" style="max-height:none;"><div class="empty-hint">Cargando...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para agregar/editar una causa raíz o medida del catálogo
+       (ver arriba) -- mismas clases .trz-modal-* del modal de detalle,
+       para que se sienta como la misma funcionalidad. -->
+  <div class="trz-modal-overlay" id="catModalOverlay" onclick="if (event.target === this) cerrarModalCatalogo();">
+    <div class="trz-modal-panel" style="max-width: 460px;">
+      <div class="trz-modal-header">
+        <h3 id="catModalTitulo"><i class="fa-solid fa-diagram-project"></i> Causa raíz</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalCatalogo()">&times;</button>
+      </div>
+      <div id="catModalBody"></div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+        <button type="button" class="btn-secondary-trz" onclick="cerrarModalCatalogo()">Cancelar</button>
+        <button type="button" class="btn-primario-trz" id="catModalGuardar">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detalle de un caso: solo lectura, salvo el estado de cada medida si se
+       tiene permiso para gestionar trazabilidad (produccion.trazabilidad.gestionar)
+       -- agregar causas/medidas nuevas se sigue haciendo desde Producción,
+       al hacer clic en la referencia o motivo de donde salió el problema. -->
+  <div class="trz-modal-overlay" id="segModalOverlay" onclick="if (event.target === this) cerrarDetalleSeguimiento();">
+    <div class="trz-modal-panel">
+      <div class="trz-modal-header">
+        <h3><i class="fa-solid fa-clipboard-list"></i> Detalle del Caso</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarDetalleSeguimiento()">&times;</button>
+      </div>
+      <div id="segModalContexto" class="trz-contexto-grid"></div>
+
+      <!-- Pedido por Julio (04/09): solo para casos de tipo Motivo --
+           tendencia mensual + top de referencias donde más aparece (ver
+           cargarGraficasMotivoSeguimiento). Rediseño 04/09 (3), confirmado
+           con captura de pantalla: ancho completo, apiladas una arriba de
+           otra, por ENCIMA del cuadro de causas/medidas. -->
+      <div id="segGraficasSeccion">
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-line"></i> Unidades por mes</h5>
+          <canvas id="segChartMes"></canvas>
+        </div>
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-bar"></i> Top referencias donde más aparece</h5>
+          <canvas id="segChartReferencias"></canvas>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+          <span style="font-size:10.5px; color:#a0aec0; font-weight:700; text-transform:uppercase;">Estado del caso</span>
+          <span id="segModalEstado"></span>
+        </div>
+      </div>
+      <div id="segModalCausas" class="trz-item-lista"></div>
+    </div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+    let usuarioActual = null;
+
+    let segDatosCache = null;   // todos los casos (sin filtrar), traídos una sola vez
+    let segCasoActual = null;   // el caso que se está viendo en el modal de detalle
+
+    // Nombres de fábrica/área ya vienen del Excel sin tildes (así llegan
+    // normalizados desde sincronizar_produccion.js: "Fabrica 1",
+    // "Inyeccion"). Este mapa solo corrige la tilde para MOSTRAR el nombre
+    // en pantalla -- copiado tal cual de produccion.html para que ambos
+    // módulos muestren siempre lo mismo.
+    const NOMBRES_DISPLAY = {
+      'Fabrica 1': 'Fábrica 1',
+      'Fabrica 2': 'Fábrica 2',
+      'Fabrica 3': 'Fábrica 3',
+      'Inyeccion': 'Inyección',
+    };
+    function nombreDisplay(fabrica) {
+      return NOMBRES_DISPLAY[fabrica] || fabrica;
+    }
+
+    function estadoPill(estado) {
+      const clase = { Pendiente: 'pill-warning', En_Proceso: 'pill-info', Implementado: 'pill-ok' }[estado] || 'pill-muted';
+      const texto = { Pendiente: 'Pendiente', En_Proceso: 'En Proceso', Implementado: 'Implementado' }[estado] || estado;
+      return `<span class="pill ${clase}">${texto}</span>`;
+    }
+
+    async function cargarMisPermisos() {
+      return await cargarPermisosDelUsuario();
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      location.reload();
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!(res.ok && data)) {
+          localStorage.removeItem('token');
+          token = null;
+          document.getElementById('loginOverlay').style.display = 'flex';
+          return false;
+        }
+        usuarioActual = { nombre: data.nombre || data.usuario, rol: data.rol };
+        document.getElementById('userNameDisplay').textContent = `${usuarioActual.nombre} (${usuarioActual.rol || 'Usuario'})`;
+
+        await cargarMisPermisos();
+
+        // Mismo criterio que el backend (puedeVerBitacora en routes/produccion.js):
+        // calidad.ver (acceso completo a Calidad), o el nuevo
+        // produccion.trazabilidad.ver (solo este módulo), o
+        // produccion.trazabilidad.gestionar (ya puede crear/editar casos,
+        // así que ver la bitácora completa no le agrega ningún acceso nuevo).
+        if (!tienePermiso('calidad.ver') && !tienePermiso('produccion.trazabilidad.ver') && !tienePermiso('produccion.trazabilidad.gestionar')) {
+          alert('No tienes permiso para acceder al módulo de Seguimiento de Producción.');
+          location.href = 'index.html';
+          return false;
+        }
+
+        const btnVolver = document.getElementById('btnVolverPortal');
+        if (btnVolver) btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+
+        return true;
+      } catch (e) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        return false;
+      }
+    }
+
+    async function init() {
+      token = localStorage.getItem('token');
+      if (!token) { document.getElementById('loginOverlay').style.display = 'flex'; return; }
+      const ok = await checkAuth();
+      if (!ok) return;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'block';
+      await cargarSeguimiento();
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      err.style.display = 'none';
+      if (!u || !p) { err.textContent = 'Ingrese usuario y contraseña'; err.style.display = 'block'; return; }
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: u, contrasena: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          // Julio pidió que, sin importar en qué módulo haya quedado la
+          // sesión cerrada, al volver a iniciar sesión siempre se llegue
+          // al panel central -- nunca se debe quedar en este módulo.
+          location.href = 'index.html';
+        } else {
+          err.textContent = data.error || 'Credenciales inválidas';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'Error de conexión';
+        err.style.display = 'block';
+      }
+    }
+
+    // ======================== BITÁCORA ========================
+    // Se traen TODOS los casos de una sola vez (sin filtro de fábrica ni
+    // estado, límite alto) y los filtros de acá son solo en memoria -- así
+    // no depende de /produccion/resumen-fabricas (que pide calidad.ver, un
+    // permiso que alguien con SOLO produccion.trazabilidad.ver no tiene) y
+    // cambiar de filtro no necesita ir de nuevo al servidor.
+    async function cargarSeguimiento(forzar) {
+      if (segDatosCache && !forzar) { renderizarTablaSeguimiento(); return; }
+      const tbody = document.getElementById('segTablaBody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#a0aec0;">Cargando...</td></tr>';
+      try {
+        // El backend espera "limite" (no "limit") -- ver GET
+        // /produccion/trazabilidad/problemas en routes/produccion.js.
+        const res = await fetch('/api/produccion/trazabilidad/problemas?limite=500', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        segDatosCache = await res.json();
+        poblarFiltroFabrica();
+        renderizarTablaSeguimiento();
+      } catch (e) {
+        console.error('Error cargando bitácora de trazabilidad:', e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Error cargando la bitácora.</td></tr>';
+      }
+    }
+
+    function poblarFiltroFabrica() {
+      const sel = document.getElementById('segFiltroFabrica');
+      const valorPrevio = sel.value;
+      const fabricas = [...new Set((segDatosCache || []).map(p => p.fabrica))].sort();
+      sel.innerHTML = '<option value="">Todas</option>' +
+        fabricas.map(f => `<option value="${f}">${escapeHtml(nombreDisplay(f))}</option>`).join('');
+      if (valorPrevio) sel.value = valorPrevio;
+    }
+
+    function renderizarTablaSeguimiento() {
+      const tbody = document.getElementById('segTablaBody');
+      if (!tbody) return;
+      const fabrica = document.getElementById('segFiltroFabrica').value;
+      const estado = document.getElementById('segFiltroEstado').value;
+      const datos = (segDatosCache || []).filter(p => {
+        if (fabrica && p.fabrica !== fabrica) return false;
+        if (estado === 'en_curso') return p.estado !== 'Implementado';
+        if (estado) return p.estado === estado;
+        return true;
+      });
+      if (datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#a0aec0;">No hay casos registrados con estos filtros.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = datos.map(p => `
+        <tr>
+          <td>${escapeHtml(p.semana)}</td>
+          <td>${escapeHtml(nombreDisplay(p.fabrica))}</td>
+          <td><span class="pill pill-muted">${p.tipo_contexto === 'referencia' ? 'Ref.' : 'Motivo'}</span> <strong>${escapeHtml(p.valor_contexto)}</strong></td>
+          <td>${estadoPill(p.estado)}</td>
+          <td title="${p.ultima_causa ? escapeHtml(p.ultima_causa) : ''}">${escapeHtml(p.actualizado_en || '')}
+            ${p.total_causas > 0 ? ` <span class="pill pill-muted">${p.total_causas} causa${p.total_causas === 1 ? '' : 's'}</span>` : ''}${p.total_medidas > 0 ? ` <span class="pill pill-muted">${p.total_medidas} medida${p.total_medidas === 1 ? '' : 's'}</span>` : ''}</td>
+          <td><button type="button" class="btn-secondary-trz" onclick="verDetalleSeguimiento(${p.id})"><i class="fa-solid fa-eye"></i> Ver</button></td>
+        </tr>`).join('');
+    }
+
+    // ======================== DETALLE DE UN CASO ========================
+    async function verDetalleSeguimiento(id) {
+      document.getElementById('segModalOverlay').style.display = 'flex';
+      document.getElementById('segModalContexto').innerHTML = '<div class="empty-hint">Cargando...</div>';
+      document.getElementById('segModalCausas').innerHTML = '';
+      document.getElementById('segGraficasSeccion').style.display = 'none';
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        segCasoActual = await res.json();
+        renderizarDetalleSeguimiento();
+        // Gráficas de contexto (pedido por Julio 04/09): solo para casos de
+        // tipo Motivo, se cargan una sola vez al entrar (cambiar el estado
+        // de una medida no cambia esta información).
+        if (segCasoActual.tipo_contexto === 'motivo') {
+          document.getElementById('segGraficasSeccion').style.display = 'flex';
+          cargarGraficasMotivoSeguimiento(segCasoActual.fabrica, segCasoActual.valor_contexto);
+        }
+      } catch (e) {
+        document.getElementById('segModalContexto').innerHTML = '<div class="empty-hint" style="color:red;">No se pudo cargar este caso.</div>';
+      }
+    }
+
+    // Mismo criterio que en Producción (Public/produccion.html): tendencia
+    // mensual de un motivo + top de referencias donde más aparece. Van con
+    // el permiso de "poder ver este caso" (puedeVerBitacora en el backend),
+    // así que funcionan igual para alguien con solo
+    // produccion.trazabilidad.ver (sin calidad.ver).
+    const NOMBRES_MES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    function formatearMesLabel(mesStr) {
+      const [y, m] = String(mesStr || '').split('-').map(Number);
+      if (!y || !m || !NOMBRES_MES_CORTO[m - 1]) return mesStr;
+      return `${NOMBRES_MES_CORTO[m - 1]} ${y}`;
+    }
+
+    let segChartMesInstancia = null;
+    let segChartReferenciasInstancia = null;
+
+    async function cargarGraficasMotivoSeguimiento(fabricaValor, motivoValor) {
+      if (segChartMesInstancia) { segChartMesInstancia.destroy(); segChartMesInstancia = null; }
+      if (segChartReferenciasInstancia) { segChartReferenciasInstancia.destroy(); segChartReferenciasInstancia = null; }
+
+      try {
+        const paramsMes = new URLSearchParams({ fabrica: fabricaValor, motivo: motivoValor, meses: 24 });
+        const paramsRef = new URLSearchParams({ fabrica: fabricaValor, motivo: motivoValor, meses: 24, limite: 10 });
+        const [resMes, resRef] = await Promise.all([
+          fetch(`/api/produccion/trazabilidad/graficas/por-mes?${paramsMes}`, { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch(`/api/produccion/trazabilidad/graficas/referencias-por-motivo?${paramsRef}`, { headers: { 'Authorization': 'Bearer ' + token } }),
+        ]);
+        const datosMes = resMes.ok ? await resMes.json() : [];
+        const datosRef = resRef.ok ? await resRef.json() : [];
+
+        const ctxMes = document.getElementById('segChartMes')?.getContext('2d');
+        const ctxRef = document.getElementById('segChartReferencias')?.getContext('2d');
+        if (!ctxMes || !ctxRef) return;
+
+        segChartMesInstancia = new Chart(ctxMes, {
+          type: 'line',
+          data: {
+            labels: datosMes.map(d => formatearMesLabel(d.mes)),
+            datasets: [{ label: 'Unidades rechazadas', data: datosMes.map(d => d.unidades), borderColor: '#2C43A2', backgroundColor: 'rgba(44,67,162,0.12)', fill: true, tension: 0.25 }],
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+
+        // Pedido por Julio (04/09, 3): barras verticales (no horizontales) y
+        // top 10 referencias (ver el límite en paramsRef arriba).
+        segChartReferenciasInstancia = new Chart(ctxRef, {
+          type: 'bar',
+          data: {
+            labels: datosRef.map(d => d.referencia),
+            datasets: [{ label: 'Veces reportado', data: datosRef.map(d => d.cantidad), backgroundColor: '#38a169' }],
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+      } catch (e) {
+        console.error('Error cargando gráficas de contexto del motivo:', e);
+      }
+    }
+
+    function renderizarDetalleSeguimiento() {
+      const p = segCasoActual;
+      if (!p) return;
+      const etiquetaTipo = p.tipo_contexto === 'referencia' ? 'Referencia' : 'Motivo';
+      const etiquetaValor = p.tipo_contexto === 'referencia' ? '% Desperdicio' : 'Unidades rechazadas';
+
+      document.getElementById('segModalContexto').innerHTML = `
+        <div><span>Fábrica</span><strong>${escapeHtml(nombreDisplay(p.fabrica))}</strong></div>
+        <div><span>${etiquetaTipo}</span><strong>${escapeHtml(p.valor_contexto)}</strong></div>
+        <div><span>Semana</span><strong>${escapeHtml(p.semana)}</strong></div>
+        <div><span>${etiquetaValor}</span><strong>${p.pct_desperdicio_inicial != null ? p.pct_desperdicio_inicial + (p.tipo_contexto === 'referencia' ? '%' : '') : '--'}</strong></div>
+      `;
+      document.getElementById('segModalEstado').innerHTML = estadoPill(p.estado);
+
+      const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+      const causas = p.causas || [];
+      const medidas = p.medidas || [];
+      const cont = document.getElementById('segModalCausas');
+
+      if (causas.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Todavía no hay ninguna causa raíz registrada.</div>';
+        return;
+      }
+
+      cont.innerHTML = causas.map(c => renderizarCausaCardSeguimiento(c, medidas.filter(m => m.causa_id === c.id), puedeGestionar)).join('');
+
+      if (puedeGestionar) {
+        cont.querySelectorAll('select.trz-medida-estado').forEach(sel => {
+          sel.onchange = () => cambiarEstadoMedidaSeguimiento(sel.dataset.medidaId, sel.value);
+        });
+      }
+    }
+
+    const ETIQUETAS_ESTADO_MEDIDA = { En_Proceso: 'En Proceso', Funciono: 'Funcionó', No_Funciono: 'No funcionó' };
+
+    function renderizarMedidaItemSeguimiento(m, puedeGestionar) {
+      return `
+        <div class="trz-item" data-medida-id="${m.id}">
+          <div class="trz-item-meta">
+            <span class="trz-item-kind">Medida</span>
+            <select class="trz-medida-estado" data-medida-id="${m.id}" ${puedeGestionar ? '' : 'disabled'}>
+              ${Object.entries(ETIQUETAS_ESTADO_MEDIDA).map(([valor, texto]) => `<option value="${valor}" ${m.estado === valor ? 'selected' : ''}>${texto}</option>`).join('')}
+            </select>
+          </div>
+          <div class="trz-item-texto">${escapeHtml(m.texto)}</div>
+          <div class="trz-item-resp">Registrada por <b>${escapeHtml(m.autor_nombre || m.responsable_nombre || 'Usuario')}</b> el ${escapeHtml(m.creado_en || '')}</div>
+        </div>`;
+    }
+
+    function renderizarCausaCardSeguimiento(causa, medidasDeCausa, puedeGestionar) {
+      return `
+        <div class="trz-causa-card">
+          <div class="trz-item-causa-info">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind causa">Causa raíz</span>
+              <span>${escapeHtml(causa.fecha || '')}</span>
+            </div>
+            <div class="trz-item-texto">${escapeHtml(causa.texto)}</div>
+            <div class="trz-item-resp">Registrada por <b>${escapeHtml(causa.autor_nombre || causa.responsable_nombre || 'Usuario')}</b></div>
+            ${causa.compartida_con && causa.compartida_con.length ? `<div class="pill pill-muted" style="margin-top:6px; display:inline-block;" title="Las medidas de esta causa se ven y editan igual desde el otro caso"><i class="fa-solid fa-link"></i> También vinculada a: ${escapeHtml(causa.compartida_con.map(c => c.tipo_caso === 'problema' ? `Producción, caso #${c.caso_id}` : `Reporte por Áreas #${c.caso_id}`).join(' · '))}</div>` : ''}
+          </div>
+          <div class="trz-medidas-de-causa">
+            ${medidasDeCausa.length
+              ? medidasDeCausa.map(m => renderizarMedidaItemSeguimiento(m, puedeGestionar)).join('')
+              : '<div class="empty-hint" style="margin:0;">Todavía no hay medidas para esta causa.</div>'}
+          </div>
+        </div>`;
+    }
+
+    async function cambiarEstadoMedidaSeguimiento(medidaId, estado) {
+      if (!segCasoActual) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/problemas/${segCasoActual.id}/medidas/${medidaId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ estado }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al actualizar la medida');
+        segCasoActual = data;
+        renderizarDetalleSeguimiento();
+        // La fila de la tabla de fondo (estado, total de medidas, última
+        // actualización) también pudo cambiar -- se refresca sola.
+        await cargarSeguimiento(true);
+      } catch (e) {
+        alert('Error: ' + e.message);
+        renderizarDetalleSeguimiento(); // revertir el selector a lo que de verdad quedó guardado
+      }
+    }
+
+    function cerrarDetalleSeguimiento() {
+      document.getElementById('segModalOverlay').style.display = 'none';
+      segCasoActual = null;
+    }
+
+    // ======================== SUB-PESTAÑAS "CASOS" / "CATÁLOGO" ========================
+    function activarSubTabSeguimiento(tab) {
+      document.querySelectorAll('.subtabs-nav .subtab-btn').forEach(b => b.classList.remove('activa'));
+      document.querySelectorAll('.subtab-pane').forEach(p => p.classList.remove('activa'));
+      document.getElementById('segSubtabBtn-' + tab).classList.add('activa');
+      document.getElementById('segSubtabPane-' + tab).classList.add('activa');
+      // Pedido por Julio (07/09): antes solo se cargaba la primera vez
+      // (catalogoTrazCache === null) -- si mientras tanto se agregó una
+      // causa desde otro módulo (p.ej. Reportes por Áreas, en otra pestaña
+      // del navegador), esta pestaña se quedaba con la lista vieja hasta
+      // recargar toda la página. Ahora se refresca siempre que se entra a
+      // esta pestaña (el catálogo es chico, no tiene costo real).
+      if (tab === 'catalogo') cargarCatalogoTraz(true);
+    }
+
+    // ======================== CATÁLOGO DE CAUSAS Y MEDIDAS ========================
+    // Movido acá desde Gestión → Catálogos (pedido por Julio 04/09): queda
+    // mejor junto al seguimiento real de los casos que en la administración
+    // de roles y usuarios. Ver los mismos endpoints /produccion/trazabilidad/
+    // catalogo/... que ya usaba gestion.html.
+    let catalogoTrazCache = null; // null = todavía no se ha cargado ni una vez
+    // Pedido por Julio (07/09, cuarta vuelta): esta lista no decía a qué
+    // Problema/Defecto pertenecía cada causa -- una causa agregada desde
+    // Reportes por Áreas (o desde el nuevo selector de Producción por
+    // Fábrica) sí quedaba bien guardada y ligada, pero como acá no se veía
+    // esa conexión, parecía que "no había cargado". Mismo catálogo de
+    // Defectos ISO 2859 que ya usan Reportes y Producción por Fábrica.
+    let catalogoDefectosCache = null;
+
+    function badgeEstadoActivo(activo) {
+      const esActivo = activo !== 'Inactivo';
+      return `<span class="pill ${esActivo ? 'pill-ok' : 'pill-muted'}">${esActivo ? 'Activo' : 'Inactivo'}</span>`;
+    }
+
+    function badgeDefecto(defectoId) {
+      if (!defectoId) return '<span class="pill pill-muted">Sin problema asignado</span>';
+      const d = (catalogoDefectosCache || []).find(x => String(x.id) === String(defectoId));
+      // Si tiene defecto_id pero no aparece en el catálogo de defectos
+      // ACTIVOS (ver /produccion/trazabilidad/defectos), no es que le falte
+      // el problema -- es que ese defecto quedó Inactivo mientras tanto. No
+      // se confunde con "Sin problema asignado" (defecto_id realmente NULL).
+      if (!d) return '<span class="pill pill-muted">Problema no encontrado (puede estar Inactivo)</span>';
+      return `<span class="pill pill-info">${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</span>`;
+    }
+
+    function buscarCausaCatalogoCache(id) {
+      return (catalogoTrazCache || []).find(c => String(c.id) === String(id)) || null;
+    }
+    function buscarMedidaCatalogoCache(causaId, medidaId) {
+      const c = buscarCausaCatalogoCache(causaId);
+      return c ? (c.medidas || []).find(m => String(m.id) === String(medidaId)) || null : null;
+    }
+
+    async function cargarCatalogoTraz(forzar) {
+      const cont = document.getElementById('catTrazContainer');
+      if (!forzar && catalogoTrazCache !== null) { renderizarCatalogoTraz(); return; }
+      cont.innerHTML = '<div class="empty-hint">Cargando...</div>';
+      try {
+        const [resCatalogo, resDefectos] = await Promise.all([
+          fetch('/api/produccion/trazabilidad/catalogo', { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch('/api/produccion/trazabilidad/defectos', { headers: { 'Authorization': 'Bearer ' + token } }),
+        ]);
+        if (!resCatalogo.ok) throw new Error('HTTP ' + resCatalogo.status);
+        catalogoTrazCache = await resCatalogo.json();
+        // Los defectos son opcionales para esta pantalla -- si por lo que
+        // sea no se pudieron traer, se sigue mostrando el catálogo igual,
+        // solo que sin la etiqueta de a qué problema pertenece cada causa.
+        catalogoDefectosCache = resDefectos.ok ? await resDefectos.json() : [];
+        renderizarCatalogoTraz();
+      } catch (e) {
+        console.error('Error cargando catálogo de causas/medidas:', e);
+        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error cargando el catálogo.</div>';
+      }
+    }
+
+    function renderizarCatalogoTraz() {
+      const cont = document.getElementById('catTrazContainer');
+      const puedeGestionar = tienePermiso('catalogos.gestionar');
+      document.getElementById('catBtnAgregarCausa').style.display = puedeGestionar ? 'inline-flex' : 'none';
+      const datos = catalogoTrazCache || [];
+      cont.innerHTML = datos.length
+        ? datos.map(c => renderizarCausaCatalogoAdmin(c, puedeGestionar)).join('')
+        : '<div class="empty-hint">Todavía no hay ninguna causa raíz en el catálogo.</div>';
+
+      // Limpieza de una sola vez (pedido por Julio, 07/09) del backlog de
+      // causas sin "problema" (defecto) asignado -- ver borrarCausasSinProblema().
+      // Solo se muestra si hay algo que limpiar, para que no quede ahí de
+      // adorno una vez ya se usó.
+      const sinProblema = datos.filter(c => !c.defecto_id).length;
+      const cajaLimpieza = document.getElementById('catLimpiezaBox');
+      if (puedeGestionar && sinProblema > 0) {
+        cajaLimpieza.style.display = 'block';
+        document.getElementById('catBtnLimpiar').innerHTML = `<i class="fa-solid fa-broom"></i> Borrar ${sinProblema} causa${sinProblema === 1 ? '' : 's'} sin problema asignado`;
+      } else {
+        cajaLimpieza.style.display = 'none';
+      }
+    }
+
+    async function borrarCausasSinProblema() {
+      const datos = catalogoTrazCache || [];
+      const sinProblema = datos.filter(c => !c.defecto_id).length;
+      if (!confirm(
+        `¿Borrar las ${sinProblema} causa${sinProblema === 1 ? '' : 's'} raíz del catálogo que no tienen ningún "problema" asignado?\n\n` +
+        'Esto incluye causas ya usadas en casos reales -- su texto se mantiene en el historial de cada caso, pero dejan de poder reusarse desde el catálogo. Esta acción no se puede deshacer.'
+      )) return;
+      try {
+        const res = await fetch('/api/produccion/trazabilidad/catalogo/causas-sin-defecto', {
+          method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo completar la limpieza');
+        alert(`Listo: se borraron ${data.causasEliminadas} causa(s) (${data.medidasEliminadas} medida(s) propia(s), ${data.referenciasDesvinculadas} referencia(s) en casos reales desvinculada(s)).`);
+        await cargarCatalogoTraz(true);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function renderizarCausaCatalogoAdmin(c, puedeGestionar) {
+      const filasMedidas = (c.medidas || []).length
+        ? c.medidas.map(m => `
+          <div class="trz-item" data-medida-id="${m.id}">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind">Medida</span>
+              ${badgeEstadoActivo(m.activo)}
+            </div>
+            <div class="trz-item-texto">${escapeHtml(m.texto)}</div>
+            ${puedeGestionar ? `<div style="display:flex; gap:6px; margin-top:8px;">
+              <button type="button" class="btn-secondary-trz" onclick="abrirModalMedidaCatalogo(${c.id}, ${m.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+              <button type="button" class="btn-eliminar-trz" onclick="eliminarMedidaCatalogo(${c.id}, ${m.id}, '${escapeHtml(m.texto).replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
+            </div>` : ''}
+          </div>`).join('')
+        : '<div class="empty-hint" style="margin:0;">Todavía no hay medidas para esta causa.</div>';
+
+      return `
+        <div class="trz-causa-card" data-causa-id="${c.id}">
+          <div class="trz-item-causa-info">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind causa">Causa raíz</span>
+              <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                ${badgeDefecto(c.defecto_id)}
+                ${badgeEstadoActivo(c.activo)}
+              </span>
+            </div>
+            <div class="trz-item-texto">${escapeHtml(c.texto)}</div>
+            ${puedeGestionar ? `<div style="display:flex; gap:6px; margin-top:8px;">
+              <button type="button" class="btn-secondary-trz" onclick="abrirModalCausaCatalogo(${c.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+              <button type="button" class="btn-eliminar-trz" onclick="eliminarCausaCatalogo(${c.id}, '${escapeHtml(c.texto).replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
+            </div>` : ''}
+          </div>
+          <div class="trz-medidas-de-causa">
+            ${filasMedidas}
+            ${puedeGestionar ? `<button type="button" class="btn-secondary-trz" style="align-self:flex-start;" onclick="abrirModalMedidaCatalogo(${c.id})"><i class="fa-solid fa-plus"></i> Agregar medida</button>` : ''}
+          </div>
+        </div>`;
+    }
+
+    function cerrarModalCatalogo() {
+      document.getElementById('catModalOverlay').style.display = 'none';
+    }
+
+    function campoModalCatalogo(id, label, valor, placeholder) {
+      return `<div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:5px;">${label}</label>
+        <input type="text" id="${id}" value="${valor}" placeholder="${placeholder}" style="width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid #cbd5e0; border-radius:8px; font-size:13.5px; font-family:inherit;">
+      </div>`;
+    }
+    function campoEstadoModalCatalogo(id, activo) {
+      return `<div>
+        <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:5px;">Estado</label>
+        <select id="${id}" style="width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid #cbd5e0; border-radius:8px; font-size:13.5px; font-family:inherit;">
+          <option value="Activo" ${activo !== 'Inactivo' ? 'selected' : ''}>Activo</option>
+          <option value="Inactivo" ${activo === 'Inactivo' ? 'selected' : ''}>Inactivo</option>
+        </select>
+      </div>`;
+    }
+
+    function abrirModalCausaCatalogo(id) {
+      const c = id ? buscarCausaCatalogoCache(id) : null;
+      document.getElementById('catModalTitulo').innerHTML = `<i class="fa-solid fa-diagram-project"></i> ${c ? 'Editar' : 'Agregar'} Causa Raíz`;
+      document.getElementById('catModalBody').innerHTML =
+        campoModalCatalogo('catInputTexto', 'Causa raíz', c ? escapeHtml(c.texto) : '', 'Ej: Molde desgastado') +
+        (c ? campoEstadoModalCatalogo('catInputEstado', c.activo) : '');
+      document.getElementById('catModalGuardar').onclick = () => guardarCausaCatalogo(id);
+      document.getElementById('catModalOverlay').style.display = 'flex';
+    }
+
+    async function guardarCausaCatalogo(id) {
+      const texto = document.getElementById('catInputTexto').value.trim();
+      if (!texto) return alert('Escribe el texto de la causa raíz.');
+      const payload = { texto };
+      const estadoSel = document.getElementById('catInputEstado');
+      if (estadoSel) payload.activo = estadoSel.value;
+      const url = id ? `/api/produccion/trazabilidad/catalogo/causas/${id}` : '/api/produccion/trazabilidad/catalogo/causas';
+      const method = id ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { cerrarModalCatalogo(); await cargarCatalogoTraz(true); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarCausaCatalogo(id, texto) {
+      if (!confirm(`¿Seguro que quieres eliminar la causa raíz "${texto}"? Si tiene medidas en el catálogo o ya se usó en algún caso real, el sistema te va a pedir que la desactives en vez de eliminarla.`)) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/catalogo/causas/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatalogoTraz(true);
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    function abrirModalMedidaCatalogo(causaId, medidaId) {
+      const m = medidaId ? buscarMedidaCatalogoCache(causaId, medidaId) : null;
+      document.getElementById('catModalTitulo').innerHTML = `<i class="fa-solid fa-diagram-project"></i> ${m ? 'Editar' : 'Agregar'} Medida`;
+      document.getElementById('catModalBody').innerHTML =
+        campoModalCatalogo('catInputTexto', 'Medida', m ? escapeHtml(m.texto) : '', 'Ej: Llevar molde a mantenimiento al taller') +
+        (m ? campoEstadoModalCatalogo('catInputEstado', m.activo) : '');
+      document.getElementById('catModalGuardar').onclick = () => guardarMedidaCatalogo(causaId, medidaId);
+      document.getElementById('catModalOverlay').style.display = 'flex';
+    }
+
+    async function guardarMedidaCatalogo(causaId, medidaId) {
+      const texto = document.getElementById('catInputTexto').value.trim();
+      if (!texto) return alert('Escribe el texto de la medida.');
+      const payload = { texto };
+      const estadoSel = document.getElementById('catInputEstado');
+      if (estadoSel) payload.activo = estadoSel.value;
+      const url = medidaId ? `/api/produccion/trazabilidad/catalogo/medidas/${medidaId}` : `/api/produccion/trazabilidad/catalogo/causas/${causaId}/medidas`;
+      const method = medidaId ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { cerrarModalCatalogo(); await cargarCatalogoTraz(true); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarMedidaCatalogo(causaId, medidaId, texto) {
+      if (!confirm(`¿Seguro que quieres eliminar la medida "${texto}"?`)) return;
+      try {
+        const res = await fetch(`/api/produccion/trazabilidad/catalogo/medidas/${medidaId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatalogoTraz(true);
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    init();
+  </script>
+</body>
+</html>

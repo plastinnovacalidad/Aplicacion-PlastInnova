@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes por Áreas - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <style>
+    /* Módulo "Reportes por Áreas" (pedido por Julio, 04/09): 3 tipos de
+       reporte (Rápido, Completo, Informativo) que viven en una sola bitácora
+       -- mismo look que Seguimiento de Producción (.trz-* / .admin-table /
+       .pill), para que se sienta como el mismo sistema. */
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; flex-direction: column; }
+    #appHeader { flex-shrink: 0; }
+    #appMain { flex: 1; min-height: 0; overflow-y: auto; }
+
+    .rep-content { max-width: 1150px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    .feed-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 25px; }
+    .feed-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; }
+    .feed-card h4.con-boton { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+    .rep-filtros { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .rep-filtros select, .rep-filtros input[type="text"] { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; font-family: inherit; }
+    .rep-filtros label { font-size: 11.5px; color: #718096; font-weight: 600; margin-right: 4px; }
+    .rep-filtros-acciones { display: flex; gap: 10px; margin-left: auto; }
+
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; }
+    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .admin-table tr:hover td { background: #f9f9f9; }
+
+    .empty-hint { color: #a0aec0; text-align: center; padding: 14px 0; font-size: 12.5px; }
+
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .pill-warning { background: #fffaf0; color: #b7791f; }
+    .pill-ok { background: #f0fff4; color: #38a169; }
+    .pill-muted { background: #f0f0f0; color: #888; }
+    .pill-info { background: #ebf8ff; color: #1B4FC4; }
+    .pill-critica { background: #fff5f5; color: #c53030; }
+    .pill-tipo-rapido { background: #fff5eb; color: #c05621; }
+    .pill-tipo-completo { background: #ebf4ff; color: #2C43A2; }
+    .pill-tipo-informativo { background: #f0fff4; color: #2f855a; }
+
+    .btn-secondary-trz { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; border-radius: 6px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-secondary-trz:hover { background: #edf2f7; }
+    .btn-eliminar-trz { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-eliminar-trz:hover { background: #fed7d7; }
+    .btn-trz-agregar-causa { background: #ebf4ff; border: 1px solid #c3dafe; color: #2C43A2; border-radius: 6px; padding: 3px 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0; }
+    .btn-trz-agregar-causa:hover { background: #c3dafe; }
+    .btn-primario-trz { background: #2C43A2; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-primario-trz:hover { background: #23348a; }
+    .btn-primario-trz:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-crear-rep { color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+    .btn-crear-rapido { background: #c05621; }
+    .btn-crear-rapido:hover { background: #9c4221; }
+    .btn-crear-informativo { background: #2f855a; }
+    .btn-crear-informativo:hover { background: #276749; }
+
+    /* Modales -- mismo look que el modal de detalle de Seguimiento de
+       Producción, para que se sienta como la misma funcionalidad. */
+    .trz-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(23,32,53,0.55); align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; z-index: 1000; }
+    .trz-modal-panel { max-width: 920px; width: 100%; margin: 0; background: #fff; border-radius: 14px; padding: 26px 32px; box-shadow: 0 12px 40px rgba(17,27,67,0.25); }
+    .trz-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+    .trz-modal-header h3 { margin: 0; font-size: 17px; color: #2d3748; }
+    .trz-modal-cerrar { background: none; border: none; font-size: 22px; line-height: 1; color: #a0aec0; cursor: pointer; padding: 2px 6px; }
+    .trz-modal-cerrar:hover { color: #4a5568; }
+
+    .trz-contexto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+    .trz-contexto-grid > div { display: flex; flex-direction: column; gap: 2px; }
+    .trz-contexto-grid span { font-size: 10.5px; color: #a0aec0; font-weight: 700; text-transform: uppercase; }
+    .trz-contexto-grid strong { font-size: 13.5px; color: #2d3748; }
+
+    .trz-item-lista { max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
+    .trz-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 13px; }
+    .trz-item-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: #a0aec0; margin-bottom: 4px; }
+    .trz-item-texto { font-size: 13.5px; line-height: 1.5; color: #2d3748; white-space: pre-wrap; }
+    .trz-item-kind { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #a0aec0; }
+    .trz-item-kind.causa { color: #b7791f; }
+    .trz-item-resp { font-size: 11px; color: #718096; margin-top: 4px; }
+    .trz-item-resp b { color: #4a5568; }
+    .trz-medida-estado { padding: 3px 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 11px; font-family: inherit; background: #fff; }
+
+    .trz-causa-card { border: 1px solid #e2e8f0; border-left: 4px solid #2C43A2; border-radius: 12px; padding: 14px 16px 16px; margin-bottom: 14px; background: #fff; box-shadow: 0 1px 3px rgba(17,27,67,0.06); }
+    .trz-causa-card > .trz-item-causa-info { padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px dashed #edf2f7; }
+    .trz-medidas-de-causa { margin-left: 16px; padding-left: 16px; border-left: 2px solid #edf2f7; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Campos de formulario en los modales de crear (Rápido / Informativo). */
+    .rep-field { margin-bottom: 14px; }
+    .rep-field label { display: block; font-size: 12px; font-weight: 700; color: #4a5568; margin-bottom: 5px; }
+    .rep-field input, .rep-field select, .rep-field textarea {
+      width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #cbd5e0;
+      border-radius: 8px; font-size: 13.5px; font-family: inherit; outline: none;
+    }
+    .rep-field input:focus, .rep-field select:focus, .rep-field textarea:focus {
+      border-color: #2C43A2; box-shadow: 0 0 0 3px rgba(44,67,162,0.1);
+    }
+    .rep-field textarea { resize: vertical; min-height: 80px; }
+    .rep-fila-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .rep-areas-destino { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; background: #f8fafc; }
+    .rep-areas-destino label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #4a5568; }
+
+    /* Adjuntos (evidencia / fichas técnicas) dentro del detalle. */
+    .rep-adjuntos-lista { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    .rep-adjunto-item { display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #4a5568; }
+    .rep-adjunto-item a { color: #2C43A2; text-decoration: none; font-weight: 600; }
+    .rep-adjunto-item a:hover { text-decoration: underline; }
+    .rep-adjunto-borrar { background: none; border: none; color: #c53030; cursor: pointer; font-size: 13px; padding: 0 2px; }
+
+    .rep-acciones-rapido { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .rep-escalar-form { margin-top: 14px; padding: 14px; background: #f8fafc; border: 1px dashed #cbd5e0; border-radius: 10px; }
+
+    /* Wizard de "Reporte Problema" (pedido por Julio, 07/09): un solo modal
+       con varios pasos -- elegir Rápido/Completo, llenar los datos, y para
+       Completo además elegir "el problema" (defecto) y su causa raíz, todo
+       amarrado entre sí (ver routes/reportes.js#resolverCausaConCatalogo). */
+    .wiz-intro { color: #718096; font-size: 13px; margin: 0 0 16px; }
+    .wiz-opciones-tipo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .wiz-opcion-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; cursor: pointer; font-family: inherit; }
+    .wiz-opcion-card:hover { background: #edf2f7; border-color: #cbd5e0; }
+    .wiz-opcion-card i { font-size: 20px; color: #2C43A2; }
+    .wiz-opcion-card strong { font-size: 14px; color: #2d3748; }
+    .wiz-opcion-card span { font-size: 12px; color: #718096; }
+    .wiz-botones { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; }
+    .wiz-causa-opcion { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #4a5568; padding: 4px 0; }
+    .wiz-item-elegible { cursor: pointer; }
+    .wiz-item-elegible:hover { background: #eef2ff; border-color: #c3dafe; }
+  </style>
+</head>
+<body>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-triangle-exclamation"></i> Reportes por Áreas</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1><i class="fa-solid fa-triangle-exclamation"></i> Reportes por Áreas</h1>
+        <p>Reportes Rápidos, Reportes de Problema Completo y Comunicados entre áreas</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal"><i class="fa-solid fa-arrow-left"></i> Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div id="appMain" style="display:none;">
+    <div class="rep-content">
+      <div class="feed-card">
+        <h4 class="con-boton">
+          <span><i class="fa-solid fa-list"></i> Todos los reportes</span>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="btn-crear-rep btn-crear-rapido" id="btnAbrirProblema" style="display:none;" onclick="abrirModalProblema()"><i class="fa-solid fa-triangle-exclamation"></i> Reporte Problema</button>
+            <button type="button" class="btn-crear-rep btn-crear-informativo" id="btnAbrirInformativo" style="display:none;" onclick="abrirModalInformativo()"><i class="fa-solid fa-bullhorn"></i> Informativo</button>
+          </div>
+        </h4>
+        <div class="rep-filtros">
+          <div>
+            <label>Tipo:</label>
+            <select id="repFiltroTipo" onchange="cargarReportes()">
+              <option value="">Todos</option>
+              <option value="rapido">Rápido</option>
+              <option value="completo">Completo</option>
+              <option value="informativo">Informativo</option>
+            </select>
+          </div>
+          <div>
+            <label>Estado:</label>
+            <select id="repFiltroEstado" onchange="cargarReportes()">
+              <option value="">Todos</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="En_Proceso">En Proceso</option>
+              <option value="Implementado">Implementado</option>
+              <option value="Revisado">Revisado</option>
+            </select>
+          </div>
+          <div>
+            <label>Área:</label>
+            <select id="repFiltroArea" onchange="cargarReportes()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div>
+            <label>Urgencia:</label>
+            <select id="repFiltroUrgencia" onchange="cargarReportes()">
+              <option value="">Todas</option>
+              <option value="Baja">Baja</option>
+              <option value="Media">Media</option>
+              <option value="Alta">Alta</option>
+              <option value="Critica">Crítica</option>
+            </select>
+          </div>
+          <div>
+            <label>Buscar:</label>
+            <input type="text" id="repFiltroTexto" placeholder="Referencia, lote, título..." onkeydown="if(event.key==='Enter') cargarReportes();">
+          </div>
+          <div class="rep-filtros-acciones">
+            <button type="button" class="btn-secondary-trz" onclick="cargarReportes()"><i class="fa-solid fa-rotate"></i> Refrescar</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Tipo</th><th>Área</th><th>Referencia / Título</th><th>Urgencia / Vigencia</th><th>Estado</th><th>Última actualización</th><th></th></tr></thead>
+            <tbody id="repTablaBody"><tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== MODAL: REPORTE DE PROBLEMA (wizard: Rápido o Completo) ======================== -->
+  <div class="trz-modal-overlay" id="modalProblemaOverlay" onclick="if (event.target === this) cerrarModalProblema();">
+    <div class="trz-modal-panel" style="max-width: 620px;">
+      <div class="trz-modal-header">
+        <h3 id="wizProblemaTitulo"><i class="fa-solid fa-triangle-exclamation"></i> Nuevo Reporte de Problema</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalProblema()">&times;</button>
+      </div>
+      <div id="wizProblemaBody"></div>
+    </div>
+  </div>
+
+  <!-- ======================== MODAL: CREAR REPORTE INFORMATIVO ======================== -->
+  <div class="trz-modal-overlay" id="modalInformativoOverlay" onclick="if (event.target === this) cerrarModalInformativo();">
+    <div class="trz-modal-panel" style="max-width: 600px;">
+      <div class="trz-modal-header">
+        <h3><i class="fa-solid fa-bullhorn"></i> Nuevo Reporte Informativo</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalInformativo()">&times;</button>
+      </div>
+      <p style="color:#718096; font-size:12.5px; margin:-6px 0 14px;">Un comunicado o boletín para avisar a una o varias áreas de algo (un cambio de procedimiento, una alerta técnica, etc.), sin que sea un problema con causa raíz.</p>
+      <div class="rep-fila-2">
+        <div class="rep-field">
+          <label>Área que emite (opcional)</label>
+          <select id="infArea"><option value="">Selecciona...</option></select>
+        </div>
+        <div class="rep-field">
+          <label>Vigente hasta (opcional)</label>
+          <input type="date" id="infVigencia">
+        </div>
+      </div>
+      <div class="rep-field">
+        <label>Título / Asunto *</label>
+        <input type="text" id="infTitulo" placeholder="Ej: Nuevo procedimiento de empaque">
+      </div>
+      <div class="rep-field">
+        <label>Contenido *</label>
+        <textarea id="infContenido" placeholder="Escribe el comunicado."></textarea>
+      </div>
+      <div class="rep-field">
+        <label>Áreas destino *</label>
+        <div class="rep-areas-destino" id="infAreasDestino"><div class="empty-hint" style="padding:6px 0;">Cargando áreas...</div></div>
+      </div>
+      <p style="color:#a0aec0; font-size:11.5px; margin:-6px 0 14px;">Los archivos adjuntos (PDF, imágenes) se agregan desde el detalle del reporte, una vez guardado.</p>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn-secondary-trz" onclick="cerrarModalInformativo()">Cancelar</button>
+        <button type="button" class="btn-primario-trz" id="infBtnGuardar" onclick="guardarReporteInformativo()">Publicar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== MODAL: DETALLE (se adapta según el tipo) ======================== -->
+  <div class="trz-modal-overlay" id="detalleModalOverlay" onclick="if (event.target === this) cerrarDetalleReporte();">
+    <div class="trz-modal-panel">
+      <div class="trz-modal-header">
+        <h3 id="detalleModalTitulo"><i class="fa-solid fa-triangle-exclamation"></i> Detalle</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarDetalleReporte()">&times;</button>
+      </div>
+      <div id="detalleModalContexto" class="trz-contexto-grid"></div>
+      <div id="detalleModalCuerpo"></div>
+    </div>
+  </div>
+
+  <!-- ======================== VINCULAR CAUSA EXISTENTE (MIGRACIÓN #37) ========================
+       Pedido por Julio (07/09): buscar una causa raíz ya registrada (en este
+       mismo módulo o en Trazabilidad de Producción) y vincularla a este
+       reporte -- a partir de ahí comparten medidas y estado. Siempre una
+       búsqueda + elección manual, nunca automático (ver data/causasRaiz.js:
+       el mismo defecto puede tener causas distintas según la fábrica/área). -->
+  <div class="trz-modal-overlay" id="vincularCausaRepOverlay" onclick="if (event.target === this) cerrarModalVincularCausaReporte();">
+    <div class="trz-modal-panel" style="max-width: 560px;">
+      <div class="trz-modal-header">
+        <h3><i class="fa-solid fa-link"></i> Vincular una causa raíz existente</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalVincularCausaReporte()">&times;</button>
+      </div>
+      <p style="font-size:12.5px; color:#718096; margin-top:0;">Busca por el texto de la causa. Antes de vincular, revisa en qué caso(s) ya está -- el mismo defecto puede tener causas distintas según la fábrica o el área, así que vincula solo si de verdad es el mismo problema real.</p>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <input type="text" id="vincularCausaRepInput" placeholder="Escribe parte del texto de la causa..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); buscarCausasParaVincularReporte();}">
+        <button type="button" class="btn-secondary-trz" onclick="buscarCausasParaVincularReporte()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+      </div>
+      <div id="vincularCausaRepResultados" class="trz-item-lista"></div>
+    </div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+    let usuarioActual = null;
+
+    let repDatosCache = null;   // último listado traído del servidor (ya con los filtros aplicados)
+    let repAreasCache = null;   // catálogo de áreas activas (reusa iso_areas)
+    let repReporteActual = null; // el reporte que se está viendo en el modal de detalle
+
+    async function cargarMisPermisos() {
+      return await cargarPermisosDelUsuario();
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      location.reload();
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!(res.ok && data)) {
+          localStorage.removeItem('token');
+          token = null;
+          document.getElementById('loginOverlay').style.display = 'flex';
+          return false;
+        }
+        usuarioActual = { nombre: data.nombre || data.usuario, rol: data.rol };
+        document.getElementById('userNameDisplay').textContent = `${usuarioActual.nombre} (${usuarioActual.rol || 'Usuario'})`;
+
+        await cargarMisPermisos();
+
+        // Mismo criterio que el backend (puedeVerModulo en routes/reportes.js):
+        // cualquiera de los 4 permisos del módulo alcanza para entrar.
+        if (!['reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar'].some(p => tienePermiso(p))) {
+          alert('No tienes permiso para acceder al módulo de Reportes por Áreas.');
+          location.href = 'index.html';
+          return false;
+        }
+
+        const btnVolver = document.getElementById('btnVolverPortal');
+        if (btnVolver) btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+
+        document.getElementById('btnAbrirProblema').style.display = tienePermiso('reportes.crear') ? 'inline-flex' : 'none';
+        document.getElementById('btnAbrirInformativo').style.display = tienePermiso('reportes.crear') ? 'inline-flex' : 'none';
+
+        return true;
+      } catch (e) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        return false;
+      }
+    }
+
+    async function init() {
+      token = localStorage.getItem('token');
+      if (!token) { document.getElementById('loginOverlay').style.display = 'flex'; return; }
+      const ok = await checkAuth();
+      if (!ok) return;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'block';
+      await cargarAreas();
+      await cargarReportes();
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      err.style.display = 'none';
+      if (!u || !p) { err.textContent = 'Ingrese usuario y contraseña'; err.style.display = 'block'; return; }
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: u, contrasena: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          location.href = 'index.html';
+        } else {
+          err.textContent = data.error || 'Credenciales inválidas';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'Error de conexión';
+        err.style.display = 'block';
+      }
+    }
+
+    // ======================== ÁREAS (catálogo reusado de iso_areas) ========================
+    async function cargarAreas() {
+      try {
+        const res = await fetch('/api/reportes/areas', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        repAreasCache = await res.json();
+        poblarSelectsDeAreas();
+      } catch (e) {
+        console.error('Error cargando el catálogo de áreas:', e);
+        repAreasCache = [];
+      }
+    }
+
+    function poblarSelectsDeAreas() {
+      const areas = repAreasCache || [];
+      const opciones = areas.map(a => `<option value="${a.id}">${escapeHtml(a.nombre)}</option>`).join('');
+
+      const filtro = document.getElementById('repFiltroArea');
+      filtro.innerHTML = '<option value="">Todas</option>' + opciones;
+
+      // El <select> de área del wizard de "Reporte Problema" (#wizArea) se
+      // arma solo, cada vez que ese paso se renderiza (pasoDatosBaseHtml),
+      // directamente desde repAreasCache -- no hace falta poblarlo acá.
+
+      const infArea = document.getElementById('infArea');
+      infArea.innerHTML = '<option value="">Selecciona...</option>' + opciones;
+
+      const destino = document.getElementById('infAreasDestino');
+      destino.innerHTML = areas.length
+        ? areas.map(a => `<label><input type="checkbox" value="${a.id}"> ${escapeHtml(a.nombre)}</label>`).join('')
+        : '<div class="empty-hint" style="padding:6px 0;">No hay áreas activas en el catálogo (Gestión → Catálogos).</div>';
+    }
+
+    // ======================== LISTADO ========================
+    function tipoPill(tipo) {
+      const clase = { rapido: 'pill-tipo-rapido', completo: 'pill-tipo-completo', informativo: 'pill-tipo-informativo' }[tipo] || 'pill-muted';
+      const texto = { rapido: 'Rápido', completo: 'Completo', informativo: 'Informativo' }[tipo] || tipo;
+      return `<span class="pill ${clase}">${texto}</span>`;
+    }
+
+    function urgenciaPill(urgencia) {
+      if (!urgencia) return '';
+      const clase = { Baja: 'pill-muted', Media: 'pill-info', Alta: 'pill-warning', Critica: 'pill-critica' }[urgencia] || 'pill-muted';
+      const texto = urgencia === 'Critica' ? 'Crítica' : urgencia;
+      return `<span class="pill ${clase}">${texto}</span>`;
+    }
+
+    function estadoPill(reporte) {
+      if (reporte.tipo === 'informativo') return vigenciaPill(reporte.fecha_vigencia);
+      const clase = { Pendiente: 'pill-warning', En_Proceso: 'pill-info', Implementado: 'pill-ok', Revisado: 'pill-ok' }[reporte.estado] || 'pill-muted';
+      const texto = { Pendiente: 'Pendiente', En_Proceso: 'En Proceso', Implementado: 'Implementado', Revisado: 'Revisado' }[reporte.estado] || (reporte.estado || '--');
+      return `<span class="pill ${clase}">${texto}</span>`;
+    }
+
+    // La vigencia de un Informativo no se guarda como estado -- se calcula
+    // en el momento comparando fecha_vigencia contra hoy (pedido así en la
+    // planeación con Julio: no hay un "cerrar" manual para este tipo).
+    function vigenciaPill(fechaVigencia) {
+      if (!fechaVigencia) return '<span class="pill pill-muted">Sin vigencia definida</span>';
+      const hoy = new Date().toISOString().slice(0, 10);
+      const vigente = String(fechaVigencia).slice(0, 10) >= hoy;
+      return vigente ? '<span class="pill pill-ok">Vigente</span>' : '<span class="pill pill-muted">Vencido</span>';
+    }
+
+    async function cargarReportes() {
+      const tbody = document.getElementById('repTablaBody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr>';
+      const params = new URLSearchParams();
+      const tipo = document.getElementById('repFiltroTipo').value;
+      const estado = document.getElementById('repFiltroEstado').value;
+      const area = document.getElementById('repFiltroArea').value;
+      const urgencia = document.getElementById('repFiltroUrgencia').value;
+      const texto = document.getElementById('repFiltroTexto').value.trim();
+      if (tipo) params.set('tipo', tipo);
+      if (estado) params.set('estado', estado);
+      if (area) params.set('area_id', area);
+      if (urgencia) params.set('urgencia', urgencia);
+      if (texto) params.set('q', texto);
+      params.set('limite', 300);
+      try {
+        const res = await fetch(`/api/reportes?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        repDatosCache = await res.json();
+        renderizarTablaReportes();
+      } catch (e) {
+        console.error('Error cargando reportes:', e);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error cargando los reportes.</td></tr>';
+      }
+    }
+
+    function renderizarTablaReportes() {
+      const tbody = document.getElementById('repTablaBody');
+      const datos = repDatosCache || [];
+      if (datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">No hay reportes registrados con estos filtros.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = datos.map(r => `
+        <tr>
+          <td>${tipoPill(r.tipo)}</td>
+          <td>${escapeHtml(r.area_origen_nombre || '—')}</td>
+          <td><strong>${escapeHtml(r.titulo || r.referencia || '(sin referencia)')}</strong>${r.lote ? ` <span style="color:#a0aec0;">· Lote ${escapeHtml(r.lote)}</span>` : ''}</td>
+          <td>${r.tipo === 'informativo' ? (r.fecha_vigencia ? escapeHtml(String(r.fecha_vigencia).slice(0, 10)) : '—') : urgenciaPill(r.urgencia)}</td>
+          <td>${estadoPill(r)}</td>
+          <td>${escapeHtml(r.actualizado_en || r.created_at || '')}
+            ${r.total_causas > 0 ? ` <span class="pill pill-muted">${r.total_causas} causa${r.total_causas === 1 ? '' : 's'}</span>` : ''}${r.total_medidas > 0 ? ` <span class="pill pill-muted">${r.total_medidas} medida${r.total_medidas === 1 ? '' : 's'}</span>` : ''}${r.total_adjuntos > 0 ? ` <span class="pill pill-muted"><i class="fa-solid fa-paperclip"></i> ${r.total_adjuntos}</span>` : ''}</td>
+          <td><button type="button" class="btn-secondary-trz" onclick="verDetalleReporte(${r.id})"><i class="fa-solid fa-eye"></i> Ver</button></td>
+        </tr>`).join('');
+    }
+
+    // ======================== CREAR: REPORTE PROBLEMA (wizard Rápido / Completo) ========================
+    // Pedido por Julio (07/09): un solo botón "Reporte Problema" que primero
+    // pregunta si es Rápido o Completo. Rápido pide área/urgencia/referencia/
+    // lote/observación y al terminar pregunta a quién avisar por WhatsApp.
+    // Completo primero pregunta si ya hay un Rápido de esto -- si sí, se
+    // elige de la lista de los últimos y se autocompletan los datos (dejando
+    // seguir editando la observación); si no, se llenan desde cero. Luego,
+    // en ambos casos, se pregunta "el problema" (catálogo de defectos de
+    // Muestreos ISO 2859) y su causa raíz (del catálogo compartido con
+    // Seguimiento de Producción, ya filtrado por ese problema -- o agregar
+    // una nueva si no hay ninguna todavía). Si no había un Rápido previo, se
+    // crea uno "invisible" y se escala de inmediato (decisión ya acordada
+    // con Julio), para no duplicar el flujo de creación.
+    let wizProblema = null;
+    let wizDefectosCache = null;
+    let wizCausasCache = null;
+    let wizRapidosRecientesCache = null;
+    let wizDestinatariosCache = null;
+
+    function estadoWizardInicial() {
+      return {
+        paso: 'tipo', esCompleto: false, origenRapidoId: null,
+        area_origen_id: '', urgencia: 'Media', referencia: '', lote: '', descripcion: '',
+        defecto_id: '', causaModo: 'existente',
+      };
+    }
+
+    function abrirModalProblema() {
+      wizProblema = estadoWizardInicial();
+      document.getElementById('modalProblemaOverlay').style.display = 'flex';
+      renderPasoWizard();
+    }
+    function cerrarModalProblema() {
+      document.getElementById('modalProblemaOverlay').style.display = 'none';
+      wizProblema = null;
+    }
+
+    function actualizarTituloWizard() {
+      const titulo = document.getElementById('wizProblemaTitulo');
+      if (!wizProblema || wizProblema.paso === 'tipo') {
+        titulo.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Nuevo Reporte de Problema';
+      } else {
+        titulo.innerHTML = `<i class="fa-solid ${wizProblema.esCompleto ? 'fa-diagram-project' : 'fa-bolt'}"></i> ${wizProblema.esCompleto ? 'Reporte Completo' : 'Reporte Rápido'}`;
+      }
+    }
+    function mostrarCargandoWizard() {
+      actualizarTituloWizard();
+      document.getElementById('wizProblemaBody').innerHTML = '<div class="empty-hint">Cargando...</div>';
+    }
+    function renderPasoWizard() {
+      if (!wizProblema) return;
+      actualizarTituloWizard();
+      const renders = {
+        tipo: pasoTipoHtml, rapForm: pasoDatosBaseHtml, rapDestinatarios: pasoDestinatariosHtml,
+        compExiste: pasoCompExisteHtml, compLista: pasoCompListaHtml,
+        compProblema: pasoCompProblemaHtml, compCausa: pasoCompCausaHtml,
+      };
+      document.getElementById('wizProblemaBody').innerHTML = (renders[wizProblema.paso] || pasoTipoHtml)();
+    }
+
+    // -------- Paso 1: ¿Rápido o Completo? --------
+    function pasoTipoHtml() {
+      return `
+        <p class="wiz-intro">¿Qué tipo de reporte quieres crear?</p>
+        <div class="wiz-opciones-tipo">
+          <button type="button" class="wiz-opcion-card" onclick="wizElegirTipo('rapido')">
+            <i class="fa-solid fa-bolt"></i>
+            <strong>Reporte Rápido</strong>
+            <span>Avisar de inmediato de un problema, aunque todavía no se sepa la causa.</span>
+          </button>
+          <button type="button" class="wiz-opcion-card" onclick="wizElegirTipo('completo')">
+            <i class="fa-solid fa-diagram-project"></i>
+            <strong>Reporte Completo</strong>
+            <span>Ya se sabe (o se quiere registrar ya) la causa raíz y las medidas.</span>
+          </button>
+        </div>
+        <div style="display:flex; justify-content:flex-end;">
+          <button type="button" class="btn-secondary-trz" onclick="cerrarModalProblema()">Cancelar</button>
+        </div>`;
+    }
+    function wizElegirTipo(tipo) {
+      wizProblema.esCompleto = (tipo === 'completo');
+      wizProblema.paso = wizProblema.esCompleto ? 'compExiste' : 'rapForm';
+      renderPasoWizard();
+    }
+
+    // -------- Paso "¿Ya hay un Reporte Rápido de esto?" (solo Completo) --------
+    function pasoCompExisteHtml() {
+      return `
+        <p class="wiz-intro">¿Ya existe un Reporte Rápido de este problema?</p>
+        <div class="wiz-opciones-tipo">
+          <button type="button" class="wiz-opcion-card" onclick="wizCompExiste(true)">
+            <i class="fa-solid fa-list"></i>
+            <strong>Sí</strong>
+            <span>Elegirlo de los últimos Reportes Rápidos registrados.</span>
+          </button>
+          <button type="button" class="wiz-opcion-card" onclick="wizCompExiste(false)">
+            <i class="fa-solid fa-file-circle-plus"></i>
+            <strong>No</strong>
+            <span>Registrar los datos desde cero.</span>
+          </button>
+        </div>
+        <div class="wiz-botones" style="justify-content:flex-start;">
+          <button type="button" class="btn-secondary-trz" onclick="wizProblema.paso='tipo'; renderPasoWizard();">Atrás</button>
+        </div>`;
+    }
+    async function wizCompExiste(existe) {
+      if (existe) {
+        wizProblema.paso = 'compLista';
+        mostrarCargandoWizard();
+        try {
+          const res = await fetch('/api/reportes/rapidos-recientes', { headers: { 'Authorization': 'Bearer ' + token } });
+          wizRapidosRecientesCache = res.ok ? await res.json() : [];
+        } catch (e) { wizRapidosRecientesCache = []; }
+        renderPasoWizard();
+      } else {
+        wizProblema.origenRapidoId = null;
+        wizProblema.area_origen_id = ''; wizProblema.urgencia = 'Media';
+        wizProblema.referencia = ''; wizProblema.lote = ''; wizProblema.descripcion = '';
+        wizProblema.paso = 'rapForm';
+        renderPasoWizard();
+      }
+    }
+
+    // -------- Paso: lista de últimos Rápidos pendientes (para escalar) --------
+    function pasoCompListaHtml() {
+      const lista = wizRapidosRecientesCache || [];
+      const filas = lista.length
+        ? lista.map(r => {
+            const resumen = (r.descripcion || '').slice(0, 140) + ((r.descripcion || '').length > 140 ? '…' : '');
+            return `
+              <div class="trz-item wiz-item-elegible" onclick="wizElegirRapidoExistente(${r.id})">
+                <div class="trz-item-meta">
+                  <span class="trz-item-kind">${escapeHtml(r.area_origen_nombre || 'Sin área')}${r.referencia ? ' · Ref. ' + escapeHtml(r.referencia) : ''}${r.lote ? ' · Lote ' + escapeHtml(r.lote) : ''}</span>
+                  <span>${escapeHtml((r.created_at || '').slice(0, 16))}</span>
+                </div>
+                <div class="trz-item-texto">${escapeHtml(resumen)}</div>
+              </div>`;
+          }).join('')
+        : '<div class="empty-hint">No hay Reportes Rápidos pendientes para elegir. Puedes volver atrás y registrar los datos desde cero.</div>';
+      return `
+        <p class="wiz-intro">Elige el Reporte Rápido que quieres escalar a Completo:</p>
+        <div class="trz-item-lista" style="max-height:320px;">${filas}</div>
+        <div class="wiz-botones" style="justify-content:flex-start;">
+          <button type="button" class="btn-secondary-trz" onclick="wizProblema.paso='compExiste'; renderPasoWizard();">Atrás</button>
+        </div>`;
+    }
+    function wizElegirRapidoExistente(id) {
+      const r = (wizRapidosRecientesCache || []).find(x => x.id === id);
+      if (!r) return;
+      wizProblema.origenRapidoId = r.id;
+      wizProblema.area_origen_id = r.area_origen_id;
+      wizProblema.urgencia = r.urgencia;
+      wizProblema.referencia = r.referencia;
+      wizProblema.lote = r.lote;
+      wizProblema.descripcion = r.descripcion;
+      wizProblema.paso = 'rapForm';
+      renderPasoWizard();
+    }
+
+    // -------- Paso: datos base (área/urgencia/referencia/lote/observación) --------
+    // Se reusa tanto para el Reporte Rápido "puro" como para el Completo sin
+    // Rápido previo (ahí todos los campos son editables); si viene de un
+    // Rápido ya elegido de la lista, los demás campos quedan solo de
+    // referencia y ÚNICAMENTE la observación se puede seguir editando
+    // (pedido explícito de Julio).
+    function pasoDatosBaseHtml() {
+      const soloLectura = !!wizProblema.origenRapidoId;
+      const areas = repAreasCache || [];
+      if (soloLectura) {
+        const areaNombre = (areas.find(a => String(a.id) === String(wizProblema.area_origen_id)) || {}).nombre || '—';
+        return `
+          <p class="wiz-intro">Datos del Reporte Rápido elegido. Puedes seguir editando la observación antes de escalar.</p>
+          <div class="trz-contexto-grid" style="margin-bottom:16px;">
+            <div><span>Área</span><strong>${escapeHtml(areaNombre)}</strong></div>
+            <div><span>Referencia</span><strong>${escapeHtml(wizProblema.referencia || '—')}</strong></div>
+            <div><span>Lote</span><strong>${escapeHtml(wizProblema.lote || '—')}</strong></div>
+            <div><span>Urgencia</span><strong>${wizProblema.urgencia === 'Critica' ? 'Crítica' : (wizProblema.urgencia || '—')}</strong></div>
+          </div>
+          <div class="rep-field">
+            <label>Descripción / Observación *</label>
+            <textarea id="wizDescripcion">${escapeHtml(wizProblema.descripcion || '')}</textarea>
+          </div>
+          <div class="wiz-botones">
+            <button type="button" class="btn-secondary-trz" onclick="wizProblema.paso='compLista'; renderPasoWizard();">Atrás</button>
+            <button type="button" class="btn-primario-trz" onclick="wizContinuarDesdeForm()">Siguiente</button>
+          </div>`;
+      }
+      const opciones = areas.map(a => `<option value="${a.id}" ${String(a.id) === String(wizProblema.area_origen_id) ? 'selected' : ''}>${escapeHtml(a.nombre)}</option>`).join('');
+      return `
+        <p class="wiz-intro">${wizProblema.esCompleto ? 'Cuéntanos qué pasó.' : 'Para avisar de inmediato de un problema, aunque todavía no se sepa la causa.'}</p>
+        <div class="rep-fila-2">
+          <div class="rep-field">
+            <label>Área donde ocurrió *</label>
+            <select id="wizArea"><option value="">Selecciona...</option>${opciones}</select>
+          </div>
+          <div class="rep-field">
+            <label>Urgencia</label>
+            <select id="wizUrgencia">
+              <option value="Baja" ${wizProblema.urgencia === 'Baja' ? 'selected' : ''}>Baja</option>
+              <option value="Media" ${wizProblema.urgencia === 'Media' ? 'selected' : ''}>Media</option>
+              <option value="Alta" ${wizProblema.urgencia === 'Alta' ? 'selected' : ''}>Alta</option>
+              <option value="Critica" ${wizProblema.urgencia === 'Critica' ? 'selected' : ''}>Crítica</option>
+            </select>
+          </div>
+        </div>
+        <div class="rep-fila-2">
+          <div class="rep-field">
+            <label>Referencia (opcional)</label>
+            <input type="text" id="wizReferencia" value="${escapeHtml(wizProblema.referencia || '')}" placeholder="Código de referencia">
+          </div>
+          <div class="rep-field">
+            <label>Lote (opcional)</label>
+            <input type="text" id="wizLote" value="${escapeHtml(wizProblema.lote || '')}" placeholder="Número de lote">
+          </div>
+        </div>
+        <div class="rep-field">
+          <label>Descripción / Observación *</label>
+          <textarea id="wizDescripcion" placeholder="¿Qué pasó? Descríbelo con el detalle que tengas por ahora.">${escapeHtml(wizProblema.descripcion || '')}</textarea>
+        </div>
+        <div class="wiz-botones">
+          <button type="button" class="btn-secondary-trz" onclick="wizProblema.paso = wizProblema.esCompleto ? 'compExiste' : 'tipo'; renderPasoWizard();">Atrás</button>
+          <button type="button" class="btn-primario-trz" onclick="wizContinuarDesdeForm()">Siguiente</button>
+        </div>`;
+    }
+    async function wizContinuarDesdeForm() {
+      const soloLectura = !!wizProblema.origenRapidoId;
+      if (!soloLectura) {
+        wizProblema.area_origen_id = document.getElementById('wizArea').value;
+        wizProblema.urgencia = document.getElementById('wizUrgencia').value;
+        wizProblema.referencia = document.getElementById('wizReferencia').value.trim();
+        wizProblema.lote = document.getElementById('wizLote').value.trim();
+      }
+      wizProblema.descripcion = document.getElementById('wizDescripcion').value.trim();
+      if (!soloLectura && !wizProblema.area_origen_id) return alert('Selecciona el área donde ocurrió el problema.');
+      if (!wizProblema.descripcion) return alert('Escribe una descripción del problema.');
+
+      if (!wizProblema.esCompleto) {
+        wizProblema.paso = 'rapDestinatarios';
+        mostrarCargandoWizard();
+        try {
+          const res = await fetch('/api/reportes/destinatarios', { headers: { 'Authorization': 'Bearer ' + token } });
+          wizDestinatariosCache = res.ok ? await res.json() : [];
+        } catch (e) { wizDestinatariosCache = []; }
+        renderPasoWizard();
+      } else {
+        wizProblema.paso = 'compProblema';
+        mostrarCargandoWizard();
+        try {
+          const res = await fetch('/api/reportes/defectos', { headers: { 'Authorization': 'Bearer ' + token } });
+          wizDefectosCache = res.ok ? await res.json() : [];
+        } catch (e) { wizDefectosCache = []; }
+        renderPasoWizard();
+      }
+    }
+
+    // -------- Paso: destinatarios del aviso por WhatsApp (solo Rápido) --------
+    function pasoDestinatariosHtml() {
+      const dest = wizDestinatariosCache || [];
+      const lista = dest.length
+        ? dest.map(u => `<label><input type="checkbox" value="${u.id}"> ${escapeHtml(u.nombre)}</label>`).join('')
+        : '<div class="empty-hint" style="padding:6px 0;">Ningún usuario tiene un teléfono registrado todavía (Gestión → Usuarios).</div>';
+      return `
+        <p class="wiz-intro">¿A quién quieres avisar por WhatsApp? Se les manda una tarjeta con el resumen del reporte. Es opcional -- puedes dejarlo sin marcar y solo se guarda el registro.</p>
+        <div class="rep-areas-destino" id="wizDestinatariosLista">${lista}</div>
+        <div class="wiz-botones">
+          <button type="button" class="btn-secondary-trz" onclick="wizProblema.paso='rapForm'; renderPasoWizard();">Atrás</button>
+          <button type="button" class="btn-primario-trz" id="wizBtnGuardarRapido" onclick="wizGuardarRapido()">Guardar</button>
+        </div>`;
+    }
+    async function wizGuardarRapido() {
+      const checks = document.querySelectorAll('#wizDestinatariosLista input[type=checkbox]:checked');
+      const destinatarios = Array.from(checks).map(cb => parseInt(cb.value, 10));
+      const btn = document.getElementById('wizBtnGuardarRapido');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/reportes/rapido', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            area_origen_id: wizProblema.area_origen_id, urgencia: wizProblema.urgencia,
+            referencia: wizProblema.referencia, lote: wizProblema.lote, descripcion: wizProblema.descripcion,
+            destinatarios,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo guardar el reporte');
+        cerrarModalProblema();
+        await cargarReportes();
+        verDetalleReporte(data.id);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // -------- Paso: "el problema" (catálogo de defectos de Muestreos ISO 2859) --------
+    function pasoCompProblemaHtml() {
+      const defectos = wizDefectosCache || [];
+      const opciones = defectos.map(d => `<option value="${d.id}" ${String(d.id) === String(wizProblema.defecto_id) ? 'selected' : ''}>${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
+      return `
+        <p class="wiz-intro">¿Cuál es el problema? (mismo catálogo de defectos de Muestreos ISO 2859)</p>
+        <div class="rep-field">
+          <label>Problema / Defecto *</label>
+          <select id="wizDefecto"><option value="">Selecciona...</option>${opciones}</select>
+        </div>
+        <div class="wiz-botones">
+          <button type="button" class="btn-secondary-trz" onclick="wizProblema.paso='rapForm'; renderPasoWizard();">Atrás</button>
+          <button type="button" class="btn-primario-trz" onclick="wizContinuarDesdeProblema()">Siguiente</button>
+        </div>`;
+    }
+    async function wizContinuarDesdeProblema() {
+      const defectoId = document.getElementById('wizDefecto').value;
+      if (!defectoId) return alert('Elige el problema (defecto).');
+      wizProblema.defecto_id = defectoId;
+      wizProblema.causaModo = 'existente';
+      wizProblema.paso = 'compCausa';
+      mostrarCargandoWizard();
+      try {
+        const res = await fetch(`/api/reportes/catalogo-causas?defecto_id=${defectoId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        wizCausasCache = res.ok ? await res.json() : [];
+      } catch (e) { wizCausasCache = []; }
+      if (wizCausasCache.length === 0) wizProblema.causaModo = 'otra';
+      renderPasoWizard();
+    }
+
+    // -------- Paso: causa raíz (ya amarrada al defecto elegido) --------
+    function pasoCompCausaHtml() {
+      const causas = wizCausasCache || [];
+      const listaOpciones = causas.map(c => `
+        <label class="wiz-causa-opcion">
+          <input type="radio" name="wizCausaRadio" value="${c.id}" onclick="wizProblema.causaModo='existente';">
+          ${escapeHtml(c.texto)}
+        </label>`).join('');
+      const opcionOtra = `
+        <label class="wiz-causa-opcion">
+          <input type="radio" name="wizCausaRadio" value="__otra__" ${wizProblema.causaModo === 'otra' ? 'checked' : ''} onclick="wizProblema.causaModo='otra'; renderPasoWizard();">
+          Otra (agregar una nueva)
+        </label>`;
+      const campoOtra = wizProblema.causaModo === 'otra' ? `
+        <div class="rep-field" style="margin-top:10px;">
+          <label>Nueva causa raíz *</label>
+          <textarea id="wizCausaTexto" placeholder="¿Qué se cree que originó el problema?">${escapeHtml(wizProblema.causa_texto || '')}</textarea>
+        </div>` : '';
+      return `
+        <p class="wiz-intro">${causas.length ? '¿Cuál puede ser la causa raíz de este problema?' : 'Todavía no hay ninguna causa raíz registrada para este problema -- agrega la primera.'}</p>
+        <div class="rep-areas-destino" style="max-height:220px;">
+          ${listaOpciones}
+          ${opcionOtra}
+        </div>
+        ${campoOtra}
+        <div class="wiz-botones">
+          <button type="button" class="btn-secondary-trz" onclick="wizProblema.paso='compProblema'; renderPasoWizard();">Atrás</button>
+          <button type="button" class="btn-primario-trz" id="wizBtnGuardarCompleto" onclick="wizGuardarCompleto()">Guardar</button>
+        </div>`;
+    }
+    async function wizGuardarCompleto() {
+      const radioSel = document.querySelector('input[name="wizCausaRadio"]:checked');
+      if (!radioSel) return alert('Elige una causa raíz o "Otra" para agregar una nueva.');
+      let causaPayload;
+      if (radioSel.value === '__otra__') {
+        const texto = document.getElementById('wizCausaTexto').value.trim();
+        if (!texto) return alert('Escribe la nueva causa raíz.');
+        causaPayload = { causa_raiz: texto };
+      } else {
+        causaPayload = { causa_catalogo_id: parseInt(radioSel.value, 10) };
+      }
+
+      const btn = document.getElementById('wizBtnGuardarCompleto');
+      btn.disabled = true;
+      try {
+        let reporteId = wizProblema.origenRapidoId;
+        if (!reporteId) {
+          // No había un Rápido previo -- se crea uno "invisible" (sin
+          // preguntar destinatarios de WhatsApp, ya que nunca se llega a
+          // mostrar como tal) y se escala enseguida (ver comentario arriba).
+          const resRapido = await fetch('/api/reportes/rapido', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({
+              area_origen_id: wizProblema.area_origen_id, urgencia: wizProblema.urgencia,
+              referencia: wizProblema.referencia, lote: wizProblema.lote, descripcion: wizProblema.descripcion,
+            }),
+          });
+          const dataRapido = await resRapido.json();
+          if (!resRapido.ok) throw new Error(dataRapido.error || 'No se pudo registrar el reporte.');
+          reporteId = dataRapido.id;
+        }
+        const res = await fetch(`/api/reportes/${reporteId}/escalar`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ ...causaPayload, defecto_id: wizProblema.defecto_id, descripcion: wizProblema.descripcion }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo escalar el reporte.');
+        cerrarModalProblema();
+        await cargarReportes();
+        verDetalleReporte(data.id);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ======================== CREAR: REPORTE INFORMATIVO ========================
+    function abrirModalInformativo() {
+      document.getElementById('infArea').value = '';
+      document.getElementById('infVigencia').value = '';
+      document.getElementById('infTitulo').value = '';
+      document.getElementById('infContenido').value = '';
+      document.getElementById('infAreasDestino').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+      document.getElementById('modalInformativoOverlay').style.display = 'flex';
+    }
+    function cerrarModalInformativo() {
+      document.getElementById('modalInformativoOverlay').style.display = 'none';
+    }
+
+    async function guardarReporteInformativo() {
+      const area_origen_id = document.getElementById('infArea').value;
+      const fecha_vigencia = document.getElementById('infVigencia').value;
+      const titulo = document.getElementById('infTitulo').value.trim();
+      const contenido = document.getElementById('infContenido').value.trim();
+      const areas_destino = Array.from(document.getElementById('infAreasDestino').querySelectorAll('input[type=checkbox]:checked')).map(cb => parseInt(cb.value, 10));
+      if (!titulo) return alert('Escribe el título del comunicado.');
+      if (!contenido) return alert('Escribe el contenido del comunicado.');
+      if (areas_destino.length === 0) return alert('Elige al menos un área destino.');
+
+      const btn = document.getElementById('infBtnGuardar');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/reportes/informativo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ area_origen_id, titulo, contenido, fecha_vigencia, areas_destino }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo publicar el comunicado');
+        cerrarModalInformativo();
+        await cargarReportes();
+        verDetalleReporte(data.id);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ======================== DETALLE (se adapta según el tipo) ========================
+    async function verDetalleReporte(id) {
+      document.getElementById('detalleModalOverlay').style.display = 'flex';
+      document.getElementById('detalleModalContexto').innerHTML = '<div class="empty-hint">Cargando...</div>';
+      document.getElementById('detalleModalCuerpo').innerHTML = '';
+      try {
+        const res = await fetch(`/api/reportes/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        repReporteActual = await res.json();
+        renderizarDetalleReporte();
+      } catch (e) {
+        document.getElementById('detalleModalContexto').innerHTML = '<div class="empty-hint" style="color:red;">No se pudo cargar este reporte.</div>';
+      }
+    }
+
+    function cerrarDetalleReporte() {
+      document.getElementById('detalleModalOverlay').style.display = 'none';
+      repReporteActual = null;
+    }
+
+    function renderizarDetalleReporte() {
+      const r = repReporteActual;
+      if (!r) return;
+      const titulos = { rapido: 'Reporte Rápido', completo: 'Reporte de Problema Completo', informativo: 'Reporte Informativo' };
+      const iconos = { rapido: 'fa-bolt', completo: 'fa-diagram-project', informativo: 'fa-bullhorn' };
+      document.getElementById('detalleModalTitulo').innerHTML = `<i class="fa-solid ${iconos[r.tipo] || 'fa-triangle-exclamation'}"></i> ${titulos[r.tipo] || 'Reporte'} ${tipoPill(r.tipo)}`;
+
+      const contexto = [];
+      contexto.push(`<div><span>Área ${r.tipo === 'informativo' ? 'emisora' : 'de origen'}</span><strong>${escapeHtml(r.area_origen_nombre || '—')}</strong></div>`);
+      if (r.tipo !== 'informativo') {
+        contexto.push(`<div><span>Referencia</span><strong>${escapeHtml(r.referencia || '—')}</strong></div>`);
+        contexto.push(`<div><span>Lote</span><strong>${escapeHtml(r.lote || '—')}</strong></div>`);
+        contexto.push(`<div><span>Urgencia</span><strong>${urgenciaPill(r.urgencia) || '—'}</strong></div>`);
+      } else {
+        contexto.push(`<div><span>Vigente hasta</span><strong>${r.fecha_vigencia ? escapeHtml(String(r.fecha_vigencia).slice(0, 10)) : '—'}</strong></div>`);
+        contexto.push(`<div><span>Vigencia</span><strong>${vigenciaPill(r.fecha_vigencia)}</strong></div>`);
+      }
+      contexto.push(`<div><span>Registrado por</span><strong>${escapeHtml(r.autor_nombre || '—')}</strong></div>`);
+      contexto.push(`<div><span>Fecha</span><strong>${escapeHtml(r.created_at || '')}</strong></div>`);
+      document.getElementById('detalleModalContexto').innerHTML = contexto.join('');
+
+      // Editar (pedido por Julio, 07/09): disponible siempre, sin importar
+      // el estado del reporte -- "poder editarlos después de que los
+      // creemos". El formulario en sí se arma al abrirse (mostrarFormularioEditarReporte),
+      // acá solo queda el botón y el contenedor vacío.
+      const puedeGestionar = tienePermiso('reportes.gestionar');
+      const botonEditar = puedeGestionar
+        ? `<div style="display:flex; justify-content:flex-end; margin:-8px 0 14px;"><button type="button" class="btn-secondary-trz" onclick="mostrarFormularioEditarReporte()"><i class="fa-solid fa-pen"></i> Editar</button></div>`
+        : '';
+
+      const cuerpo = document.getElementById('detalleModalCuerpo');
+      let cuerpoTipo;
+      if (r.tipo === 'rapido') cuerpoTipo = cuerpoRapido(r);
+      else if (r.tipo === 'completo') cuerpoTipo = cuerpoCompleto(r);
+      else cuerpoTipo = cuerpoInformativo(r);
+      cuerpo.innerHTML = botonEditar + '<div id="repEditarForm" style="display:none;" class="rep-escalar-form"></div>' + cuerpoTipo;
+
+      adjuntarHandlersCuerpo();
+    }
+
+    // -------- Editar (área/urgencia/referencia/lote/observación, o para un
+    // Informativo: título/contenido/vigencia/áreas destino) --------
+    // Pedido por Julio (07/09, segunda vuelta): en un Rápido o Completo
+    // también se puede elegir/cambiar/quitar "el problema" desde acá -- así
+    // un reporte que se escaló con el botón rápido del detalle (que no lo
+    // pedía) o al que se le eligió mal, se puede corregir sin tener que
+    // recrearlo. Por eso esta función ahora es async (pide el catálogo de
+    // defectos antes de armar el formulario).
+    async function mostrarFormularioEditarReporte() {
+      const r = repReporteActual;
+      if (!r) return;
+      const areas = repAreasCache || [];
+      const form = document.getElementById('repEditarForm');
+      if (r.tipo === 'informativo') {
+        const opcionesArea = areas.map(a => `<option value="${a.id}" ${String(a.id) === String(r.area_origen_id) ? 'selected' : ''}>${escapeHtml(a.nombre)}</option>`).join('');
+        const destinosActuales = (r.destinos || []).map(d => d.id);
+        form.innerHTML = `
+          <div class="rep-fila-2">
+            <div class="rep-field"><label>Área que emite (opcional)</label><select id="editArea"><option value="">Selecciona...</option>${opcionesArea}</select></div>
+            <div class="rep-field"><label>Vigente hasta (opcional)</label><input type="date" id="editVigencia" value="${r.fecha_vigencia ? escapeHtml(String(r.fecha_vigencia).slice(0, 10)) : ''}"></div>
+          </div>
+          <div class="rep-field"><label>Título / Asunto *</label><input type="text" id="editTitulo" value="${escapeHtml(r.titulo || '')}"></div>
+          <div class="rep-field"><label>Contenido *</label><textarea id="editContenido">${escapeHtml(r.descripcion || '')}</textarea></div>
+          <div class="rep-field">
+            <label>Áreas destino *</label>
+            <div class="rep-areas-destino" id="editAreasDestino">${areas.map(a => `<label><input type="checkbox" value="${a.id}" ${destinosActuales.includes(a.id) ? 'checked' : ''}> ${escapeHtml(a.nombre)}</label>`).join('')}</div>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn-secondary-trz" onclick="document.getElementById('repEditarForm').style.display='none';">Cancelar</button>
+            <button type="button" class="btn-primario-trz" onclick="guardarEdicionReporte(${r.id})">Guardar cambios</button>
+          </div>`;
+        form.style.display = 'block';
+        return;
+      }
+      form.innerHTML = '<div class="empty-hint">Cargando...</div>';
+      form.style.display = 'block';
+      let defectos = [];
+      try {
+        const res = await fetch('/api/reportes/defectos', { headers: { 'Authorization': 'Bearer ' + token } });
+        defectos = res.ok ? await res.json() : [];
+      } catch (e) { defectos = []; }
+      const opcionesArea = areas.map(a => `<option value="${a.id}" ${String(a.id) === String(r.area_origen_id) ? 'selected' : ''}>${escapeHtml(a.nombre)}</option>`).join('');
+      const opcionesDefecto = defectos.map(d => `<option value="${d.id}" ${String(d.id) === String(r.defecto_id) ? 'selected' : ''}>${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
+      form.innerHTML = `
+        <div class="rep-fila-2">
+          <div class="rep-field"><label>Área donde ocurrió *</label><select id="editArea">${opcionesArea}</select></div>
+          <div class="rep-field">
+            <label>Urgencia</label>
+            <select id="editUrgencia">
+              ${['Baja', 'Media', 'Alta', 'Critica'].map(u => `<option value="${u}" ${r.urgencia === u ? 'selected' : ''}>${u === 'Critica' ? 'Crítica' : u}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="rep-fila-2">
+          <div class="rep-field"><label>Referencia (opcional)</label><input type="text" id="editReferencia" value="${escapeHtml(r.referencia || '')}"></div>
+          <div class="rep-field"><label>Lote (opcional)</label><input type="text" id="editLote" value="${escapeHtml(r.lote || '')}"></div>
+        </div>
+        <div class="rep-field">
+          <label>Problema / Defecto (opcional)</label>
+          <select id="editDefecto"><option value="">Sin problema asignado</option>${opcionesDefecto}</select>
+        </div>
+        <div class="rep-field"><label>Descripción / Observación *</label><textarea id="editDescripcion">${escapeHtml(r.descripcion || '')}</textarea></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary-trz" onclick="document.getElementById('repEditarForm').style.display='none';">Cancelar</button>
+          <button type="button" class="btn-primario-trz" onclick="guardarEdicionReporte(${r.id})">Guardar cambios</button>
+        </div>`;
+    }
+
+    async function guardarEdicionReporte(id) {
+      const r = repReporteActual;
+      if (!r) return;
+      let payload;
+      if (r.tipo === 'informativo') {
+        const titulo = document.getElementById('editTitulo').value.trim();
+        const contenido = document.getElementById('editContenido').value.trim();
+        const area_origen_id = document.getElementById('editArea').value;
+        const fecha_vigencia = document.getElementById('editVigencia').value;
+        const areas_destino = Array.from(document.getElementById('editAreasDestino').querySelectorAll('input[type=checkbox]:checked')).map(cb => parseInt(cb.value, 10));
+        if (!titulo) return alert('Escribe el título del comunicado.');
+        if (!contenido) return alert('Escribe el contenido del comunicado.');
+        if (areas_destino.length === 0) return alert('Elige al menos un área destino.');
+        payload = { titulo, contenido, area_origen_id, fecha_vigencia, areas_destino };
+      } else {
+        const area_origen_id = document.getElementById('editArea').value;
+        const urgencia = document.getElementById('editUrgencia').value;
+        const referencia = document.getElementById('editReferencia').value.trim();
+        const lote = document.getElementById('editLote').value.trim();
+        const descripcion = document.getElementById('editDescripcion').value.trim();
+        const defecto_id = document.getElementById('editDefecto').value;
+        if (!area_origen_id) return alert('Selecciona el área donde ocurrió el problema.');
+        if (!descripcion) return alert('Escribe una descripción del problema.');
+        payload = { area_origen_id, urgencia, referencia, lote, descripcion, defecto_id };
+      }
+      try {
+        const res = await fetch(`/api/reportes/${id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo guardar los cambios');
+        await refrescarDetalleYTabla(data);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function cuerpoRapido(r) {
+      const puedeGestionar = tienePermiso('reportes.gestionar');
+      const acciones = (puedeGestionar && r.estado === 'Pendiente') ? `
+        <div class="rep-acciones-rapido">
+          <button type="button" class="btn-secondary-trz" onclick="marcarRevisado(${r.id})"><i class="fa-solid fa-check"></i> Marcar Revisado (cerrar sin escalar)</button>
+          <button type="button" class="btn-primario-trz" onclick="mostrarFormularioEscalar()"><i class="fa-solid fa-arrow-up-right-dots"></i> Escalar a Reporte Completo</button>
+        </div>
+        <div id="repEscalarForm" style="display:none;" class="rep-escalar-form"></div>` : '';
+      return `
+        <div class="trz-item" style="margin-bottom:14px;">
+          <div class="trz-item-meta"><span class="trz-item-kind">Descripción / Síntoma</span></div>
+          <div class="trz-item-texto">${escapeHtml(r.descripcion || '')}</div>
+        </div>
+        ${acciones}
+        ${bloqueAdjuntos(r)}
+        ${bloqueCompartir(r)}`;
+    }
+
+    function cuerpoCompleto(r) {
+      const puedeGestionar = tienePermiso('reportes.gestionar');
+      const puedeEliminar = tienePermiso('reportes.eliminar');
+      const causas = r.causas || [];
+      const medidas = r.medidas || [];
+      const listaCausas = causas.length
+        ? causas.map(c => renderizarCausaCard(r, c, medidas.filter(m => m.causa_id === c.id), puedeGestionar, puedeEliminar)).join('')
+        : '<div class="empty-hint">Todavía no hay ninguna causa raíz registrada.</div>';
+      const botonAgregarCausa = puedeGestionar ? `<button type="button" class="btn-trz-agregar-causa" onclick="mostrarFormularioCausa()" title="Agregar causa raíz"><i class="fa-solid fa-plus"></i> Agregar causa raíz</button>` : '';
+      // MIGRACIÓN #37 (07/09, pedido por Julio): si la misma causa real ya
+      // está registrada en Trazabilidad de Producción (u otro reporte), se
+      // busca y se vincula en vez de escribirla de nuevo -- comparten
+      // medidas y progreso desde entonces. Nunca automático (ver
+      // data/causasRaiz.js).
+      const botonVincularCausa = puedeGestionar ? `<button type="button" class="btn-trz-agregar-causa" onclick="abrirModalVincularCausaReporte()" title="Vincular una causa que ya existe en otro caso o módulo"><i class="fa-solid fa-link"></i> Vincular existente</button>` : '';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;">
+          <span style="font-size:10.5px; color:#a0aec0; font-weight:700; text-transform:uppercase;">Causas raíz y medidas</span>
+          <span style="display:flex; gap:6px;">${botonAgregarCausa}${botonVincularCausa}</span>
+        </div>
+        <div id="repNuevaCausaForm" style="display:none;" class="rep-escalar-form"></div>
+        <div class="trz-item-lista" style="max-height:340px;">${listaCausas}</div>
+        ${bloqueAdjuntos(r)}
+        ${bloqueCompartir(r)}`;
+    }
+
+    const ETIQUETAS_ESTADO_MEDIDA = { En_Proceso: 'En Proceso', Funciono: 'Funcionó', No_Funciono: 'No funcionó' };
+
+    function renderizarCausaCard(r, causa, medidasDeCausa, puedeGestionar, puedeEliminar) {
+      const botonEliminarCausa = puedeEliminar ? `<button type="button" class="btn-eliminar-trz" onclick="eliminarCausaReporte(${r.id}, ${causa.id})"><i class="fa-solid fa-trash"></i></button>` : '';
+      const filasMedidas = medidasDeCausa.length
+        ? medidasDeCausa.map(m => renderizarMedidaItem(r, m, puedeGestionar, puedeEliminar)).join('')
+        : '<div class="empty-hint" style="margin:0;">Todavía no hay medidas para esta causa.</div>';
+      const botonAgregarMedida = puedeGestionar ? `<button type="button" class="btn-secondary-trz" style="align-self:flex-start;" onclick="mostrarFormularioMedida(${causa.id})"><i class="fa-solid fa-plus"></i> Agregar medida</button>` : '';
+      return `
+        <div class="trz-causa-card" data-causa-id="${causa.id}">
+          <div class="trz-item-causa-info">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind causa">Causa raíz</span>
+              ${botonEliminarCausa}
+            </div>
+            <div class="trz-item-texto">${escapeHtml(causa.texto)}</div>
+            <div class="trz-item-resp">Registrada por <b>${escapeHtml(causa.autor_nombre || 'Usuario')}</b></div>
+            ${causa.compartida_con && causa.compartida_con.length ? `<div class="pill pill-muted" style="margin-top:6px; display:inline-block;" title="Las medidas de esta causa se ven y editan igual desde el otro caso"><i class="fa-solid fa-link"></i> También vinculada a: ${escapeHtml(causa.compartida_con.map(c => c.tipo_caso === 'problema' ? `Producción, caso #${c.caso_id}` : `Reporte #${c.caso_id}`).join(' · '))}</div>` : ''}
+          </div>
+          <div class="trz-medidas-de-causa">
+            ${filasMedidas}
+            <div id="repNuevaMedidaForm-${causa.id}" style="display:none;" class="rep-escalar-form">
+              <div class="rep-field" style="margin-bottom:10px;">
+                <label>Nueva medida</label>
+                <textarea id="repNuevaMedidaTexto-${causa.id}" placeholder="Describe la medida de solución"></textarea>
+              </div>
+              <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" class="btn-secondary-trz" onclick="document.getElementById('repNuevaMedidaForm-${causa.id}').style.display='none';">Cancelar</button>
+                <button type="button" class="btn-primario-trz" onclick="agregarMedidaReporte(${r.id}, ${causa.id})">Guardar</button>
+              </div>
+            </div>
+            ${botonAgregarMedida}
+          </div>
+        </div>`;
+    }
+
+    function renderizarMedidaItem(r, m, puedeGestionar, puedeEliminar) {
+      const botonEliminar = puedeEliminar ? `<button type="button" class="btn-eliminar-trz" onclick="eliminarMedidaReporte(${r.id}, ${m.id})"><i class="fa-solid fa-trash"></i></button>` : '';
+      return `
+        <div class="trz-item" data-medida-id="${m.id}">
+          <div class="trz-item-meta">
+            <span class="trz-item-kind">Medida</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <select class="trz-medida-estado" data-medida-id="${m.id}" data-reporte-id="${r.id}" ${puedeGestionar ? '' : 'disabled'}>
+                ${Object.entries(ETIQUETAS_ESTADO_MEDIDA).map(([valor, texto]) => `<option value="${valor}" ${m.estado === valor ? 'selected' : ''}>${texto}</option>`).join('')}
+              </select>
+              ${botonEliminar}
+            </div>
+          </div>
+          <div class="trz-item-texto">${escapeHtml(m.texto)}</div>
+          <div class="trz-item-resp">Registrada por <b>${escapeHtml(m.autor_nombre || 'Usuario')}</b> el ${escapeHtml(m.creado_en || '')}</div>
+        </div>`;
+    }
+
+    function cuerpoInformativo(r) {
+      const destinos = (r.destinos || []).map(d => escapeHtml(d.nombre)).join(', ') || '—';
+      return `
+        <div class="trz-item" style="margin-bottom:14px;">
+          <div class="trz-item-meta"><span class="trz-item-kind">Áreas destino</span></div>
+          <div class="trz-item-texto">${destinos}</div>
+        </div>
+        <div class="trz-item" style="margin-bottom:14px;">
+          <div class="trz-item-meta"><span class="trz-item-kind">Contenido</span></div>
+          <div class="trz-item-texto">${escapeHtml(r.descripcion || '')}</div>
+        </div>
+        ${bloqueAdjuntos(r)}`;
+    }
+
+    // ======================== COMPARTIR (reenviar la tarjeta por WhatsApp) ========================
+    // Pedido por Julio (07/09): antes la tarjeta-imagen solo se mandaba una
+    // vez, al crear un Reporte Rápido. Ahora se puede reenviar en cualquier
+    // momento, a quien sea, desde el detalle de cualquier Rápido o Completo
+    // (los Informativos ya avisan solos al publicarse).
+    function bloqueCompartir(r) {
+      return `
+        <div style="margin-top:18px;">
+          <span style="font-size:10.5px; color:#a0aec0; font-weight:700; text-transform:uppercase;">Compartir por WhatsApp</span>
+          <div id="repCompartirBox-${r.id}" style="margin-top:8px;">
+            <button type="button" class="btn-secondary-trz" onclick="mostrarFormularioCompartir(${r.id})"><i class="fa-solid fa-share-nodes"></i> Compartir</button>
+          </div>
+        </div>`;
+    }
+    async function mostrarFormularioCompartir(reporteId) {
+      const box = document.getElementById('repCompartirBox-' + reporteId);
+      box.innerHTML = '<div class="empty-hint" style="margin:0; padding:6px 0;">Cargando destinatarios...</div>';
+      try {
+        const res = await fetch('/api/reportes/destinatarios', { headers: { 'Authorization': 'Bearer ' + token } });
+        const destinatarios = res.ok ? await res.json() : [];
+        const lista = destinatarios.length
+          ? destinatarios.map(u => `<label><input type="checkbox" value="${u.id}"> ${escapeHtml(u.nombre)}</label>`).join('')
+          : '<div class="empty-hint" style="padding:6px 0;">Ningún usuario tiene un teléfono registrado todavía (Gestión → Usuarios).</div>';
+        box.innerHTML = `
+          <div class="rep-areas-destino" id="repCompartirLista-${reporteId}">${lista}</div>
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+            <button type="button" class="btn-secondary-trz" onclick="renderizarDetalleReporte()">Cancelar</button>
+            <button type="button" class="btn-primario-trz" onclick="enviarCompartirReporte(${reporteId})">Enviar</button>
+          </div>`;
+      } catch (e) {
+        box.innerHTML = '<div class="empty-hint" style="color:red;">No se pudo cargar la lista de destinatarios.</div>';
+      }
+    }
+    async function enviarCompartirReporte(reporteId) {
+      const checks = document.querySelectorAll(`#repCompartirLista-${reporteId} input[type=checkbox]:checked`);
+      const destinatarios = Array.from(checks).map(cb => parseInt(cb.value, 10));
+      if (destinatarios.length === 0) return alert('Elige al menos un destinatario.');
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/compartir`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ destinatarios }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo compartir el reporte');
+        const envio = data.envio || {};
+        if (envio.enviado) {
+          alert('Reporte compartido.' + (envio.fallos && envio.fallos.length ? ` No se pudo entregar a: ${envio.fallos.join(', ')}.` : ''));
+        } else {
+          alert('No se pudo compartir: ' + (envio.motivo || 'error desconocido'));
+        }
+        renderizarDetalleReporte();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // ======================== ADJUNTOS ========================
+    function bloqueAdjuntos(r) {
+      const puedeAdjuntar = tienePermiso('reportes.crear') || tienePermiso('reportes.gestionar');
+      const puedeEliminar = tienePermiso('reportes.eliminar');
+      const adjuntos = r.adjuntos || [];
+      const lista = adjuntos.length
+        ? adjuntos.map(a => `
+          <div class="rep-adjunto-item">
+            <a href="javascript:void(0)" onclick="verAdjuntoReporte(${r.id}, ${a.id})"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(a.nombre_original || 'archivo')}</a>
+            ${puedeEliminar ? `<button type="button" class="rep-adjunto-borrar" onclick="eliminarAdjuntoReporte(${r.id}, ${a.id})" title="Eliminar adjunto"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </div>`).join('')
+        : '<div class="empty-hint" style="margin:0;">No hay adjuntos.</div>';
+      return `
+        <div style="margin-top:18px;">
+          <span style="font-size:10.5px; color:#a0aec0; font-weight:700; text-transform:uppercase;">Evidencia / archivos adjuntos</span>
+          <div class="rep-adjuntos-lista">${lista}</div>
+          ${puedeAdjuntar ? `
+            <div style="margin-top:10px;">
+              <input type="file" id="repInputAdjunto-${r.id}" accept="image/*,application/pdf" style="font-size:12.5px;">
+              <button type="button" class="btn-secondary-trz" onclick="subirAdjuntoReporte(${r.id})"><i class="fa-solid fa-upload"></i> Subir</button>
+            </div>` : ''}
+        </div>`;
+    }
+
+    // Los <select> de estado de medida se recrean cada vez que se renderiza
+    // el detalle -- hay que volver a conectar su evento cada vez.
+    function adjuntarHandlersCuerpo() {
+      document.querySelectorAll('#detalleModalCuerpo select.trz-medida-estado').forEach(sel => {
+        sel.onchange = () => cambiarEstadoMedida(sel.dataset.reporteId, sel.dataset.medidaId, sel.value);
+      });
+    }
+
+    async function refrescarDetalleYTabla(nuevoReporte) {
+      repReporteActual = nuevoReporte;
+      renderizarDetalleReporte();
+      await cargarReportes();
+    }
+
+    async function marcarRevisado(id) {
+      if (!confirm('¿Marcar este reporte como Revisado? Se cierra sin escalar a un Reporte Completo.')) return;
+      try {
+        const res = await fetch(`/api/reportes/${id}/revisar`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo marcar como Revisado');
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // -------- Escalar a Reporte Completo (botón rápido del detalle) --------
+    // Pedido por Julio (07/09, segunda vuelta): este botón (a diferencia del
+    // asistente "Reporte Problema") no preguntaba "el problema" -- por eso
+    // las causas que se agregaban por acá nunca quedaban ligadas a ningún
+    // defecto, y no volvían a aparecer al elegir ese mismo problema después.
+    // Ahora deja elegir el problema (opcional, igual que en Editar) y, si se
+    // elige uno, muestra las causas YA registradas para ese problema para
+    // reusar una o agregar "Otra" -- mismo criterio que el asistente.
+    let repEscalarCausas = [];
+    let repEscalarModoCausa = 'otra';
+
+    async function mostrarFormularioEscalar() {
+      const form = document.getElementById('repEscalarForm');
+      form.style.display = 'block';
+      form.innerHTML = '<div class="empty-hint">Cargando...</div>';
+      repEscalarCausas = [];
+      repEscalarModoCausa = 'otra';
+      let defectos = [];
+      try {
+        const res = await fetch('/api/reportes/defectos', { headers: { 'Authorization': 'Bearer ' + token } });
+        defectos = res.ok ? await res.json() : [];
+      } catch (e) { defectos = []; }
+      const opcionesDefecto = defectos.map(d => `<option value="${d.id}">${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
+      form.innerHTML = `
+        <div class="rep-field" style="margin-bottom:10px;">
+          <label>Problema / Defecto (opcional)</label>
+          <select id="repEscalarDefecto" onchange="repEscalarCambiarDefecto()"><option value="">Sin problema asignado</option>${opcionesDefecto}</select>
+        </div>
+        <div id="repEscalarCausaArea">
+          <div class="rep-field" style="margin-bottom:10px;">
+            <label>Causa raíz inicial *</label>
+            <textarea id="repEscalarCausa" placeholder="¿Qué se cree que originó el problema?"></textarea>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary-trz" onclick="document.getElementById('repEscalarForm').style.display='none';">Cancelar</button>
+          <button type="button" class="btn-primario-trz" onclick="escalarReporte(${repReporteActual.id})">Escalar</button>
+        </div>`;
+    }
+
+    async function repEscalarCambiarDefecto() {
+      const defectoId = document.getElementById('repEscalarDefecto').value;
+      if (!defectoId) {
+        repEscalarCausas = [];
+        repEscalarModoCausa = 'otra';
+        document.getElementById('repEscalarCausaArea').innerHTML = `
+          <div class="rep-field" style="margin-bottom:10px;">
+            <label>Causa raíz inicial *</label>
+            <textarea id="repEscalarCausa" placeholder="¿Qué se cree que originó el problema?"></textarea>
+          </div>`;
+        return;
+      }
+      document.getElementById('repEscalarCausaArea').innerHTML = '<div class="empty-hint">Cargando causas...</div>';
+      try {
+        const res = await fetch(`/api/reportes/catalogo-causas?defecto_id=${defectoId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        repEscalarCausas = res.ok ? await res.json() : [];
+      } catch (e) { repEscalarCausas = []; }
+      repEscalarModoCausa = repEscalarCausas.length ? 'existente' : 'otra';
+      renderizarRepEscalarCausaArea();
+    }
+
+    function renderizarRepEscalarCausaArea() {
+      const causas = repEscalarCausas || [];
+      const listaOpciones = causas.map(c => `
+        <label class="wiz-causa-opcion">
+          <input type="radio" name="repEscalarCausaRadio" value="${c.id}" onclick="repEscalarModoCausa='existente';">
+          ${escapeHtml(c.texto)}
+        </label>`).join('');
+      const opcionOtra = `
+        <label class="wiz-causa-opcion">
+          <input type="radio" name="repEscalarCausaRadio" value="__otra__" ${repEscalarModoCausa === 'otra' ? 'checked' : ''} onclick="repEscalarModoCausa='otra'; renderizarRepEscalarCausaArea();">
+          Otra (agregar una nueva)
+        </label>`;
+      const campoOtra = repEscalarModoCausa === 'otra' ? `
+        <div class="rep-field" style="margin-top:10px;">
+          <label>Nueva causa raíz *</label>
+          <textarea id="repEscalarCausa" placeholder="¿Qué se cree que originó el problema?"></textarea>
+        </div>` : '';
+      document.getElementById('repEscalarCausaArea').innerHTML = `
+        <p style="font-size:12.5px; color:#718096; margin:0 0 8px;">${causas.length ? '¿Cuál puede ser la causa raíz de este problema?' : 'Todavía no hay ninguna causa raíz registrada para este problema -- agrega la primera.'}</p>
+        <div class="rep-areas-destino" style="max-height:180px;">
+          ${listaOpciones}
+          ${opcionOtra}
+        </div>
+        ${campoOtra}`;
+    }
+
+    async function escalarReporte(id) {
+      const defectoSelect = document.getElementById('repEscalarDefecto');
+      const defecto_id = defectoSelect ? defectoSelect.value : '';
+      const radioSel = document.querySelector('input[name="repEscalarCausaRadio"]:checked');
+      let causaPayload;
+      if (radioSel && radioSel.value !== '__otra__') {
+        causaPayload = { causa_catalogo_id: parseInt(radioSel.value, 10) };
+      } else {
+        const causa_raiz = document.getElementById('repEscalarCausa').value.trim();
+        if (!causa_raiz) return alert('Escribe al menos una causa raíz para poder escalar.');
+        causaPayload = { causa_raiz };
+      }
+      try {
+        const res = await fetch(`/api/reportes/${id}/escalar`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ ...causaPayload, defecto_id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo escalar el reporte');
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // -------- Agregar causa raíz a un Completo ya existente --------
+    // Si el reporte YA tiene un problema asignado, se ofrecen las causas ya
+    // registradas para ESE problema (para reusar) además de "Otra" -- mismo
+    // criterio que al escalar. Si el reporte no tiene problema asignado
+    // (se escaló sin elegir uno), se deja el campo de texto libre de
+    // siempre -- para amarrarlo a un problema hay que usar "Editar".
+    let repNuevaCausaCausas = [];
+    let repNuevaCausaModo = 'otra';
+
+    async function mostrarFormularioCausa() {
+      const r = repReporteActual;
+      const form = document.getElementById('repNuevaCausaForm');
+      form.style.display = 'block';
+      if (!r || !r.defecto_id) {
+        repNuevaCausaCausas = [];
+        repNuevaCausaModo = 'otra';
+        form.innerHTML = `
+          <div class="rep-field" style="margin-bottom:10px;">
+            <label>Nueva causa raíz *</label>
+            <textarea id="repNuevaCausaTexto" placeholder="Describe la causa raíz"></textarea>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn-secondary-trz" onclick="document.getElementById('repNuevaCausaForm').style.display='none';">Cancelar</button>
+            <button type="button" class="btn-primario-trz" onclick="agregarCausaReporte(${r ? r.id : 0})">Guardar</button>
+          </div>`;
+        return;
+      }
+      form.innerHTML = '<div class="empty-hint">Cargando causas del problema...</div>';
+      try {
+        const res = await fetch(`/api/reportes/catalogo-causas?defecto_id=${r.defecto_id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        repNuevaCausaCausas = res.ok ? await res.json() : [];
+      } catch (e) { repNuevaCausaCausas = []; }
+      repNuevaCausaModo = repNuevaCausaCausas.length ? 'existente' : 'otra';
+      renderizarRepNuevaCausaForm();
+    }
+
+    function renderizarRepNuevaCausaForm() {
+      const r = repReporteActual;
+      const causas = repNuevaCausaCausas || [];
+      const listaOpciones = causas.map(c => `
+        <label class="wiz-causa-opcion">
+          <input type="radio" name="repNuevaCausaRadio" value="${c.id}" onclick="repNuevaCausaModo='existente';">
+          ${escapeHtml(c.texto)}
+        </label>`).join('');
+      const opcionOtra = `
+        <label class="wiz-causa-opcion">
+          <input type="radio" name="repNuevaCausaRadio" value="__otra__" ${repNuevaCausaModo === 'otra' ? 'checked' : ''} onclick="repNuevaCausaModo='otra'; renderizarRepNuevaCausaForm();">
+          Otra (agregar una nueva)
+        </label>`;
+      const campoOtra = repNuevaCausaModo === 'otra' ? `
+        <div class="rep-field" style="margin-top:10px;">
+          <label>Nueva causa raíz *</label>
+          <textarea id="repNuevaCausaTexto" placeholder="Describe la causa raíz"></textarea>
+        </div>` : '';
+      document.getElementById('repNuevaCausaForm').innerHTML = `
+        <p style="font-size:12.5px; color:#718096; margin:0 0 8px;">${causas.length ? 'Causas ya registradas para este problema -- puedes reusar una o agregar otra.' : 'Todavía no hay ninguna otra causa registrada para este problema.'}</p>
+        <div class="rep-areas-destino" style="max-height:180px;">
+          ${listaOpciones}
+          ${opcionOtra}
+        </div>
+        ${campoOtra}
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+          <button type="button" class="btn-secondary-trz" onclick="document.getElementById('repNuevaCausaForm').style.display='none';">Cancelar</button>
+          <button type="button" class="btn-primario-trz" onclick="agregarCausaReporte(${r.id})">Guardar</button>
+        </div>`;
+    }
+
+    async function agregarCausaReporte(reporteId) {
+      const radioSel = document.querySelector('input[name="repNuevaCausaRadio"]:checked');
+      let payload;
+      if (radioSel && radioSel.value !== '__otra__') {
+        payload = { causa_catalogo_id: parseInt(radioSel.value, 10) };
+      } else {
+        const texto = document.getElementById('repNuevaCausaTexto').value.trim();
+        if (!texto) return alert('Escribe el texto de la causa raíz.');
+        payload = { texto };
+      }
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/causas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo agregar la causa raíz');
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // ======================== VINCULAR CAUSA EXISTENTE (MIGRACIÓN #37) ========================
+    function abrirModalVincularCausaReporte() {
+      if (!repReporteActual) return;
+      document.getElementById('vincularCausaRepInput').value = '';
+      document.getElementById('vincularCausaRepResultados').innerHTML = '<div class="empty-hint">Escribe algo y presiona Buscar.</div>';
+      document.getElementById('vincularCausaRepOverlay').style.display = 'flex';
+      document.getElementById('vincularCausaRepInput').focus();
+    }
+
+    function cerrarModalVincularCausaReporte() {
+      document.getElementById('vincularCausaRepOverlay').style.display = 'none';
+    }
+
+    function describirCasosVinculadosReporte(casos) {
+      if (!casos || casos.length === 0) return 'Sin ningún caso vinculado todavía.';
+      return casos.map(c => c.tipo_caso === 'problema'
+        ? `Trazabilidad de Producción, caso #${c.caso_id}`
+        : `Reporte #${c.caso_id}`).join(' · ');
+    }
+
+    async function buscarCausasParaVincularReporte() {
+      const q = document.getElementById('vincularCausaRepInput').value.trim();
+      const cont = document.getElementById('vincularCausaRepResultados');
+      cont.innerHTML = '<div class="empty-hint">Buscando...</div>';
+      try {
+        const params = new URLSearchParams({ q, limite: 20 });
+        const res = await fetch(`/api/reportes/causas/buscar?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const causas = await res.json();
+        if (causas.length === 0) {
+          cont.innerHTML = '<div class="empty-hint">No se encontró ninguna causa con ese texto.</div>';
+          return;
+        }
+        cont.innerHTML = causas.map(c => `
+          <div class="trz-item">
+            <div class="trz-item-texto">${escapeHtml(c.texto)}</div>
+            <div class="trz-item-resp" style="margin-bottom:8px;">${escapeHtml(describirCasosVinculadosReporte(c.casos_vinculados))}</div>
+            <button type="button" class="btn-secondary-trz" onclick="vincularCausaExistenteReporte(${c.id})"><i class="fa-solid fa-link"></i> Vincular a este reporte</button>
+          </div>`).join('');
+      } catch (e) {
+        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error al buscar.</div>';
+      }
+    }
+
+    async function vincularCausaExistenteReporte(causaId) {
+      if (!repReporteActual) return;
+      try {
+        const res = await fetch(`/api/reportes/${repReporteActual.id}/causas/vincular`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ causa_id: causaId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo vincular la causa');
+        cerrarModalVincularCausaReporte();
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    function mostrarFormularioMedida(causaId) {
+      document.getElementById('repNuevaMedidaForm-' + causaId).style.display = 'block';
+    }
+
+    async function agregarMedidaReporte(reporteId, causaId) {
+      const texto = document.getElementById('repNuevaMedidaTexto-' + causaId).value.trim();
+      if (!texto) return alert('Escribe el texto de la medida.');
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/medidas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ texto, causa_id: causaId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo agregar la medida');
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function cambiarEstadoMedida(reporteId, medidaId, estado) {
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/medidas/${medidaId}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ estado }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo actualizar la medida');
+        await refrescarDetalleYTabla(data);
+      } catch (e) {
+        alert('Error: ' + e.message);
+        renderizarDetalleReporte(); // revertir el selector a lo que de verdad quedó guardado
+      }
+    }
+
+    async function eliminarCausaReporte(reporteId, causaId) {
+      if (!confirm('¿Eliminar esta causa raíz? Sus medidas también se eliminarán.')) return;
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/causas/${causaId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo eliminar la causa raíz');
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function eliminarMedidaReporte(reporteId, medidaId) {
+      if (!confirm('¿Eliminar esta medida?')) return;
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/medidas/${medidaId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo eliminar la medida');
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // El endpoint de adjuntos exige el mismo header Authorization que el
+    // resto de la API (no acepta el token por la URL), así que un <a href>
+    // normal no serviría -- se trae el archivo por fetch (con el header) y
+    // se abre como un blob: URL en una pestaña nueva.
+    async function verAdjuntoReporte(reporteId, adjuntoId) {
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/adjuntos/${adjuntoId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('No se pudo abrir el archivo (HTTP ' + res.status + ')');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function subirAdjuntoReporte(reporteId) {
+      const input = document.getElementById('repInputAdjunto-' + reporteId);
+      if (!input || !input.files || !input.files[0]) return alert('Selecciona un archivo primero.');
+      const fd = new FormData();
+      fd.append('archivo', input.files[0]);
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/adjuntos`, {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo subir el archivo');
+        await refrescarDetalleYTabla(data);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function eliminarAdjuntoReporte(reporteId, adjuntoId) {
+      if (!confirm('¿Eliminar este adjunto?')) return;
+      try {
+        const res = await fetch(`/api/reportes/${reporteId}/adjuntos/${adjuntoId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || 'No se pudo eliminar el adjunto'); }
+        const res2 = await fetch(`/api/reportes/${reporteId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const data2 = await res2.json();
+        await refrescarDetalleYTabla(data2);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    init();
+  </script>
+</body>
+</html>

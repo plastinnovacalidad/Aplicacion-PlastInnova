@@ -71,6 +71,7 @@ app.use('/api', require('./routes/auditoria'));
 app.use('/api', require('./routes/calidad'));
 app.use('/api', require('./routes/valoresCableado'));
 app.use('/api', require('./routes/produccion'));
+app.use('/api', require('./routes/reportes'));
 
 // Cualquier /api/... que no coincidió con ninguna ruta de arriba (ej. una URL
 // mal escrita) responde con JSON en vez de la página HTML de error por
