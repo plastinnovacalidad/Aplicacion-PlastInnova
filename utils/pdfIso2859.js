@@ -48,10 +48,20 @@ function coloresEstado(valor) {
   // el reporte de inspección (utils/pdfInspeccionMetrologia.js) salga con
   // el mismo verde/rojo que ya usan Auditoría/Lote/Trazabilidad, en vez de
   // caer en el gris por defecto por no reconocer el texto.
-  if (['aceptado', 'seguir', 'aprobado', 'ninguna', 'conforme'].includes(v)) return { bg: COLORES.verdeBg, color: COLORES.verde };
-  if (['rechazado', 'parar', 'critico', 'crítico', 'fuera de tolerancia'].includes(v)) return { bg: COLORES.rojoBg, color: COLORES.rojo };
-  if (['alerta', 'aceptado_con_obs', 'mayor'].includes(v)) return { bg: COLORES.naranjaBg, color: COLORES.naranja };
-  if (v === 'menor') return { bg: COLORES.azulClaro, color: COLORES.azul };
+  //
+  // 'alta'/'media'/'baja' (criticidad) y 'pendiente'/'en_proceso'/
+  // 'implementado' (estado) son del módulo Problemas (utils del "Reporte de
+  // Problema", 08/09) -- mismo criterio de color que ya usan sus píldoras en
+  // pantalla (pill-critica/pill-warning/pill-info/pill-ok en
+  // Public/problemas.html). 'baja' y 'descartado' caen en el gris por
+  // defecto a propósito (igual que su pill-muted en pantalla). 'funciono'/
+  // 'no_funciono' (estado de una medida) no tienen píldora de color en
+  // pantalla todavía (ahí es un <select> simple) -- se agregan solo para el
+  // PDF, verde/rojo por ser el criterio más intuitivo al leer el reporte.
+  if (['aceptado', 'seguir', 'aprobado', 'ninguna', 'conforme', 'implementado', 'funciono', 'funcionó'].includes(v)) return { bg: COLORES.verdeBg, color: COLORES.verde };
+  if (['rechazado', 'parar', 'critico', 'crítico', 'fuera de tolerancia', 'alta', 'no_funciono', 'no_funcionó'].includes(v)) return { bg: COLORES.rojoBg, color: COLORES.rojo };
+  if (['alerta', 'aceptado_con_obs', 'mayor', 'media', 'pendiente'].includes(v)) return { bg: COLORES.naranjaBg, color: COLORES.naranja };
+  if (['menor', 'en_proceso'].includes(v)) return { bg: COLORES.azulClaro, color: COLORES.azul };
   return { bg: COLORES.grisEstadoBg, color: COLORES.grisEstado };
 }
 

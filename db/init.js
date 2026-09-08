@@ -1954,6 +1954,246 @@ async function inicializarBaseDatos() {
     console.error('⚠️ Error creando tablas unificadas de causas/medidas:', e.message);
   }
 
+  // MIGRACIÓN #38: módulo unificado "Problemas" -- Julio pidió (07-08/09)
+  // rehacer por completo el diseño de la MIGRACIÓN #37. Aquel rediseño solo
+  // tendía un puente entre Trazabilidad de Producción y Reportes por Áreas
+  // (dos módulos separados que podían compartir una causa); lo que Julio
+  // necesita de verdad es UN solo lugar donde quede registrado y bajo
+  // seguimiento CUALQUIER problema de cualquier proceso, sin depender de la
+  // memoria de nadie ("necesitamos mantenernos informados de todos los
+  // problemas... no sé cómo poder hacerle seguimiento a todo sin depender
+  // de la memoria").
+  //
+  // Por eso Trazabilidad de Producción (trazabilidad_problemas) y la parte
+  // de causa raíz/medidas de Reportes por Áreas (reportes tipo 'rapido' y
+  // 'completo') se fusionan en una sola tabla `problemas`, con:
+  //   - `origen`: de dónde salió el registro -- 'produccion' (desde el
+  //     tablero de Producción: rankings de desperdicio por referencia o
+  //     motivos de rechazo), 'reporte' (una incidencia de línea reportada
+  //     por un área) o 'general' (un problema que se detecta caminando la
+  //     planta o revisando los "tops", sin abrir primero ni el tablero de
+  //     Producción ni Reportes por Áreas -- se registra directo en el
+  //     módulo Problemas).
+  //   - Los campos de contexto de cada origen quedan juntos en la misma
+  //     tabla (nullable los que no aplican a un origen, mismo criterio que
+  //     ya usaba `reportes` con sus 3 tipos): fabrica/tipo_contexto/
+  //     valor_contexto/semana/pct_desperdicio_inicial (de Producción) y
+  //     area_origen_id/referencia/lote (de Reportes). `defecto_id`
+  //     (catálogo compartido iso_tipificacion_defectos) y `descripcion`
+  //     aplican a cualquier origen.
+  //   - `criticidad`: Baja/Media/Alta -- Julio pidió explícitamente que NO
+  //     hubiera un cuarto nivel "Crítica" -- para poder priorizar qué
+  //     atacar primero al revisar la lista abierta, y para las alertas que
+  //     pidió ("avisarme los que son críticos").
+  //   - `estado`: Pendiente/En_Proceso/Implementado (mismo criterio de
+  //     siempre, recalculado solo según las medidas) + 'Descartado' (nuevo
+  //     -- para cuando, al revisar, se decide que no amerita seguimiento;
+  //     antes no existía esa salida y quedaba forzado a "Pendiente" para
+  //     siempre).
+  //
+  // Los "Reportes Informativos" (boletines entre áreas, no son problemas)
+  // NO se tocan -- Julio confirmó que se quedan aparte, sin fusionar. La
+  // tabla `reportes` sigue existiendo, de aquí en adelante solo con
+  // registros tipo='informativo'.
+  //
+  // causas_raiz deja de colgar de causas_raiz_casos (la tabla puente de la
+  // MIGRACIÓN #37 ya no hace falta -- con un solo tipo de caso no hay nada
+  // que "puentear") y pasa a tener un `problema_id` directo. `medidas`
+  // sigue colgando de `causa_id`, igual que antes.
+  //
+  // Julio confirmó (07-08/09) que todo lo que había en trazabilidad_problemas,
+  // causas_raiz/causas_raiz_casos/medidas y los reportes tipo 'rapido'/
+  // 'completo' de la tabla `reportes` eran pruebas -- se borran sin migrar
+  // nada (mismo criterio que ya se usó en la MIGRACIÓN #37).
+  try {
+    const tablaProblemas = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='problemas'");
+    if (!tablaProblemas) {
+      await db.exec('DROP TABLE IF EXISTS causas_raiz_casos');
+      await db.exec('DROP TABLE IF EXISTS medidas');
+      await db.exec('DROP TABLE IF EXISTS causas_raiz');
+      await db.exec('DROP TABLE IF EXISTS trazabilidad_problemas');
+      // Reportes Rápido/Completo confirmados de prueba -- se borran sus
+      // filas (Informativo no se toca; no se borra la tabla en sí).
+      await db.exec("DELETE FROM reportes WHERE tipo IN ('rapido','completo')");
+
+      await db.exec(`
+        CREATE TABLE problemas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          origen TEXT NOT NULL CHECK(origen IN ('produccion','reporte','general')),
+          fabrica TEXT,
+          tipo_contexto TEXT CHECK(tipo_contexto IS NULL OR tipo_contexto IN ('referencia','motivo')),
+          valor_contexto TEXT,
+          semana TEXT,
+          pct_desperdicio_inicial REAL,
+          area_origen_id INTEGER REFERENCES iso_areas(id),
+          referencia TEXT,
+          lote TEXT,
+          defecto_id INTEGER REFERENCES iso_tipificacion_defectos(id),
+          descripcion TEXT,
+          criticidad TEXT NOT NULL DEFAULT 'Media' CHECK(criticidad IN ('Baja','Media','Alta')),
+          estado TEXT NOT NULL DEFAULT 'Pendiente' CHECK(estado IN ('Pendiente','En_Proceso','Implementado','Descartado')),
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          creado_en DATETIME DEFAULT (datetime('now','localtime')),
+          actualizado_en DATETIME DEFAULT (datetime('now','localtime')),
+          cerrado_en DATETIME
+        );
+        CREATE TABLE causas_raiz (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          problema_id INTEGER NOT NULL REFERENCES problemas(id),
+          texto TEXT NOT NULL,
+          causa_catalogo_id INTEGER REFERENCES trazabilidad_catalogo_causas(id),
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          responsable_id INTEGER REFERENCES usuarios(id),
+          responsable_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE TABLE medidas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          causa_id INTEGER NOT NULL REFERENCES causas_raiz(id),
+          texto TEXT NOT NULL,
+          estado TEXT NOT NULL DEFAULT 'En_Proceso' CHECK(estado IN ('En_Proceso','Funciono','No_Funciono')),
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          responsable_id INTEGER REFERENCES usuarios(id),
+          responsable_nombre TEXT,
+          creado_en DATETIME DEFAULT (datetime('now','localtime')),
+          actualizado_en DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX idx_problemas_origen ON problemas(origen);
+        CREATE INDEX idx_problemas_estado ON problemas(estado);
+        CREATE INDEX idx_problemas_criticidad ON problemas(criticidad);
+        CREATE INDEX idx_problemas_contexto ON problemas(fabrica, tipo_contexto, valor_contexto);
+        CREATE INDEX idx_causas_raiz_problema ON causas_raiz(problema_id);
+        CREATE INDEX idx_medidas_causa ON medidas(causa_id);
+      `);
+      console.log('🆕 Módulo unificado "Problemas" creado (tabla problemas + causas_raiz/medidas rehechas) -- reemplaza trazabilidad_problemas y los Reportes tipo Rápido/Completo.');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando el módulo unificado de Problemas:', e.message);
+  }
+
+  // MIGRACIÓN #39 (08/09, pedido por Julio): liga sola el Defecto de los
+  // problemas de Producción que ya existían y se habían quedado sin uno --
+  // Julio dudó de que "motivo de rechazo" y "Problema/Defecto" fueran cosas
+  // distintas ("dos cosas tengo dudas por que defectos y motivo de rechazo
+  // son diferentes"); revisando los datos reales, 257 de 314 motivos (82%)
+  // coinciden con un Defecto del catálogo -- para él, en la práctica, son lo
+  // mismo. Esta migración (y resolverDefectoIdPorMotivo() en
+  // data/problemas.js, que hace lo mismo para cualquier problema NUEVO que
+  // se cree de ahora en adelante) los liga automáticamente:
+  //   1) por el texto completo exacto (mismo formato "CÓDIGO - DESCRIPCIÓN"
+  //      en motivo y en Defecto);
+  //   2) si no, por el código antes del " - " (para cuando el texto tiene
+  //      alguna diferencia menor de redacción pero el código es el mismo).
+  // A propósito NO tiene guarda de "ya se corrió antes" -- el UPDATE solo
+  // toca filas con defecto_id todavía NULL, así que en cada arranque es
+  // gratis (no encuentra nada que cambiar) salvo cuando de verdad hay algo
+  // nuevo que ligar -- por ejemplo, el día que alguien dé de alta en el
+  // catálogo uno de los códigos que Producción ya usa pero todavía no
+  // existe ahí (D6, D14, D15, D19, K7, K22, K26, K28, K30, PT10, a la fecha
+  // de esta migración), los problemas viejos con ese motivo quedan ligados
+  // solos, sin tener que volver a tocar nada.
+  try {
+    const porTexto = await db.run(`
+      UPDATE problemas
+      SET defecto_id = (
+        SELECT d.id FROM iso_tipificacion_defectos d
+        WHERE UPPER(TRIM(d.descripcion)) = UPPER(TRIM(problemas.valor_contexto))
+        LIMIT 1
+      )
+      WHERE origen = 'produccion' AND tipo_contexto = 'motivo' AND defecto_id IS NULL
+        AND valor_contexto IS NOT NULL AND TRIM(valor_contexto) != ''
+        AND EXISTS (
+          SELECT 1 FROM iso_tipificacion_defectos d
+          WHERE UPPER(TRIM(d.descripcion)) = UPPER(TRIM(problemas.valor_contexto))
+        )
+    `);
+    const porCodigo = await db.run(`
+      UPDATE problemas
+      SET defecto_id = (
+        SELECT d.id FROM iso_tipificacion_defectos d
+        WHERE UPPER(d.codigo) = UPPER(TRIM(SUBSTR(problemas.valor_contexto, 1, INSTR(problemas.valor_contexto, ' - ') - 1)))
+        LIMIT 1
+      )
+      WHERE origen = 'produccion' AND tipo_contexto = 'motivo' AND defecto_id IS NULL
+        AND valor_contexto IS NOT NULL AND INSTR(valor_contexto, ' - ') > 1
+        AND EXISTS (
+          SELECT 1 FROM iso_tipificacion_defectos d
+          WHERE UPPER(d.codigo) = UPPER(TRIM(SUBSTR(problemas.valor_contexto, 1, INSTR(problemas.valor_contexto, ' - ') - 1)))
+        )
+    `);
+    const totalLigados = (porTexto.changes || 0) + (porCodigo.changes || 0);
+    if (totalLigados > 0) {
+      console.log(`🔗 Migración #39: se ligó el Defecto de ${totalLigados} problema(s) de Producción que se habían quedado sin uno (${porTexto.changes || 0} por texto exacto, ${porCodigo.changes || 0} por código).`);
+    }
+  } catch (e) {
+    console.error('⚠️ Error ligando Defecto por motivo (MIGRACIÓN #39):', e.message);
+  }
+
+  // MIGRACIÓN #40: elec_config_cableado.forma_cableado -- agrega FOREIGN
+  // KEY hacia elec_fotos_cableado(forma_cableado). Al mapear qué tablas no
+  // cruzaban entre sí (08/09) se verificó que las 56 formas de cableado
+  // usadas en las 450 filas de elec_config_cableado son exactamente las
+  // mismas 56 que ya tienen foto en elec_fotos_cableado -- cero huérfanas
+  // -- así que se puede declarar la relación real sin perder ni romper
+  // ningún dato. SQLite no permite agregar una FOREIGN KEY a una tabla
+  // existente con ALTER TABLE, así que se reconstruye la tabla completa
+  // (mismo patrón que ya se usó arriba para iso_lotes y seguimiento_cambios).
+  try {
+    const fksConfigCableado = await db.all('PRAGMA foreign_key_list(elec_config_cableado)');
+    const yaConectada = fksConfigCableado.some(fk => fk.table === 'elec_fotos_cableado');
+    if (!yaConectada) {
+      await db.exec(`
+        CREATE TABLE elec_config_cableado_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          version_id INTEGER NOT NULL UNIQUE,
+          cortar_puntas INTEGER DEFAULT 0,
+          posicion_punto TEXT,
+          empujar_cables INTEGER DEFAULT 0,
+          forma_cableado TEXT,
+          referencia_cable TEXT,
+          no_aplica_medias INTEGER DEFAULT 0,
+          FOREIGN KEY (version_id) REFERENCES versiones(id) ON DELETE CASCADE,
+          FOREIGN KEY (forma_cableado) REFERENCES elec_fotos_cableado(forma_cableado)
+        );
+        INSERT INTO elec_config_cableado_new SELECT * FROM elec_config_cableado;
+        DROP TABLE elec_config_cableado;
+        ALTER TABLE elec_config_cableado_new RENAME TO elec_config_cableado;
+        CREATE INDEX IF NOT EXISTS idx_elec_config_forma ON elec_config_cableado(forma_cableado);
+      `);
+      console.log('🔗 elec_config_cableado.forma_cableado conectada a elec_fotos_cableado (FOREIGN KEY agregada).');
+    }
+  } catch (e) {
+    console.error('⚠️ Error conectando elec_config_cableado con elec_fotos_cableado:', e.message);
+  }
+
+  // MIGRACIÓN #41: iso_referencias.tipo_producto -- agrega FOREIGN KEY
+  // hacia iso_planes_muestreo(producto). Verificado 08/09: las 17.985
+  // referencias tienen su tipo_producto cubierto por un plan de muestreo
+  // -- cero huérfanas. Mismo motivo y mismo método que la MIGRACIÓN #40
+  // (rebuild completo, SQLite no soporta agregar FK con ALTER TABLE).
+  try {
+    const fksIsoReferencias = await db.all('PRAGMA foreign_key_list(iso_referencias)');
+    const yaConectada = fksIsoReferencias.some(fk => fk.table === 'iso_planes_muestreo');
+    if (!yaConectada) {
+      await db.exec(`
+        CREATE TABLE iso_referencias_new (
+          nombre TEXT PRIMARY KEY,
+          tipo_producto TEXT NOT NULL REFERENCES iso_planes_muestreo(producto),
+          estado TEXT DEFAULT 'Activo'
+        );
+        INSERT INTO iso_referencias_new SELECT * FROM iso_referencias;
+        DROP TABLE iso_referencias;
+        ALTER TABLE iso_referencias_new RENAME TO iso_referencias;
+      `);
+      console.log('🔗 iso_referencias.tipo_producto conectada a iso_planes_muestreo (FOREIGN KEY agregada).');
+    }
+  } catch (e) {
+    console.error('⚠️ Error conectando iso_referencias con iso_planes_muestreo:', e.message);
+  }
+
   // Usuarios por defecto si está vacío
   const count = await db.get('SELECT COUNT(*) as total FROM usuarios');
   if (count.total === 0) {

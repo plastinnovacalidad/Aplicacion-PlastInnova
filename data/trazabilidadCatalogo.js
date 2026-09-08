@@ -36,19 +36,36 @@ function normalizarTexto(texto) {
 // problema" en un Reporte Completo, el selector de causa raíz solo ofrece
 // las que ya se han usado para ese problema en concreto, no el catálogo
 // entero. Cuando se OMITE (undefined, el valor por defecto), no filtra por
-// defecto -- así sigue funcionando exactamente igual que antes para
-// Seguimiento de Producción, que administra y ve el catálogo completo sin
-// importar defectos (ese módulo no tiene ese concepto).
-function listarCausasCatalogo({ soloActivas, defectoId } = {}) {
+// defecto.
+//
+// `motivo` (pedido por Julio, 08/09, tras la MIGRACIÓN #38): para Producción,
+// "motivo de rechazo" y "defecto" son lo mismo -- ya no se pide elegir un
+// Defecto del catálogo ISO 2859 aparte (esos son dos vocabularios sin
+// relación real entre sí). En vez de eso, cuando se pasa `motivo`, solo trae
+// las causas que YA se usaron en algún problema de origen='produccion' con
+// ESE mismo valor_contexto (el motivo) -- mismo criterio de "reusar lo ya
+// tejido para este problema en concreto" que `defectoId`, pero sin
+// necesidad de una columna nueva: se resuelve con un JOIN contra
+// causas_raiz/problemas en el momento de listar. Independiente de
+// `defectoId` (Producción nunca manda los dos a la vez).
+function listarCausasCatalogo({ soloActivas, defectoId, motivo } = {}) {
   const condiciones = [];
   const params = [];
-  if (soloActivas) condiciones.push("activo = 'Activo'");
+  if (soloActivas) condiciones.push("tcc.activo = 'Activo'");
   if (defectoId !== undefined) {
-    if (defectoId === null) condiciones.push('defecto_id IS NULL');
-    else { condiciones.push('defecto_id = ?'); params.push(defectoId); }
+    if (defectoId === null) condiciones.push('tcc.defecto_id IS NULL');
+    else { condiciones.push('tcc.defecto_id = ?'); params.push(defectoId); }
+  }
+  if (motivo) {
+    condiciones.push(`tcc.id IN (
+      SELECT cr.causa_catalogo_id FROM causas_raiz cr
+      JOIN problemas p ON p.id = cr.problema_id
+      WHERE p.origen = 'produccion' AND p.valor_contexto = ? AND cr.causa_catalogo_id IS NOT NULL
+    )`);
+    params.push(motivo);
   }
   const where = condiciones.length ? 'WHERE ' + condiciones.join(' AND ') : '';
-  return getDb().all(`SELECT * FROM trazabilidad_catalogo_causas ${where} ORDER BY texto ASC`, params);
+  return getDb().all(`SELECT tcc.* FROM trazabilidad_catalogo_causas tcc ${where} ORDER BY tcc.texto ASC`, params);
 }
 
 function listarMedidasCatalogo({ soloActivas } = {}) {
@@ -61,9 +78,9 @@ function listarMedidasCatalogo({ soloActivas } = {}) {
 // inactivo) y para poblar de una vez los selectores del modal de
 // trazabilidad al abrirlo (evita pedir "medidas de esta causa" cada vez que
 // alguien cambia de causa en el formulario). Ver `defectoId` arriba.
-async function listarCatalogoCompleto({ soloActivas, defectoId } = {}) {
+async function listarCatalogoCompleto({ soloActivas, defectoId, motivo } = {}) {
   const [causas, medidas] = await Promise.all([
-    listarCausasCatalogo({ soloActivas, defectoId }),
+    listarCausasCatalogo({ soloActivas, defectoId, motivo }),
     listarMedidasCatalogo({ soloActivas }),
   ]);
   return causas.map((c) => ({ ...c, medidas: medidas.filter((m) => m.causa_catalogo_id === c.id) }));

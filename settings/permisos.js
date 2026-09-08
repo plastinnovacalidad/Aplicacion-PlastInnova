@@ -84,7 +84,13 @@ const PERMISOS_DISPONIBLES = [
   // responsable de cada causa/medida ya no se elige, es automáticamente
   // quien esté conectado al agregarla. El estado general del caso se
   // recalcula solo.
-  { codigo: 'produccion.trazabilidad.gestionar', descripcion: 'Registrar problemas del tablero de Producción (Referencias/Motivos) y agregarles causas raíz y medidas de solución' },
+  // OJO (MIGRACIÓN #38, 08/09): desde el rediseño del módulo "Problemas",
+  // este permiso ya NO da acceso a nada -- trazabilidad_problemas se
+  // eliminó y toda la lógica de causas/medidas vive ahora en Problemas
+  // (permisos 'problemas.*' más abajo). Se deja el código sin borrar por si
+  // algún rol ya lo tenía asignado, pero hay que reasignar 'problemas.*' a
+  // quien lo necesite.
+  { codigo: 'produccion.trazabilidad.gestionar', descripcion: '(En desuso desde MIGRACIÓN #38, ver problemas.gestionar) Registrar problemas del tablero de Producción (Referencias/Motivos) y agregarles causas raíz y medidas de solución' },
   // Módulo "Seguimiento de Producción" (antes una pestaña de Producción,
   // ahora su propia página en el portal, dentro de la sección Calidad): ver
   // la bitácora completa de casos (todas las fábricas/referencias/motivos,
@@ -93,7 +99,11 @@ const PERMISOS_DISPONIBLES = [
   // -- quien tenga 'produccion.trazabilidad.gestionar' también puede
   // entrar (no tendría sentido poder editar un caso pero no poder ver la
   // lista de casos).
-  { codigo: 'produccion.trazabilidad.ver', descripcion: 'Ver el módulo de Seguimiento de Producción (bitácora de casos: causas raíz y medidas de solución)' },
+  // OJO (MIGRACIÓN #38, 08/09): la bitácora de Seguimiento de Producción
+  // ahora se lee del módulo Problemas (filtrado a origen='produccion'), así
+  // que ver esta pantalla realmente necesita además 'problemas.ver' (o
+  // gestionar/eliminar) -- este permiso ya no alcanza por sí solo.
+  { codigo: 'produccion.trazabilidad.ver', descripcion: '(Ver también problemas.ver, MIGRACIÓN #38) Ver el módulo de Seguimiento de Producción (bitácora de casos: causas raíz y medidas de solución)' },
   // Pedido por Julio (04/09): poder borrar una causa raíz o una medida ya
   // registrada (por ejemplo, si se agregó por error) es un permiso aparte
   // del de agregar ('produccion.trazabilidad.gestionar') -- así se puede
@@ -102,7 +112,9 @@ const PERMISOS_DISPONIBLES = [
   // independientes en vez de que "gestionar" incluya borrar. Borrar una
   // causa raíz borra también sus medidas; no se puede borrar la última
   // causa raíz de un caso (routes/produccion.js lo rechaza).
-  { codigo: 'produccion.trazabilidad.eliminar', descripcion: 'Eliminar causas raíz y medidas ya registradas en un caso de Producción (Referencias/Motivos)' },
+  // OJO (MIGRACIÓN #38, 08/09): en desuso, mismo motivo que
+  // produccion.trazabilidad.gestionar de arriba -- ver problemas.eliminar.
+  { codigo: 'produccion.trazabilidad.eliminar', descripcion: '(En desuso desde MIGRACIÓN #38, ver problemas.eliminar) Eliminar causas raíz y medidas ya registradas en un caso de Producción (Referencias/Motivos)' },
   // Módulo "Reportes por Áreas" (pedido por Julio, 04/09): Reporte Rápido
   // (incidencia inmediata sin causa raíz todavía), Reporte de Problema
   // Completo (causa raíz + medidas, escalado desde uno Rápido) y Reporte
@@ -110,15 +122,37 @@ const PERMISOS_DISPONIBLES = [
   // separados que ya usa Trazabilidad de Producción (ver/crear/gestionar/
   // eliminar), para poder dar a alguien solo la capacidad de crear reportes
   // (por ejemplo, un operario) sin darle la de investigar/escalar/borrar.
-  { codigo: 'reportes.ver',        descripcion: 'Ver el módulo de Reportes por Áreas (todos los reportes de todas las áreas)' },
-  { codigo: 'reportes.crear',      descripcion: 'Crear Reportes Rápidos y Reportes Informativos' },
-  // 'gestionar' cubre escalar un Reporte Rápido a Completo, marcarlo como
-  // Revisado (cerrarlo sin escalar), y agregar/editar las causas raíz y
-  // medidas de un Reporte Completo -- Julio pidió que quedara como un
-  // permiso aparte del de solo crear, para dárselo solo a quien vaya a
-  // investigar/dar seguimiento.
-  { codigo: 'reportes.gestionar',  descripcion: 'Escalar Reportes Rápidos a Completos, marcarlos como Revisados, y agregar/editar causas raíz y medidas de un Reporte Completo' },
-  { codigo: 'reportes.eliminar',   descripcion: 'Eliminar causas raíz, medidas y adjuntos ya registrados en un Reporte de Áreas' },
+  // OJO (MIGRACIÓN #38, 08/09): Reportes Rápido y Completo se eliminaron --
+  // este módulo ahora solo administra Reportes Informativos (boletines
+  // entre áreas). Todo lo que era seguimiento de un problema real (causa
+  // raíz + medidas) se mudó al módulo Problemas (ver permisos
+  // 'problemas.*' más abajo).
+  { codigo: 'reportes.ver',        descripcion: 'Ver el módulo de Reportes por Áreas (Reportes Informativos de todas las áreas)' },
+  { codigo: 'reportes.crear',      descripcion: 'Publicar Reportes Informativos' },
+  { codigo: 'reportes.gestionar',  descripcion: 'Editar un Reporte Informativo ya publicado' },
+  { codigo: 'reportes.eliminar',   descripcion: 'Eliminar adjuntos ya registrados en un Reporte de Áreas' },
+  // Módulo "Problemas" (rediseño de la MIGRACIÓN #38, pedido por Julio
+  // 08/09): reemplaza a Trazabilidad de Producción y a la parte de causa
+  // raíz/medidas de Reportes por Áreas -- un solo lugar para registrar y
+  // hacerle seguimiento a CUALQUIER problema (de Producción, de un área, o
+  // detectado caminando la planta / revisando los "tops"), sin depender de
+  // la memoria de nadie. Mismo criterio de 4 permisos separados que ya
+  // usaban esos dos módulos -- 'problemas.ver' se puede asignar aparte, a
+  // alguien que solo necesite ver la lista y las alertas de críticos (p.ej.
+  // un encargado de área), sin darle además la capacidad de crear o editar.
+  //
+  // Reemplaza en la práctica a 'produccion.trazabilidad.ver/gestionar/
+  // eliminar' y a la parte de causas/medidas de 'reportes.gestionar'/
+  // 'reportes.eliminar' -- esos permisos viejos NO se borran (puede haber
+  // roles ya armados con ellos, y el criterio del proyecto es no borrar
+  // nada de una migración anterior), pero desde esta migración ya no dan
+  // acceso a nada de causas raíz/medidas: a quien deba seguir viendo o
+  // trabajando problemas hay que asignarle estos 4 nuevos desde Gestión →
+  // Roles.
+  { codigo: 'problemas.ver',        descripcion: 'Ver el módulo Problemas (lista completa, alertas de críticos y el detalle de cada uno)' },
+  { codigo: 'problemas.crear',      descripcion: 'Registrar problemas nuevos en el módulo Problemas' },
+  { codigo: 'problemas.gestionar',  descripcion: 'Editar un problema, agregar/editar sus causas raíz y medidas, descartarlo o reabrirlo' },
+  { codigo: 'problemas.eliminar',   descripcion: 'Eliminar causas raíz y medidas ya registradas en un problema' },
 ];
 
 module.exports = { PERMISOS_DISPONIBLES };

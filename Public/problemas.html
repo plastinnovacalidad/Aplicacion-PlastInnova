@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Problemas - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Módulo "Problemas" (MIGRACIÓN #38, 07-08/09, pedido por Julio): un solo
+       lugar para llevar registro y seguimiento de CUALQUIER problema (de
+       Producción, de un área que reporta algo, o detectado directo aquí),
+       sin depender de la memoria de nadie. Reemplaza a Trazabilidad de
+       Producción y a la parte de causa raíz/medidas de Reportes por Áreas
+       (que ahora solo maneja Informativos, ver reportes_areas.html) -- ambos
+       vivían separados y hacían, en el fondo, lo mismo. Mismo look que esos
+       dos módulos (.trz-* / .admin-table / .pill), para que se sienta como
+       el mismo sistema.
+
+       Pestañas (08/09, pedido por Julio): "Seguimiento de Producción" (antes
+       Public/seguimiento_produccion.html, su propia página) ahora vive ACÁ,
+       como una segunda pestaña de nivel superior -- "Entramos para revisar
+       problemas y si vemos que tenemos que modificar alguna causa raiz vamos
+       a la otra pestaña o si tenemos que revisar algun problema como va
+       podamos revisar tambien". Public/seguimiento_produccion.html se deja
+       como una redirección para no romper accesos directos viejos (ver ese
+       archivo). */
+
+    /* Módulo "Problemas" (MIGRACIÓN #38, 07-08/09, pedido por Julio): un solo
+       lugar para llevar registro y seguimiento de CUALQUIER problema (de
+       Producción, de un área que reporta algo, o detectado directo aquí),
+       sin depender de la memoria de nadie. Reemplaza a Trazabilidad de
+       Producción y a la parte de causa raíz/medidas de Reportes por Áreas
+       (que ahora solo maneja Informativos, ver reportes_areas.html) -- ambos
+       vivían separados y hacían, en el fondo, lo mismo. Mismo look que esos
+       dos módulos (.trz-* / .admin-table / .pill), para que se sienta como
+       el mismo sistema. */
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; flex-direction: column; }
+    #appHeader { flex-shrink: 0; }
+    #appMain { flex: 1; min-height: 0; overflow-y: auto; }
+
+    .prob-content { max-width: 1150px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    .feed-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 25px; }
+    .feed-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; }
+    .feed-card h4.con-boton { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+    .rep-filtros { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .rep-filtros select, .rep-filtros input[type="text"] { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; font-family: inherit; }
+    .rep-filtros label { font-size: 11.5px; color: #718096; font-weight: 600; margin-right: 4px; }
+    .rep-filtros-acciones { display: flex; gap: 10px; margin-left: auto; }
+
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; }
+    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .admin-table tr:hover td { background: #f9f9f9; }
+
+    .empty-hint { color: #a0aec0; text-align: center; padding: 14px 0; font-size: 12.5px; }
+
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .pill-warning { background: #fffaf0; color: #b7791f; }
+    .pill-ok { background: #f0fff4; color: #38a169; }
+    .pill-muted { background: #f0f0f0; color: #888; }
+    .pill-info { background: #ebf8ff; color: #1B4FC4; }
+    .pill-critica { background: #fff5f5; color: #c53030; }
+
+    .btn-secondary-trz { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; border-radius: 6px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-secondary-trz:hover { background: #edf2f7; }
+    .btn-eliminar-trz { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-eliminar-trz:hover { background: #fed7d7; }
+    .btn-trz-agregar-causa { background: #ebf4ff; border: 1px solid #c3dafe; color: #2C43A2; border-radius: 6px; padding: 3px 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0; }
+    .btn-trz-agregar-causa:hover { background: #c3dafe; }
+    .btn-primario-trz { background: #2C43A2; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-primario-trz:hover { background: #23348a; }
+    .btn-primario-trz:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-crear-rep { background: #2C43A2; color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+    .btn-crear-rep:hover { background: #23348a; }
+    .btn-trz-fallo { background: #c53030; color: #fff; border: none; border-radius: 8px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+    .btn-trz-fallo:hover { background: #9b2c2c; }
+
+    /* Banner de alertas críticas (pedido por Julio: avisar cuáles problemas
+       críticos siguen abiertos, sin tener que ir revisando uno por uno). */
+    #probAlertaBanner { display: none; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
+    .alerta-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 13.5px; font-weight: 700; color: #c53030; }
+    .alerta-header:hover { background: rgba(197,48,48,0.06); }
+    .alerta-lista { max-height: 260px; overflow-y: auto; border-top: 1px solid #fed7d7; }
+    .alerta-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 16px; font-size: 12.5px; color: #4a5568; cursor: pointer; border-bottom: 1px solid #fff0f0; }
+    .alerta-item:hover { background: #fff9f9; }
+    .alerta-dias { color: #a0aec0; font-size: 11px; white-space: nowrap; }
+
+    /* Modales -- mismo look que los otros módulos de seguimiento. */
+    .trz-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(23,32,53,0.55); align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; z-index: 1000; }
+    .trz-modal-panel { max-width: 920px; width: 100%; margin: 0; background: #fff; border-radius: 14px; padding: 26px 32px; box-shadow: 0 12px 40px rgba(17,27,67,0.25); }
+    .trz-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+    .trz-modal-header h3 { margin: 0; font-size: 17px; color: #2d3748; }
+    .trz-modal-cerrar { background: none; border: none; font-size: 22px; line-height: 1; color: #a0aec0; cursor: pointer; padding: 2px 6px; }
+    .trz-modal-cerrar:hover { color: #4a5568; }
+
+    .trz-contexto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+    .trz-contexto-grid > div { display: flex; flex-direction: column; gap: 2px; }
+    .trz-contexto-grid span { font-size: 10.5px; color: #a0aec0; font-weight: 700; text-transform: uppercase; }
+    .trz-contexto-grid strong { font-size: 13.5px; color: #2d3748; }
+
+    .trz-item-lista { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; margin-bottom: 14px; }
+    .trz-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 13px; }
+    .trz-item-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: #a0aec0; margin-bottom: 4px; }
+    .trz-item-texto { font-size: 13.5px; line-height: 1.5; color: #2d3748; white-space: pre-wrap; }
+    .trz-item-kind { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #a0aec0; }
+    .trz-item-kind.causa { color: #b7791f; }
+    .trz-item-resp { font-size: 11px; color: #718096; margin-top: 4px; }
+    .trz-item-resp b { color: #4a5568; }
+    .trz-medida-estado { padding: 3px 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 11px; font-family: inherit; background: #fff; }
+
+    .trz-causa-card { border: 1px solid #e2e8f0; border-left: 4px solid #2C43A2; border-radius: 12px; padding: 14px 16px 16px; margin-bottom: 14px; background: #fff; box-shadow: 0 1px 3px rgba(17,27,67,0.06); }
+    .trz-causa-card > .trz-item-causa-info { padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px dashed #edf2f7; }
+    .trz-medidas-de-causa { margin-left: 16px; padding-left: 16px; border-left: 2px solid #edf2f7; display: flex; flex-direction: column; gap: 10px; }
+    .trz-item-nuevo { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+    .trz-item-nuevo-fila { display: flex; gap: 10px; align-items: center; }
+    .trz-item-nuevo-fila select { flex: 1; padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 12.5px; font-family: inherit; background: #fff; }
+    .trz-catalogo-select { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 12.5px; font-family: inherit; background: #fff; }
+    .trz-catalogo-otra { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 9px 11px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; }
+
+    /* Campos de formulario en los modales de crear/editar. */
+    .rep-field { margin-bottom: 14px; }
+    .rep-field label { display: block; font-size: 12px; font-weight: 700; color: #4a5568; margin-bottom: 5px; }
+    .rep-field input, .rep-field select, .rep-field textarea {
+      width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #cbd5e0;
+      border-radius: 8px; font-size: 13.5px; font-family: inherit; outline: none;
+    }
+    .rep-field input:focus, .rep-field select:focus, .rep-field textarea:focus {
+      border-color: #2C43A2; box-shadow: 0 0 0 3px rgba(44,67,162,0.1);
+    }
+    .rep-field textarea { resize: vertical; min-height: 80px; }
+    .rep-fila-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .rep-escalar-form { margin-top: 14px; padding: 14px; background: #f8fafc; border: 1px dashed #cbd5e0; border-radius: 10px; }
+    .prob-origen-opciones { display: flex; gap: 16px; margin-bottom: 16px; }
+    .prob-origen-opciones label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #4a5568; }
+  
+    /* ==== Traído de Seguimiento de Producción (ahora pestaña "Seguimiento de
+       Producción" dentro de este módulo, pedido por Julio 08/09: "el modulo
+       de seguimiento de produccion podriamos volverlo una pestaña dentro de
+       problemas"). ==== */
+    .seg-filtros { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .seg-filtros select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; }
+    .seg-filtros label { font-size: 11.5px; color: #718096; font-weight: 600; margin-right: 4px; }
+    .btn-refrescar-seg { background: #2C43A2; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+    .btn-refrescar-seg:hover { background: #23348a; }
+
+    /* Sub-pestañas "Casos" / "Catálogo" DENTRO de la pestaña Seguimiento de
+       Producción (ya existían así en ese módulo -- se mantienen igual). */
+    .subtabs-nav { display: flex; gap: 8px; margin-bottom: 16px; }
+    .subtab-btn { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .15s, color .15s; }
+    .subtab-btn:hover { background: #edf2f7; }
+    .subtab-btn.activa { background: #2C43A2; border-color: #2C43A2; color: #fff; }
+    .subtab-pane { display: none; }
+    .subtab-pane.activa { display: block; }
+
+    /* Gráficas de contexto del modal de detalle de un caso (Seguimiento). */
+    #segGraficasSeccion { display: none; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+    .trz-grafica-caja { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
+    .trz-grafica-caja h5 { margin: 0 0 8px 0; font-size: 11.5px; color: #718096; font-weight: 700; text-transform: uppercase; }
+    .trz-grafica-caja canvas { max-height: 220px; }
+
+    /* Pestañas de NIVEL SUPERIOR: Problemas / Seguimiento de Producción
+       (pedido por Julio, 08/09) -- clases propias (no .subtab-btn/.subtab-pane)
+       a propósito, para que activar una no desactive por accidente las
+       sub-pestañas Casos/Catálogo de más adentro (mismo look de todas formas). */
+    .prob-outer-tabs-nav { display: flex; gap: 8px; margin-bottom: 18px; }
+    .prob-outer-btn { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background .15s, color .15s; }
+    .prob-outer-btn:hover { background: #edf2f7; }
+    .prob-outer-btn.activa { background: #2C43A2; border-color: #2C43A2; color: #fff; }
+    .prob-outer-pane { display: none; }
+    .prob-outer-pane.activa { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-triangle-exclamation"></i> Problemas</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1><i class="fa-solid fa-triangle-exclamation"></i> Problemas</h1>
+        <p>Un solo lugar para llevar registro y seguimiento de causas raíz y medidas, sin importar de dónde salió el problema</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal"><i class="fa-solid fa-arrow-left"></i> Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div id="appMain" style="display:none;">
+    <div class="prob-content">
+
+      <div class="prob-outer-tabs-nav" id="probOuterTabsNav">
+        <button class="prob-outer-btn activa" id="probOuterTabBtn-problemas" onclick="activarPestañaOuter('problemas')"><i class="fa-solid fa-list-check"></i> Problemas</button>
+        <button class="prob-outer-btn" id="probOuterTabBtn-seguimiento" onclick="activarPestañaOuter('seguimiento')"><i class="fa-solid fa-clipboard-list"></i> Seguimiento de Producción</button>
+      </div>
+
+      <div class="prob-outer-pane activa" id="probOuterTabPane-problemas">
+
+      <div id="probAlertaBanner"></div>
+
+      <div class="feed-card">
+        <h4 class="con-boton">
+          <span><i class="fa-solid fa-list"></i> Todos los problemas</span>
+          <button type="button" class="btn-crear-rep" id="btnNuevoProblema" style="display:none;" onclick="abrirModalNuevo()"><i class="fa-solid fa-plus"></i> Nuevo problema</button>
+        </h4>
+        <div class="rep-filtros">
+          <div>
+            <label>Origen:</label>
+            <select id="probFiltroOrigen" onchange="cargarProblemas()">
+              <option value="">Todos</option>
+              <option value="produccion">Producción</option>
+              <option value="reporte">Reporte de área</option>
+              <option value="general">General</option>
+            </select>
+          </div>
+          <div>
+            <label>Estado:</label>
+            <select id="probFiltroEstado" onchange="cargarProblemas()">
+              <option value="en_curso">En curso</option>
+              <option value="">Todos</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="En_Proceso">En Proceso</option>
+              <option value="Implementado">Implementado</option>
+              <option value="Descartado">Descartado</option>
+            </select>
+          </div>
+          <div>
+            <label>Criticidad:</label>
+            <select id="probFiltroCriticidad" onchange="cargarProblemas()">
+              <option value="">Todas</option>
+              <option value="Alta">Alta</option>
+              <option value="Media">Media</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+          <div>
+            <label>Área:</label>
+            <select id="probFiltroArea" onchange="cargarProblemas()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div>
+            <label>Problema/Defecto:</label>
+            <select id="probFiltroDefecto" onchange="cargarProblemas()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label>Buscar:</label>
+            <input type="text" id="probFiltroTexto" placeholder="Referencia, lote, descripción..." onkeydown="if(event.key==='Enter') cargarProblemas();">
+          </div>
+          <div class="rep-filtros-acciones">
+            <button type="button" class="btn-secondary-trz" onclick="cargarProblemas(); cargarAlertasCriticas();"><i class="fa-solid fa-rotate"></i> Refrescar</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Origen</th><th>Contexto</th><th>Problema / Defecto</th><th>Criticidad</th><th>Estado</th><th>Última actualización</th><th></th></tr></thead>
+            <tbody id="probTablaBody"><tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+
+      <div class="prob-outer-pane" id="probOuterTabPane-seguimiento">
+
+      <div class="subtabs-nav">
+        <button class="subtab-btn activa" id="segSubtabBtn-casos" onclick="activarSubTabSeguimiento('casos')"><i class="fa-solid fa-clipboard-list"></i> Casos</button>
+        <button class="subtab-btn" id="segSubtabBtn-catalogo" onclick="activarSubTabSeguimiento('catalogo')"><i class="fa-solid fa-diagram-project"></i> Catálogo</button>
+      </div>
+
+      <div class="subtab-pane activa" id="segSubtabPane-casos">
+        <div class="feed-card">
+          <h4><i class="fa-solid fa-clipboard-list"></i> Todos los casos</h4>
+          <p style="color:#718096; font-size:12.5px; margin:-6px 0 14px;">Solo se listan los problemas en seguimiento activo y los que ya tienen causa raíz registrada (los casos "Implementado" quedan igual disponibles con el filtro de Estado).</p>
+          <div class="seg-filtros">
+            <div>
+              <label>Fábrica:</label>
+              <select id="segFiltroFabrica" onchange="renderizarTablaSeguimiento()">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div>
+              <label>Estado:</label>
+              <select id="segFiltroEstado" onchange="renderizarTablaSeguimiento()">
+                <option value="en_curso" selected>En curso (Pendiente + En Proceso)</option>
+                <option value="">Todos</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En_Proceso">En Proceso</option>
+                <option value="Implementado">Implementado</option>
+                <option value="Descartado">Descartado</option>
+              </select>
+            </div>
+            <!-- MIGRACIÓN #38 (08/09, pedido por Julio): criticidad visible y
+                 filtrable acá también, no solo en el módulo Problemas -- para
+                 poder priorizar la lista sin tener que abrir cada caso. -->
+            <div>
+              <label>Criticidad:</label>
+              <select id="segFiltroCriticidad" onchange="renderizarTablaSeguimiento()">
+                <option value="">Todas</option>
+                <option value="Alta">Alta</option>
+                <option value="Media">Media</option>
+                <option value="Baja">Baja</option>
+              </select>
+            </div>
+            <button type="button" class="btn-refrescar-seg" onclick="cargarSeguimiento(true)"><i class="fa-solid fa-rotate"></i> Refrescar</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="admin-table">
+              <thead><tr><th>Semana</th><th>Fábrica</th><th>Contexto</th><th>Criticidad</th><th>Estado</th><th>Última actualización</th><th></th></tr></thead>
+              <tbody id="segTablaBody"><tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pedido por Julio (04/09): la administración de causas raíz y
+           medidas (antes en Gestión → Catálogos) se mueve para acá, junto al
+           seguimiento real de los casos. Cualquiera que entre a este módulo
+           puede VER el catálogo; agregar/editar/eliminar sigue pidiendo el
+           permiso catalogos.gestionar (ver renderizarCatalogoTraz). -->
+      <div class="subtab-pane" id="segSubtabPane-catalogo">
+        <div class="feed-card">
+          <h4 class="con-boton">
+            <span><i class="fa-solid fa-diagram-project"></i> Causas raíz y medidas</span>
+            <button type="button" class="btn-trz-agregar-causa" id="catBtnAgregarCausa" onclick="abrirModalCausaCatalogo()" style="display:none;" title="Agregar causa raíz"><i class="fa-solid fa-plus"></i></button>
+          </h4>
+          <p style="color:#718096; font-size:12.5px; margin:-4px 0 14px;">Estas son las causas raíz y medidas que se pueden elegir al registrar un caso desde Producción.</p>
+          <div id="catLimpiezaBox" style="display:none; margin:-4px 0 14px;">
+            <button type="button" class="btn-eliminar-trz" id="catBtnLimpiar" onclick="borrarCausasSinProblema()"><i class="fa-solid fa-broom"></i> Borrar causas sin problema asignado</button>
+            <span style="font-size:11.5px; color:#a0aec0; margin-left:8px;">Limpieza de una sola vez del catálogo que quedó de antes del módulo Reportes por Áreas.</span>
+          </div>
+          <div id="catTrazContainer" class="trz-item-lista" style="max-height:none;"><div class="empty-hint">Cargando...</div></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== MODAL: NUEVO PROBLEMA ======================== -->
+  <div class="trz-modal-overlay" id="modalNuevoOverlay" onclick="if (event.target === this) cerrarModalNuevo();">
+    <div class="trz-modal-panel" style="max-width: 620px;">
+      <div class="trz-modal-header">
+        <h3><i class="fa-solid fa-plus"></i> Nuevo Problema</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalNuevo()">&times;</button>
+      </div>
+      <p style="color:#718096; font-size:12.5px; margin:-6px 0 14px;">Un problema creado desde un tablero de Producción (tops de fábrica) ya se registra solo desde ese módulo. Usa este formulario para un problema reportado por un área, o uno detectado directo aquí.</p>
+      <form id="formNuevoProblema" onsubmit="crearProblemaNuevo(event)">
+        <div class="prob-origen-opciones">
+          <label><input type="radio" name="nuevoOrigen" value="reporte" checked onchange="alCambiarOrigenNuevo()"> Reporte de un área</label>
+          <label><input type="radio" name="nuevoOrigen" value="general" onchange="alCambiarOrigenNuevo()"> General</label>
+        </div>
+        <div class="rep-fila-2">
+          <div class="rep-field">
+            <label>Área (opcional)</label>
+            <select id="nuevoArea"><option value="">Selecciona...</option></select>
+          </div>
+          <div class="rep-field">
+            <label>Criticidad</label>
+            <select id="nuevoCriticidad">
+              <option value="Baja">Baja</option>
+              <option value="Media" selected>Media</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
+        </div>
+        <div class="rep-fila-2">
+          <div class="rep-field">
+            <label>Referencia (opcional)</label>
+            <input type="text" id="nuevoReferencia" placeholder="Código de referencia">
+          </div>
+          <div class="rep-field">
+            <label>Lote (opcional)</label>
+            <input type="text" id="nuevoLote" placeholder="Número de lote">
+          </div>
+        </div>
+        <div class="rep-field">
+          <label>Problema / Defecto (opcional)</label>
+          <select id="nuevoDefectoSelect" onchange="alCambiarDefectoGenerico('nuevoCausaSelect','nuevoDefectoSelect')"><option value="">Sin problema asignado</option></select>
+        </div>
+        <div class="rep-field">
+          <label id="nuevoDescripcionLabel">Descripción *</label>
+          <textarea id="nuevoDescripcion" placeholder="¿Qué pasó? Descríbelo con el detalle que tengas."></textarea>
+        </div>
+        <div class="rep-field">
+          <label>Causa raíz inicial *</label>
+          <select class="trz-catalogo-select" id="nuevoCausaSelect" data-otra="nuevoCausaOtra" onchange="alCambiarSelectCatalogo(this)">
+            <option value="">Elige una causa del catálogo...</option>
+            <option value="__otra__">Otra (escribir)</option>
+          </select>
+          <textarea class="trz-catalogo-otra" id="nuevoCausaOtra" rows="2" placeholder="¿Qué se cree que originó el problema?" style="display:none;"></textarea>
+        </div>
+        <div id="nuevoMensaje" style="display:none; color:#c53030; font-size:12.5px; margin-bottom:10px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary-trz" onclick="cerrarModalNuevo()">Cancelar</button>
+          <button type="submit" class="btn-primario-trz" id="nuevoBtnGuardar">Crear</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================== MODAL: DETALLE DEL PROBLEMA ======================== -->
+  <div class="trz-modal-overlay" id="detalleProblemaOverlay" onclick="if (event.target === this) cerrarDetalleProblema();">
+    <div class="trz-modal-panel">
+      <div class="trz-modal-header">
+        <h3 id="detalleProblemaTitulo"><i class="fa-solid fa-triangle-exclamation"></i> Detalle del problema</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarDetalleProblema()">&times;</button>
+      </div>
+      <div id="detalleProblemaContexto" class="trz-contexto-grid"></div>
+      <div id="detalleProblemaAcciones" style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:14px; flex-wrap:wrap;"></div>
+      <div id="probEditarForm" style="display:none;" class="rep-escalar-form"></div>
+      <div id="detalleProblemaCuerpo"></div>
+    </div>
+  </div>
+
+  <!-- Modal para agregar/editar una causa raíz o medida del catálogo
+       (ver arriba) -- mismas clases .trz-modal-* del modal de detalle,
+       para que se sienta como la misma funcionalidad. -->
+  <div class="trz-modal-overlay" id="catModalOverlay" onclick="if (event.target === this) cerrarModalCatalogo();">
+    <div class="trz-modal-panel" style="max-width: 460px;">
+      <div class="trz-modal-header">
+        <h3 id="catModalTitulo"><i class="fa-solid fa-diagram-project"></i> Causa raíz</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarModalCatalogo()">&times;</button>
+      </div>
+      <div id="catModalBody"></div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+        <button type="button" class="btn-secondary-trz" onclick="cerrarModalCatalogo()">Cancelar</button>
+        <button type="button" class="btn-primario-trz" id="catModalGuardar">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detalle de un caso: solo lectura, salvo el estado de cada medida si se
+       tiene permiso para gestionar el módulo Problemas ('problemas.gestionar',
+       MIGRACIÓN #38) -- agregar causas/medidas nuevas se sigue haciendo desde
+       Producción, al hacer clic en la referencia o motivo de donde salió el
+       problema. -->
+  <div class="trz-modal-overlay" id="segModalOverlay" onclick="if (event.target === this) cerrarDetalleSeguimiento();">
+    <div class="trz-modal-panel">
+      <div class="trz-modal-header">
+        <h3><i class="fa-solid fa-clipboard-list"></i> Detalle del Caso</h3>
+        <button class="trz-modal-cerrar" onclick="cerrarDetalleSeguimiento()">&times;</button>
+      </div>
+      <div id="segModalContexto" class="trz-contexto-grid"></div>
+
+      <!-- Pedido por Julio (04/09): solo para casos de tipo Motivo --
+           tendencia mensual + top de referencias donde más aparece (ver
+           cargarGraficasMotivoSeguimiento). Rediseño 04/09 (3), confirmado
+           con captura de pantalla: ancho completo, apiladas una arriba de
+           otra, por ENCIMA del cuadro de causas/medidas. -->
+      <div id="segGraficasSeccion">
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-line"></i> Unidades por mes</h5>
+          <canvas id="segChartMes"></canvas>
+        </div>
+        <div class="trz-grafica-caja">
+          <h5><i class="fa-solid fa-chart-bar"></i> Top referencias donde más aparece</h5>
+          <canvas id="segChartReferencias"></canvas>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+          <span style="font-size:10.5px; color:#a0aec0; font-weight:700; text-transform:uppercase;">Estado del caso</span>
+          <span id="segModalEstado"></span>
+        </div>
+      </div>
+      <div id="segModalCausas" class="trz-item-lista"></div>
+    </div>
+  </div>
+
+  <script src="js/comun.js"></script>
+  <script>
+    let token = localStorage.getItem('token');
+    let permisosUsuario = [];
+    let usuarioActual = null;
+
+    let probDatosCache = null;      // último listado traído del servidor (ya con los filtros aplicados)
+    let probAreasCache = null;      // catálogo de áreas activas (reusa iso_areas)
+    let probDefectosCache = null;   // catálogo de defectos (reusa iso_tipificacion_defectos)
+    let probCatalogoCache = null;   // catálogo completo de causas+medidas (reusa trazabilidadCatalogo)
+    let probProblemaActual = null;  // el problema que se está viendo en el modal de detalle
+
+    // Traído de Seguimiento de Producción (ahora pestaña dentro de este
+    // módulo, pedido por Julio 08/09).
+    let segDatosCache = null;   // todos los casos (sin filtrar), traídos una sola vez
+    let segCasoActual = null;   // el caso que se está viendo en el modal de detalle
+
+    // Qué pestaña(s) de nivel superior puede ver el usuario (calculado en
+    // checkAuth, usado en init()/activarPestañaOuter para mostrar/ocultar).
+    let probTieneAccesoProblemas = false;
+    let probTieneAccesoSeguimiento = false;
+
+    async function cargarMisPermisos() {
+      return await cargarPermisosDelUsuario();
+    }
+
+    async function doLogout() {
+      if (token) {
+        await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+      }
+      localStorage.removeItem('token');
+      token = null;
+      location.reload();
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!(res.ok && data)) {
+          localStorage.removeItem('token');
+          token = null;
+          document.getElementById('loginOverlay').style.display = 'flex';
+          return false;
+        }
+        usuarioActual = { nombre: data.nombre || data.usuario, rol: data.rol };
+        document.getElementById('userNameDisplay').textContent = `${usuarioActual.nombre} (${usuarioActual.rol || 'Usuario'})`;
+
+        await cargarMisPermisos();
+
+        // Pestañas (08/09, pedido por Julio): esta pantalla ahora es
+        // Problemas + Seguimiento de Producción en una sola página, cada
+        // una con el mismo permiso de entrada que tenía su página separada
+        // de antes -- se guarda cuál(es) tiene para decidir en init() qué
+        // pestaña(s) mostrar y cuál queda activa por defecto.
+        probTieneAccesoProblemas = ['problemas.ver', 'problemas.crear', 'problemas.gestionar', 'problemas.eliminar'].some(p => tienePermiso(p));
+        probTieneAccesoSeguimiento = tienePermiso('calidad.ver') || tienePermiso('produccion.trazabilidad.ver') || tienePermiso('produccion.trazabilidad.gestionar') || probTieneAccesoProblemas;
+
+        if (!probTieneAccesoProblemas && !probTieneAccesoSeguimiento) {
+          alert('No tienes permiso para acceder a este módulo.');
+          location.href = 'index.html';
+          return false;
+        }
+
+        const btnVolver = document.getElementById('btnVolverPortal');
+        if (btnVolver) btnVolver.style.display = tienePermiso('portal.volver') ? 'inline-flex' : 'none';
+
+        document.getElementById('btnNuevoProblema').style.display = tienePermiso('problemas.crear') ? 'inline-flex' : 'none';
+
+        return true;
+      } catch (e) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        return false;
+      }
+    }
+
+    async function init() {
+      token = localStorage.getItem('token');
+      if (!token) { document.getElementById('loginOverlay').style.display = 'flex'; return; }
+      const ok = await checkAuth();
+      if (!ok) return;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appHeader').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'block';
+
+      // Pestañas (08/09, pedido por Julio): se muestra solo la(s) pestaña(s)
+      // para la(s) que el usuario tiene permiso -- si solo tiene una, ni se
+      // muestra el selector (no tiene sentido con una sola opción).
+      document.getElementById('probOuterTabBtn-problemas').style.display = probTieneAccesoProblemas ? 'inline-flex' : 'none';
+      document.getElementById('probOuterTabBtn-seguimiento').style.display = probTieneAccesoSeguimiento ? 'inline-flex' : 'none';
+      document.getElementById('probOuterTabsNav').style.display = (probTieneAccesoProblemas && probTieneAccesoSeguimiento) ? 'flex' : 'none';
+
+      // ?pestaña=seguimiento en la URL (usado por la redirección de
+      // Public/seguimiento_produccion.html para viejos accesos directos):
+      // respeta el permiso -- si no tiene acceso a esa pestaña, cae al
+      // criterio de siempre en vez de dejar la pantalla en blanco.
+      const pestañaPedida = new URLSearchParams(location.search).get('pestaña');
+      let pestañaInicial = probTieneAccesoProblemas ? 'problemas' : 'seguimiento';
+      if (pestañaPedida === 'seguimiento' && probTieneAccesoSeguimiento) pestañaInicial = 'seguimiento';
+      else if (pestañaPedida === 'problemas' && probTieneAccesoProblemas) pestañaInicial = 'problemas';
+      await activarPestañaOuter(pestañaInicial);
+    }
+
+    // Pedido por Julio (08/09): "el modulo de seguimiento de produccion
+    // podriamos volverlo una pestaña dentro de problemas... si vemos que
+    // tenemos que modificar alguna causa raiz vamos a la otra pestaña o si
+    // tenemos que revisar algun problema como va podamos revisar tambien" --
+    // cambia entre "Problemas" y "Seguimiento de Producción" sin salir de la
+    // página. Cada pestaña carga sus datos la primera vez que se entra a
+    // ella (igual que ya hacía la sub-pestaña "Catálogo" de Seguimiento),
+    // no las dos de una al abrir la página.
+    async function activarPestañaOuter(tab) {
+      document.querySelectorAll('.prob-outer-btn').forEach(b => b.classList.remove('activa'));
+      document.querySelectorAll('.prob-outer-pane').forEach(p => p.classList.remove('activa'));
+      document.getElementById('probOuterTabBtn-' + tab).classList.add('activa');
+      document.getElementById('probOuterTabPane-' + tab).classList.add('activa');
+      if (tab === 'problemas' && !probDatosCache) {
+        await Promise.all([cargarAreas(), cargarDefectos(), cargarCatalogo()]);
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+      } else if (tab === 'seguimiento' && !segDatosCache) {
+        await cargarSeguimiento();
+      }
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value.trim();
+      const err = document.getElementById('loginError');
+      err.style.display = 'none';
+      if (!u || !p) { err.textContent = 'Ingrese usuario y contraseña'; err.style.display = 'block'; return; }
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: u, contrasena: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          location.href = 'index.html';
+        } else {
+          err.textContent = data.error || 'Credenciales inválidas';
+          err.style.display = 'block';
+        }
+      } catch (e) {
+        err.textContent = 'Error de conexión';
+        err.style.display = 'block';
+      }
+    }
+
+    // ======================== CATÁLOGOS DE APOYO ========================
+    // Mismos catálogos reusados que ya usaban Trazabilidad de Producción y
+    // Reportes por Áreas por separado -- no se duplican.
+    const NOMBRES_DISPLAY = { 'Fabrica 1': 'Fábrica 1', 'Fabrica 2': 'Fábrica 2', 'Fabrica 3': 'Fábrica 3', 'Inyeccion': 'Inyección' };
+    function nombreDisplay(fabrica) { return NOMBRES_DISPLAY[fabrica] || fabrica; }
+
+    async function cargarAreas() {
+      try {
+        const res = await fetch('/api/problemas/areas', { headers: { 'Authorization': 'Bearer ' + token } });
+        probAreasCache = res.ok ? await res.json() : [];
+      } catch (e) { probAreasCache = []; }
+      const opciones = probAreasCache.map(a => `<option value="${a.id}">${escapeHtml(a.nombre)}</option>`).join('');
+      document.getElementById('probFiltroArea').innerHTML = '<option value="">Todas</option>' + opciones;
+      document.getElementById('nuevoArea').innerHTML = '<option value="">Selecciona...</option>' + opciones;
+    }
+
+    async function cargarDefectos() {
+      try {
+        const res = await fetch('/api/problemas/defectos', { headers: { 'Authorization': 'Bearer ' + token } });
+        probDefectosCache = res.ok ? await res.json() : [];
+      } catch (e) { probDefectosCache = []; }
+      const opciones = probDefectosCache.map(d => `<option value="${d.id}">${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
+      document.getElementById('probFiltroDefecto').innerHTML = '<option value="">Todos</option>' + opciones;
+      poblarSelectDefectos(document.getElementById('nuevoDefectoSelect'));
+    }
+
+    function poblarSelectDefectos(select) {
+      if (!select) return;
+      const valorPrevio = select.value;
+      select.innerHTML = '<option value="">Sin problema asignado</option>' +
+        (probDefectosCache || []).map(d => `<option value="${d.id}">${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
+      if (valorPrevio) select.value = valorPrevio;
+    }
+
+    async function cargarCatalogo(forzar) {
+      if (probCatalogoCache && !forzar) return probCatalogoCache;
+      try {
+        const res = await fetch('/api/problemas/catalogo', { headers: { 'Authorization': 'Bearer ' + token } });
+        probCatalogoCache = res.ok ? await res.json() : [];
+      } catch (e) { probCatalogoCache = []; }
+      return probCatalogoCache;
+    }
+    function causasCatalogoActivas() {
+      return (probCatalogoCache || []).filter(c => c.activo === 'Activo');
+    }
+    function medidasCatalogoDeCausa(causaCatalogoId) {
+      const causa = (probCatalogoCache || []).find(c => String(c.id) === String(causaCatalogoId));
+      return causa ? (causa.medidas || []).filter(m => m.activo === 'Activo') : [];
+    }
+    function poblarSelectCausasCatalogo(select) {
+      if (!select) return;
+      const valorPrevio = select.value;
+      select.innerHTML = '<option value="">Elige una causa del catálogo...</option>' +
+        causasCatalogoActivas().map(c => `<option value="${c.id}">${escapeHtml(c.texto)}</option>`).join('') +
+        '<option value="__otra__">Otra (escribir)</option>';
+      if (valorPrevio) select.value = valorPrevio;
+    }
+
+    // Genérico para cualquier select de catálogo (causa o medida): muestra
+    // el textarea "Otra" cuando se elige esa opción -- cada select dice cuál
+    // es su textarea con el atributo data-otra.
+    function alCambiarSelectCatalogo(select) {
+      if (!select) return;
+      const textarea = document.getElementById(select.dataset.otra);
+      if (!textarea) return;
+      textarea.style.display = select.value === '__otra__' ? 'block' : 'none';
+      if (select.value === '__otra__') textarea.focus();
+    }
+
+    // Al elegir (o quitar) un Defecto en el formulario de "Nuevo problema",
+    // refiltra la Causa Raíz emparejada: con un Defecto elegido, solo
+    // muestra las causas del catálogo ya ligadas a ESE Defecto (para
+    // reusarlas) + "Otra"; sin Defecto, vuelve a mostrar todo el catálogo.
+    async function alCambiarDefectoGenerico(causaSelectId, defectoSelectId) {
+      const causaSelect = document.getElementById(causaSelectId);
+      const defectoSelect = document.getElementById(defectoSelectId);
+      if (!causaSelect || !defectoSelect) return;
+      const otraTextarea = document.getElementById(causaSelect.dataset.otra);
+      const defectoId = defectoSelect.value;
+      if (!defectoId) {
+        poblarSelectCausasCatalogo(causaSelect);
+        causaSelect.value = '';
+        if (otraTextarea) otraTextarea.style.display = 'none';
+        return;
+      }
+      causaSelect.innerHTML = '<option value="">Cargando causas...</option>';
+      let causas = [];
+      try {
+        const res = await fetch(`/api/problemas/catalogo-causas?defecto_id=${defectoId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        causas = res.ok ? await res.json() : [];
+      } catch (e) { causas = []; }
+      causaSelect.innerHTML = '<option value="">Elige una causa del catálogo...</option>' +
+        causas.map(c => `<option value="${c.id}">${escapeHtml(c.texto)}</option>`).join('') +
+        '<option value="__otra__">Otra (escribir)</option>';
+      causaSelect.value = '';
+      if (otraTextarea) otraTextarea.style.display = 'none';
+    }
+
+    // Lee un par select(catálogo)+textarea("Otra") y arma lo que hay que
+    // mandarle al servidor: {causa_catalogo_id} si se eligió una causa ya
+    // existente, o {[campoTexto]: texto} si se escribió "Otra" -- el
+    // servidor la agrega sola al catálogo, sin duplicar si ya existía con
+    // otras mayúsculas/tildes. `defectoSelectId` (opcional): si se pasa y
+    // tiene un valor elegido, se manda `defecto_id` junto con la causa.
+    function leerSelectCausa(selectId, otraId, campoTexto, defectoSelectId) {
+      const select = document.getElementById(selectId);
+      const valor = select ? select.value : '';
+      if (!valor) return { error: 'Elige una causa raíz del catálogo, o "Otra" para escribirla.' };
+      const defectoSelect = defectoSelectId ? document.getElementById(defectoSelectId) : null;
+      const defectoExtra = (defectoSelect && defectoSelect.value) ? { defecto_id: defectoSelect.value } : {};
+      if (valor === '__otra__') {
+        const texto = (document.getElementById(otraId)?.value || '').trim();
+        if (!texto) return { error: 'Escribe la causa raíz.' };
+        return { body: { [campoTexto]: texto, ...defectoExtra } };
+      }
+      return { body: { causa_catalogo_id: valor, ...defectoExtra } };
+    }
+
+    // Igual que leerSelectCausa, pero para la medida de una causa puntual
+    // del problema que se está viendo (cada causa raíz tiene su propio
+    // select+textarea, con ids probMedidaSelect-<causaId>/probMedidaOtra-<causaId>).
+    function leerSelectMedida(causaId) {
+      const select = document.getElementById(`probMedidaSelect-${causaId}`);
+      const valor = select ? select.value : '';
+      if (!valor) return { error: 'Elige una medida del catálogo, o "Otra" para escribirla.' };
+      if (valor === '__otra__') {
+        const texto = (document.getElementById(`probMedidaOtra-${causaId}`)?.value || '').trim();
+        if (!texto) return { error: 'Escribe la medida.' };
+        return { body: { texto } };
+      }
+      return { body: { medida_catalogo_id: valor } };
+    }
+
+    // ======================== PILLS ========================
+    function origenPill(origen) {
+      const clase = { produccion: 'pill-info', reporte: 'pill-warning', general: 'pill-muted' }[origen] || 'pill-muted';
+      const texto = { produccion: 'Producción', reporte: 'Reporte de área', general: 'General' }[origen] || origen;
+      return `<span class="pill ${clase}">${texto}</span>`;
+    }
+    function estadoPill(estado) {
+      const clase = { Pendiente: 'pill-warning', En_Proceso: 'pill-info', Implementado: 'pill-ok', Descartado: 'pill-muted' }[estado] || 'pill-muted';
+      const texto = { Pendiente: 'Pendiente', En_Proceso: 'En Proceso', Implementado: 'Implementado', Descartado: 'Descartado' }[estado] || (estado || '--');
+      return `<span class="pill ${clase}">${texto}</span>`;
+    }
+    function criticidadPill(criticidad) {
+      const clase = { Alta: 'pill-critica', Media: 'pill-warning', Baja: 'pill-muted' }[criticidad] || 'pill-muted';
+      return `<span class="pill ${clase}">${escapeHtml(criticidad || '--')}</span>`;
+    }
+
+    function contextoResumen(p) {
+      if (p.origen === 'produccion') {
+        const etiqueta = p.tipo_contexto === 'referencia' ? 'Ref.' : 'Motivo';
+        return `${nombreDisplay(p.fabrica)} · ${etiqueta}: ${p.valor_contexto || ''}`;
+      }
+      const partes = [];
+      if (p.area_origen_nombre) partes.push(p.area_origen_nombre);
+      if (p.referencia) partes.push(`Ref. ${p.referencia}`);
+      if (p.lote) partes.push(`Lote ${p.lote}`);
+      if (partes.length) return partes.join(' · ');
+      return (p.descripcion || '').slice(0, 90) || '(sin contexto)';
+    }
+
+    function diasAbierto(fecha) {
+      if (!fecha) return null;
+      const inicio = new Date(String(fecha).replace(' ', 'T'));
+      if (isNaN(inicio.getTime())) return null;
+      return Math.max(0, Math.floor((Date.now() - inicio.getTime()) / 86400000));
+    }
+
+    // ======================== ALERTAS DE CRÍTICOS ========================
+    async function cargarAlertasCriticas() {
+      try {
+        const res = await fetch('/api/problemas/alertas/criticos?limite=100', { headers: { 'Authorization': 'Bearer ' + token } });
+        const datos = res.ok ? await res.json() : [];
+        renderizarAlertasCriticas(datos);
+      } catch (e) {
+        console.error('Error cargando alertas de críticos:', e);
+      }
+    }
+    function renderizarAlertasCriticas(datos) {
+      const cont = document.getElementById('probAlertaBanner');
+      if (!datos || datos.length === 0) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
+      cont.style.display = 'block';
+      cont.innerHTML = `
+        <div class="alerta-header" onclick="toggleAlertaLista()">
+          <span><i class="fa-solid fa-triangle-exclamation"></i> ${datos.length} problema${datos.length === 1 ? '' : 's'} crítico${datos.length === 1 ? '' : 's'} sigue${datos.length === 1 ? '' : 'n'} abierto${datos.length === 1 ? '' : 's'}</span>
+          <i class="fa-solid fa-chevron-down" id="probAlertaChevron"></i>
+        </div>
+        <div class="alerta-lista" id="probAlertaLista" style="display:none;">
+          ${datos.map(p => {
+            const dias = diasAbierto(p.creado_en);
+            return `
+            <div class="alerta-item" onclick="verDetalleProblema(${p.id})">
+              <span>${origenPill(p.origen)} ${escapeHtml(contextoResumen(p))}</span>
+              <span class="alerta-dias">${dias != null ? dias + ' día' + (dias === 1 ? '' : 's') + ' abierto' : ''}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }
+    function toggleAlertaLista() {
+      const lista = document.getElementById('probAlertaLista');
+      const chevron = document.getElementById('probAlertaChevron');
+      if (!lista) return;
+      const abierta = lista.style.display === 'block';
+      lista.style.display = abierta ? 'none' : 'block';
+      if (chevron) chevron.className = abierta ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up';
+    }
+
+    // ======================== LISTADO ========================
+    async function cargarProblemas() {
+      const tbody = document.getElementById('probTablaBody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr>';
+      const params = new URLSearchParams();
+      const origen = document.getElementById('probFiltroOrigen').value;
+      const estado = document.getElementById('probFiltroEstado').value;
+      const criticidad = document.getElementById('probFiltroCriticidad').value;
+      const area = document.getElementById('probFiltroArea').value;
+      const defecto = document.getElementById('probFiltroDefecto').value;
+      const texto = document.getElementById('probFiltroTexto').value.trim();
+      if (origen) params.set('origen', origen);
+      if (estado) params.set('estado', estado);
+      if (criticidad) params.set('criticidad', criticidad);
+      if (area) params.set('area_id', area);
+      if (defecto) params.set('defecto_id', defecto);
+      if (texto) params.set('q', texto);
+      params.set('limite', 300);
+      try {
+        const res = await fetch(`/api/problemas?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        probDatosCache = await res.json();
+        renderizarTablaProblemas();
+      } catch (e) {
+        console.error('Error cargando problemas:', e);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error cargando los problemas.</td></tr>';
+      }
+    }
+
+    function renderizarTablaProblemas() {
+      const tbody = document.getElementById('probTablaBody');
+      const datos = probDatosCache || [];
+      if (datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">No hay problemas registrados con estos filtros.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = datos.map(p => `
+        <tr>
+          <td>${origenPill(p.origen)}</td>
+          <td>${escapeHtml(contextoResumen(p))}</td>
+          <td>${p.defecto_codigo ? escapeHtml(p.defecto_codigo) : '<span style="color:#a0aec0;">--</span>'}</td>
+          <td>${criticidadPill(p.criticidad)}</td>
+          <td>${estadoPill(p.estado)}</td>
+          <td>${escapeHtml(p.actualizado_en || p.creado_en || '')}
+            ${p.total_causas > 0 ? ` <span class="pill pill-muted">${p.total_causas} causa${p.total_causas === 1 ? '' : 's'}</span>` : ''}${p.total_medidas > 0 ? ` <span class="pill pill-muted">${p.total_medidas} medida${p.total_medidas === 1 ? '' : 's'}</span>` : ''}</td>
+          <td><button type="button" class="btn-secondary-trz" onclick="verDetalleProblema(${p.id})"><i class="fa-solid fa-eye"></i> Ver</button></td>
+        </tr>`).join('');
+    }
+
+    // ======================== CREAR ========================
+    function alCambiarOrigenNuevo() {
+      const origen = document.querySelector('input[name="nuevoOrigen"]:checked').value;
+      const label = document.getElementById('nuevoDescripcionLabel');
+      const textarea = document.getElementById('nuevoDescripcion');
+      if (origen === 'general') {
+        label.textContent = 'Descripción *';
+        textarea.placeholder = '¿Qué pasó? Descríbelo con el detalle que tengas.';
+      } else {
+        label.textContent = 'Descripción (opcional)';
+        textarea.placeholder = 'Si la dejas en blanco, se arma sola a partir del área/referencia.';
+      }
+    }
+
+    function abrirModalNuevo() {
+      document.getElementById('formNuevoProblema').reset();
+      document.querySelector('input[name="nuevoOrigen"][value="reporte"]').checked = true;
+      alCambiarOrigenNuevo();
+      poblarSelectDefectos(document.getElementById('nuevoDefectoSelect'));
+      poblarSelectCausasCatalogo(document.getElementById('nuevoCausaSelect'));
+      document.getElementById('nuevoCausaOtra').style.display = 'none';
+      document.getElementById('nuevoMensaje').style.display = 'none';
+      document.getElementById('modalNuevoOverlay').style.display = 'flex';
+    }
+    function cerrarModalNuevo() {
+      document.getElementById('modalNuevoOverlay').style.display = 'none';
+    }
+
+    async function crearProblemaNuevo(event) {
+      event.preventDefault();
+      const origen = document.querySelector('input[name="nuevoOrigen"]:checked').value;
+      const msg = document.getElementById('nuevoMensaje');
+      msg.style.display = 'none';
+
+      const lectura = leerSelectCausa('nuevoCausaSelect', 'nuevoCausaOtra', 'causa_raiz', 'nuevoDefectoSelect');
+      if (lectura.error) { msg.textContent = lectura.error; msg.style.display = 'block'; return; }
+
+      const descripcion = document.getElementById('nuevoDescripcion').value.trim();
+      if (origen === 'general' && !descripcion) {
+        msg.textContent = 'Escribe una descripción del problema.';
+        msg.style.display = 'block';
+        return;
+      }
+
+      const body = {
+        origen,
+        area_origen_id: document.getElementById('nuevoArea').value || null,
+        referencia: document.getElementById('nuevoReferencia').value.trim() || null,
+        lote: document.getElementById('nuevoLote').value.trim() || null,
+        descripcion: descripcion || null,
+        criticidad: document.getElementById('nuevoCriticidad').value,
+        ...lectura.body,
+      };
+
+      const btn = document.getElementById('nuevoBtnGuardar');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/problemas', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo crear el problema');
+        cerrarModalNuevo();
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+        verDetalleProblema(data.id);
+      } catch (e) {
+        msg.textContent = 'Error: ' + e.message;
+        msg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ======================== DETALLE ========================
+    async function verDetalleProblema(id) {
+      document.getElementById('detalleProblemaOverlay').style.display = 'flex';
+      document.getElementById('detalleProblemaContexto').innerHTML = '<div class="empty-hint">Cargando...</div>';
+      document.getElementById('detalleProblemaAcciones').innerHTML = '';
+      document.getElementById('detalleProblemaCuerpo').innerHTML = '';
+      document.getElementById('probEditarForm').style.display = 'none';
+      try {
+        const res = await fetch(`/api/problemas/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        probProblemaActual = await res.json();
+        renderizarDetalleProblema();
+      } catch (e) {
+        document.getElementById('detalleProblemaContexto').innerHTML = '<div class="empty-hint" style="color:red;">No se pudo cargar este problema.</div>';
+      }
+    }
+    function cerrarDetalleProblema() {
+      document.getElementById('detalleProblemaOverlay').style.display = 'none';
+      probProblemaActual = null;
+    }
+
+    // Pedido por Julio (08/09): documento PDF formal de un problema puntual
+    // (contexto, causas raíz y medidas), para compartir o archivar. El
+    // endpoint exige el mismo header Authorization que el resto de la API
+    // (no acepta el token por la URL), así que un <a href> normal no
+    // serviría -- se trae por fetch (con el header) y se abre como un
+    // blob: URL en una pestaña nueva (mismo criterio que ya usa
+    // verAdjuntoReporte en Reportes por Áreas).
+    async function generarReportePdf(id) {
+      try {
+        const res = await fetch(`/api/problemas/${id}/reporte-pdf`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('No se pudo generar el reporte (HTTP ' + res.status + ')');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function renderizarDetalleProblema() {
+      const p = probProblemaActual;
+      if (!p) return;
+      document.getElementById('detalleProblemaTitulo').innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Problema #${p.id} ${origenPill(p.origen)}`;
+
+      const tiles = [];
+      if (p.origen === 'produccion') {
+        tiles.push(`<div><span>Fábrica</span><strong>${escapeHtml(nombreDisplay(p.fabrica))}</strong></div>`);
+        tiles.push(`<div><span>${p.tipo_contexto === 'referencia' ? 'Referencia' : 'Motivo'}</span><strong>${escapeHtml(p.valor_contexto || '—')}</strong></div>`);
+        if (p.semana) tiles.push(`<div><span>Semana</span><strong>${escapeHtml(p.semana)}</strong></div>`);
+        if (p.pct_desperdicio_inicial != null) tiles.push(`<div><span>${p.tipo_contexto === 'referencia' ? '% Desperdicio inicial' : 'Unidades rechazadas inicial'}</span><strong>${p.pct_desperdicio_inicial}${p.tipo_contexto === 'referencia' ? '%' : ''}</strong></div>`);
+      } else {
+        if (p.area_origen_nombre) tiles.push(`<div><span>Área</span><strong>${escapeHtml(p.area_origen_nombre)}</strong></div>`);
+        if (p.referencia) tiles.push(`<div><span>Referencia</span><strong>${escapeHtml(p.referencia)}</strong></div>`);
+        if (p.lote) tiles.push(`<div><span>Lote</span><strong>${escapeHtml(p.lote)}</strong></div>`);
+      }
+      if (p.defecto_codigo) tiles.push(`<div><span>Problema / Defecto</span><strong>${escapeHtml(p.defecto_codigo)} — ${escapeHtml(p.defecto_descripcion || '')}</strong></div>`);
+      tiles.push(`<div><span>Criticidad</span><strong>${criticidadPill(p.criticidad)}</strong></div>`);
+      tiles.push(`<div><span>Estado</span><strong>${estadoPill(p.estado)}</strong></div>`);
+      tiles.push(`<div><span>Registrado por</span><strong>${escapeHtml(p.autor_nombre || '—')}</strong></div>`);
+      tiles.push(`<div><span>Creado</span><strong>${escapeHtml(p.creado_en || '')}</strong></div>`);
+      tiles.push(`<div><span>Actualizado</span><strong>${escapeHtml(p.actualizado_en || '')}</strong></div>`);
+      if (p.cerrado_en) tiles.push(`<div><span>Cerrado</span><strong>${escapeHtml(p.cerrado_en)}</strong></div>`);
+      document.getElementById('detalleProblemaContexto').innerHTML = tiles.join('');
+
+      const puedeGestionar = tienePermiso('problemas.gestionar');
+      const acciones = [];
+      // Pedido por Julio (08/09): "con cada problema de esos me gustaria
+      // generar un reporte" -- disponible para cualquiera que pueda VER el
+      // detalle (no solo quien gestiona), es un documento de solo lectura.
+      acciones.push(`<button type="button" class="btn-secondary-trz" onclick="generarReportePdf(${p.id})"><i class="fa-solid fa-file-pdf"></i> Generar reporte</button>`);
+      if (puedeGestionar) {
+        acciones.push(`<button type="button" class="btn-secondary-trz" onclick="mostrarFormularioEditarProblema()"><i class="fa-solid fa-pen"></i> Editar</button>`);
+        if (p.estado === 'Implementado') {
+          acciones.push(`<button type="button" class="btn-trz-fallo" onclick="accionMarcarFallo()"><i class="fa-solid fa-rotate-left"></i> La solución no funcionó</button>`);
+        }
+        if (p.estado === 'Descartado') {
+          acciones.push(`<button type="button" class="btn-secondary-trz" onclick="accionReabrir()"><i class="fa-solid fa-box-open"></i> Reabrir</button>`);
+        } else {
+          acciones.push(`<button type="button" class="btn-secondary-trz" onclick="accionDescartar()"><i class="fa-solid fa-ban"></i> Descartar (no amerita seguimiento)</button>`);
+        }
+      }
+      document.getElementById('detalleProblemaAcciones').innerHTML = acciones.join('');
+
+      const cuerpo = document.getElementById('detalleProblemaCuerpo');
+      const botonAgregarCausa = puedeGestionar ? `<button type="button" class="btn-trz-agregar-causa" onclick="mostrarFormularioAgregarCausa()" title="Agregar causa raíz"><i class="fa-solid fa-plus"></i> Agregar causa raíz</button>` : '';
+      cuerpo.innerHTML = `
+        <div class="trz-item" style="margin-bottom:14px;">
+          <div class="trz-item-meta"><span class="trz-item-kind">Descripción</span></div>
+          <div class="trz-item-texto">${escapeHtml(p.descripcion || '')}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;">
+          <span style="font-size:10.5px; color:#a0aec0; font-weight:700; text-transform:uppercase;">Causas raíz y medidas</span>
+          ${botonAgregarCausa}
+        </div>
+        <div id="probCausaNuevaBox" style="display:none; margin-bottom:14px;" class="rep-escalar-form"></div>
+        <div id="probCausasLista"></div>`;
+
+      renderizarCausasYMedidas(p.causas || [], p.medidas || [], puedeGestionar);
+    }
+
+    // -------- Editar (área/referencia/lote/defecto/descripción/criticidad) --------
+    function mostrarFormularioEditarProblema() {
+      const p = probProblemaActual;
+      if (!p) return;
+      const areas = probAreasCache || [];
+      const opcionesArea = areas.map(a => `<option value="${a.id}" ${String(a.id) === String(p.area_origen_id) ? 'selected' : ''}>${escapeHtml(a.nombre)}</option>`).join('');
+      const opcionesDefecto = (probDefectosCache || []).map(d => `<option value="${d.id}" ${String(d.id) === String(p.defecto_id) ? 'selected' : ''}>${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
+      const form = document.getElementById('probEditarForm');
+      form.innerHTML = `
+        <div class="rep-fila-2">
+          <div class="rep-field"><label>Área (opcional)</label><select id="editProbArea"><option value="">Selecciona...</option>${opcionesArea}</select></div>
+          <div class="rep-field">
+            <label>Criticidad</label>
+            <select id="editProbCriticidad">
+              ${['Baja', 'Media', 'Alta'].map(c => `<option value="${c}" ${p.criticidad === c ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="rep-fila-2">
+          <div class="rep-field"><label>Referencia (opcional)</label><input type="text" id="editProbReferencia" value="${escapeHtml(p.referencia || '')}"></div>
+          <div class="rep-field"><label>Lote (opcional)</label><input type="text" id="editProbLote" value="${escapeHtml(p.lote || '')}"></div>
+        </div>
+        <div class="rep-field"><label>Problema / Defecto (opcional)</label><select id="editProbDefecto"><option value="">Sin problema asignado</option>${opcionesDefecto}</select></div>
+        <div class="rep-field"><label>Descripción</label><textarea id="editProbDescripcion">${escapeHtml(p.descripcion || '')}</textarea></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn-secondary-trz" onclick="document.getElementById('probEditarForm').style.display='none';">Cancelar</button>
+          <button type="button" class="btn-primario-trz" onclick="guardarEdicionProblema()">Guardar cambios</button>
+        </div>`;
+      form.style.display = 'block';
+    }
+
+    async function guardarEdicionProblema() {
+      const p = probProblemaActual;
+      if (!p) return;
+      const body = {
+        area_origen_id: document.getElementById('editProbArea').value || null,
+        referencia: document.getElementById('editProbReferencia').value.trim() || null,
+        lote: document.getElementById('editProbLote').value.trim() || null,
+        defecto_id: document.getElementById('editProbDefecto').value || null,
+        descripcion: document.getElementById('editProbDescripcion').value.trim() || null,
+        criticidad: document.getElementById('editProbCriticidad').value,
+      };
+      try {
+        const res = await fetch(`/api/problemas/${p.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo guardar los cambios');
+        probProblemaActual = data;
+        renderizarDetalleProblema();
+        await cargarProblemas();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    // -------- Ciclo de vida --------
+    async function accionMarcarFallo() {
+      if (!probProblemaActual) return;
+      if (!confirm('¿La solución de este problema no funcionó? El problema se reabre.')) return;
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/marcar-fallo`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo actualizar el problema');
+        probProblemaActual = data;
+        renderizarDetalleProblema();
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+    async function accionDescartar() {
+      if (!probProblemaActual) return;
+      if (!confirm('¿Descartar este problema? Se marcará que no amerita seguimiento. Puedes reabrirlo después si hace falta.')) return;
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/descartar`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo descartar el problema');
+        probProblemaActual = data;
+        renderizarDetalleProblema();
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+    async function accionReabrir() {
+      if (!probProblemaActual) return;
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/reabrir`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo reabrir el problema');
+        probProblemaActual = data;
+        renderizarDetalleProblema();
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // -------- Causas y medidas --------
+    const ETIQUETAS_ESTADO_MEDIDA = { En_Proceso: 'En Proceso', Funciono: 'Funcionó', No_Funciono: 'No funcionó' };
+
+    function renderizarCausasYMedidas(causas, medidas, puedeGestionar) {
+      const cont = document.getElementById('probCausasLista');
+      if (!cont) return;
+      if (causas.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Todavía no hay ninguna causa raíz registrada.</div>';
+        return;
+      }
+      cont.innerHTML = `<div class="trz-item-lista" style="max-height:340px;">${causas.map(c => renderizarCausaCard(c, medidas.filter(m => m.causa_id === c.id), puedeGestionar, causas.length)).join('')}</div>`;
+      if (puedeGestionar) {
+        cont.querySelectorAll('select.trz-medida-estado').forEach(sel => {
+          sel.onchange = () => cambiarEstadoMedidaProblema(sel.dataset.medidaId, sel.value);
+        });
+      }
+    }
+
+    function renderizarCausaCard(causa, medidasDeCausa, puedeGestionar, totalCausas) {
+      const medidasCatalogo = causa.causa_catalogo_id ? medidasCatalogoDeCausa(causa.causa_catalogo_id) : [];
+      // No se puede dejar un problema sin ninguna causa raíz -- si es la
+      // única, ni se ofrece el botón de eliminar (el servidor lo rechazaría
+      // igual, pero así se evita el viaje al servidor para nada).
+      const puedeEliminar = tienePermiso('problemas.eliminar') && totalCausas > 1;
+      return `
+        <div class="trz-causa-card" data-causa-id="${causa.id}">
+          <div class="trz-item-causa-info">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind causa">Causa raíz</span>
+              <span style="display:flex; align-items:center; gap:8px;">
+                ${escapeHtml(causa.fecha || '')}
+                ${puedeEliminar ? `<button type="button" class="btn-eliminar-trz" title="Eliminar esta causa raíz y sus medidas" onclick="eliminarCausaProblema(${causa.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+              </span>
+            </div>
+            <div class="trz-item-texto">${escapeHtml(causa.texto)}</div>
+            <div class="trz-item-resp">Registrada por <b>${escapeHtml(causa.autor_nombre || causa.responsable_nombre || 'Usuario')}</b></div>
+          </div>
+          <div class="trz-medidas-de-causa">
+            ${medidasDeCausa.length ? medidasDeCausa.map(m => renderizarMedidaItem(m, puedeGestionar)).join('') : '<div class="empty-hint" style="margin:0;">Todavía no hay medidas para esta causa.</div>'}
+          </div>
+          ${puedeGestionar ? `
+          <div class="trz-item-nuevo" style="margin-top:10px;">
+            <select class="trz-catalogo-select" id="probMedidaSelect-${causa.id}" data-otra="probMedidaOtra-${causa.id}" onchange="alCambiarSelectCatalogo(this)">
+              <option value="">Elige una medida del catálogo...</option>
+              ${medidasCatalogo.map(m => `<option value="${m.id}">${escapeHtml(m.texto)}</option>`).join('')}
+              <option value="__otra__">Otra (escribir)</option>
+            </select>
+            <textarea class="trz-catalogo-otra" id="probMedidaOtra-${causa.id}" rows="2" placeholder="Escribe la medida..." style="display:none;"></textarea>
+            <div class="trz-item-nuevo-fila">
+              <button type="button" class="btn-secondary-trz" onclick="agregarMedidaProblema(${causa.id})"><i class="fa-solid fa-plus"></i> Agregar medida</button>
+            </div>
+          </div>` : ''}
+        </div>`;
+    }
+
+    function renderizarMedidaItem(m, puedeGestionar) {
+      const puedeEliminar = tienePermiso('problemas.eliminar');
+      return `
+        <div class="trz-item" data-medida-id="${m.id}">
+          <div class="trz-item-meta">
+            <span class="trz-item-kind">Medida</span>
+            <span style="display:flex; align-items:center; gap:8px;">
+              <select class="trz-medida-estado" data-medida-id="${m.id}" ${puedeGestionar ? '' : 'disabled'}>
+                ${Object.entries(ETIQUETAS_ESTADO_MEDIDA).map(([valor, texto]) => `<option value="${valor}" ${m.estado === valor ? 'selected' : ''}>${texto}</option>`).join('')}
+              </select>
+              ${puedeEliminar ? `<button type="button" class="btn-eliminar-trz" title="Eliminar esta medida" onclick="eliminarMedidaProblema(${m.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </span>
+          </div>
+          <div class="trz-item-texto">${escapeHtml(m.texto)}</div>
+          <div class="trz-item-resp">Registrada por <b>${escapeHtml(m.autor_nombre || m.responsable_nombre || 'Usuario')}</b> el ${escapeHtml(m.creado_en || '')}</div>
+        </div>`;
+    }
+
+    async function mostrarFormularioAgregarCausa() {
+      const p = probProblemaActual;
+      if (!p) return;
+      const box = document.getElementById('probCausaNuevaBox');
+      box.style.display = 'block';
+      box.innerHTML = '<div class="empty-hint">Cargando causas...</div>';
+      let causas;
+      try {
+        const params = p.defecto_id ? `?defecto_id=${p.defecto_id}` : '';
+        const res = await fetch(`/api/problemas/catalogo-causas${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        causas = res.ok ? await res.json() : [];
+      } catch (e) { causas = []; }
+      box.innerHTML = `
+        <select class="trz-catalogo-select" id="probCausaNuevaSelect" data-otra="probCausaNuevaOtra" onchange="alCambiarSelectCatalogo(this)">
+          <option value="">Elige una causa del catálogo...</option>
+          ${causas.map(c => `<option value="${c.id}">${escapeHtml(c.texto)}</option>`).join('')}
+          <option value="__otra__">Otra (escribir)</option>
+        </select>
+        <textarea class="trz-catalogo-otra" id="probCausaNuevaOtra" rows="2" placeholder="Describe la causa raíz" style="display:none;"></textarea>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+          <button type="button" class="btn-secondary-trz" onclick="document.getElementById('probCausaNuevaBox').style.display='none';">Cancelar</button>
+          <button type="button" class="btn-primario-trz" onclick="agregarCausaProblema()">Guardar</button>
+        </div>`;
+    }
+
+    async function agregarCausaProblema() {
+      if (!probProblemaActual) return;
+      const lectura = leerSelectCausa('probCausaNuevaSelect', 'probCausaNuevaOtra', 'texto');
+      if (lectura.error) return alert(lectura.error);
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/causas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(lectura.body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo agregar la causa raíz');
+        probProblemaActual = data;
+        await cargarCatalogo(true);
+        document.getElementById('probCausaNuevaBox').style.display = 'none';
+        renderizarDetalleProblema();
+        await cargarProblemas();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function agregarMedidaProblema(causaId) {
+      if (!probProblemaActual) return;
+      const lectura = leerSelectMedida(causaId);
+      if (lectura.error) return alert(lectura.error);
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/medidas`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ ...lectura.body, causa_id: causaId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo agregar la medida');
+        probProblemaActual = data;
+        await cargarCatalogo(true);
+        renderizarDetalleProblema();
+        await cargarProblemas();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function cambiarEstadoMedidaProblema(medidaId, estado) {
+      if (!probProblemaActual) return;
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/medidas/${medidaId}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ estado }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo actualizar la medida');
+        probProblemaActual = data;
+        renderizarDetalleProblema();
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+      } catch (e) {
+        alert('Error: ' + e.message);
+        renderizarDetalleProblema(); // revertir el selector a lo que de verdad quedó guardado
+      }
+    }
+
+    async function eliminarCausaProblema(causaId) {
+      if (!probProblemaActual) return;
+      if (!confirm('¿Eliminar esta causa raíz? También se eliminarán todas sus medidas. Esta acción no se puede deshacer.')) return;
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/causas/${causaId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo eliminar la causa raíz');
+        probProblemaActual = data;
+        renderizarDetalleProblema();
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function eliminarMedidaProblema(medidaId) {
+      if (!probProblemaActual) return;
+      if (!confirm('¿Eliminar esta medida? Esta acción no se puede deshacer.')) return;
+      try {
+        const res = await fetch(`/api/problemas/${probProblemaActual.id}/medidas/${medidaId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo eliminar la medida');
+        probProblemaActual = data;
+        renderizarDetalleProblema();
+        await cargarProblemas();
+        await cargarAlertasCriticas();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // ======================== SEGUIMIENTO DE PRODUCCIÓN (pestaña) ========================
+    // Traído de Public/seguimiento_produccion.html (pedido por Julio, 08/09).
+    // ======================== BITÁCORA ========================
+    // Se traen TODOS los casos de una sola vez (sin filtro de fábrica ni
+    // estado, límite alto) y los filtros de acá son solo en memoria -- así
+    // no depende de /produccion/resumen-fabricas (que pide calidad.ver, un
+    // permiso que alguien con SOLO produccion.trazabilidad.ver no tiene) y
+    // cambiar de filtro no necesita ir de nuevo al servidor.
+    async function cargarSeguimiento(forzar) {
+      if (segDatosCache && !forzar) { renderizarTablaSeguimiento(); return; }
+      const tbody = document.getElementById('segTablaBody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">Cargando...</td></tr>';
+      try {
+        // MIGRACIÓN #38 (08/09): esta bitácora ahora es una vista filtrada del
+        // módulo Problemas (origen='produccion') -- el backend espera
+        // "limite" (no "limit"), ver GET /problemas en routes/problemas.js.
+        const res = await fetch('/api/problemas?origen=produccion&limite=500', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        segDatosCache = await res.json();
+        poblarFiltroFabrica();
+        renderizarTablaSeguimiento();
+      } catch (e) {
+        console.error('Error cargando bitácora de trazabilidad:', e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Error cargando la bitácora.</td></tr>';
+      }
+    }
+
+    function poblarFiltroFabrica() {
+      const sel = document.getElementById('segFiltroFabrica');
+      const valorPrevio = sel.value;
+      const fabricas = [...new Set((segDatosCache || []).map(p => p.fabrica))].sort();
+      sel.innerHTML = '<option value="">Todas</option>' +
+        fabricas.map(f => `<option value="${f}">${escapeHtml(nombreDisplay(f))}</option>`).join('');
+      if (valorPrevio) sel.value = valorPrevio;
+    }
+
+    function renderizarTablaSeguimiento() {
+      const tbody = document.getElementById('segTablaBody');
+      if (!tbody) return;
+      const fabrica = document.getElementById('segFiltroFabrica').value;
+      const estado = document.getElementById('segFiltroEstado').value;
+      const criticidad = document.getElementById('segFiltroCriticidad')?.value || '';
+      const datos = (segDatosCache || []).filter(p => {
+        if (fabrica && p.fabrica !== fabrica) return false;
+        if (criticidad && p.criticidad !== criticidad) return false;
+        if (estado === 'en_curso') return p.estado !== 'Implementado' && p.estado !== 'Descartado';
+        if (estado) return p.estado === estado;
+        return true;
+      });
+      if (datos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#a0aec0;">No hay casos registrados con estos filtros.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = datos.map(p => `
+        <tr>
+          <td>${escapeHtml(p.semana)}</td>
+          <td>${escapeHtml(nombreDisplay(p.fabrica))}</td>
+          <td><span class="pill pill-muted">${p.tipo_contexto === 'referencia' ? 'Ref.' : 'Motivo'}</span> <strong>${escapeHtml(p.valor_contexto)}</strong></td>
+          <td>${criticidadPill(p.criticidad)}</td>
+          <td>${estadoPill(p.estado)}</td>
+          <td title="${p.ultima_causa ? escapeHtml(p.ultima_causa) : ''}">${escapeHtml(p.actualizado_en || '')}
+            ${p.total_causas > 0 ? ` <span class="pill pill-muted">${p.total_causas} causa${p.total_causas === 1 ? '' : 's'}</span>` : ''}${p.total_medidas > 0 ? ` <span class="pill pill-muted">${p.total_medidas} medida${p.total_medidas === 1 ? '' : 's'}</span>` : ''}</td>
+          <td><button type="button" class="btn-secondary-trz" onclick="verDetalleSeguimiento(${p.id})"><i class="fa-solid fa-eye"></i> Ver</button></td>
+        </tr>`).join('');
+    }
+
+    // ======================== DETALLE DE UN CASO ========================
+    async function verDetalleSeguimiento(id) {
+      document.getElementById('segModalOverlay').style.display = 'flex';
+      document.getElementById('segModalContexto').innerHTML = '<div class="empty-hint">Cargando...</div>';
+      document.getElementById('segModalCausas').innerHTML = '';
+      document.getElementById('segGraficasSeccion').style.display = 'none';
+      try {
+        const res = await fetch(`/api/problemas/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        segCasoActual = await res.json();
+        renderizarDetalleSeguimiento();
+        // Gráficas de contexto (pedido por Julio 04/09): solo para casos de
+        // tipo Motivo, se cargan una sola vez al entrar (cambiar el estado
+        // de una medida no cambia esta información).
+        if (segCasoActual.tipo_contexto === 'motivo') {
+          document.getElementById('segGraficasSeccion').style.display = 'flex';
+          cargarGraficasMotivoSeguimiento(segCasoActual.fabrica, segCasoActual.valor_contexto);
+        }
+      } catch (e) {
+        document.getElementById('segModalContexto').innerHTML = '<div class="empty-hint" style="color:red;">No se pudo cargar este caso.</div>';
+      }
+    }
+
+    // Mismo criterio que en Producción (Public/produccion.html): tendencia
+    // mensual de un motivo + top de referencias donde más aparece. Van con
+    // el permiso de "poder ver este caso" (puedeVerBitacora en el backend),
+    // así que funcionan igual para alguien con solo
+    // produccion.trazabilidad.ver (sin calidad.ver).
+    const NOMBRES_MES_CORTO = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    function formatearMesLabel(mesStr) {
+      const [y, m] = String(mesStr || '').split('-').map(Number);
+      if (!y || !m || !NOMBRES_MES_CORTO[m - 1]) return mesStr;
+      return `${NOMBRES_MES_CORTO[m - 1]} ${y}`;
+    }
+
+    let segChartMesInstancia = null;
+    let segChartReferenciasInstancia = null;
+
+    async function cargarGraficasMotivoSeguimiento(fabricaValor, motivoValor) {
+      if (segChartMesInstancia) { segChartMesInstancia.destroy(); segChartMesInstancia = null; }
+      if (segChartReferenciasInstancia) { segChartReferenciasInstancia.destroy(); segChartReferenciasInstancia = null; }
+
+      try {
+        const paramsMes = new URLSearchParams({ fabrica: fabricaValor, motivo: motivoValor, meses: 24 });
+        const paramsRef = new URLSearchParams({ fabrica: fabricaValor, motivo: motivoValor, meses: 24, limite: 10 });
+        const [resMes, resRef] = await Promise.all([
+          fetch(`/api/produccion/trazabilidad/graficas/por-mes?${paramsMes}`, { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch(`/api/produccion/trazabilidad/graficas/referencias-por-motivo?${paramsRef}`, { headers: { 'Authorization': 'Bearer ' + token } }),
+        ]);
+        const datosMes = resMes.ok ? await resMes.json() : [];
+        const datosRef = resRef.ok ? await resRef.json() : [];
+
+        const ctxMes = document.getElementById('segChartMes')?.getContext('2d');
+        const ctxRef = document.getElementById('segChartReferencias')?.getContext('2d');
+        if (!ctxMes || !ctxRef) return;
+
+        segChartMesInstancia = new Chart(ctxMes, {
+          type: 'line',
+          data: {
+            labels: datosMes.map(d => formatearMesLabel(d.mes)),
+            datasets: [{ label: 'Unidades rechazadas', data: datosMes.map(d => d.unidades), borderColor: '#2C43A2', backgroundColor: 'rgba(44,67,162,0.12)', fill: true, tension: 0.25 }],
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+
+        // Pedido por Julio (04/09, 3): barras verticales (no horizontales) y
+        // top 10 referencias (ver el límite en paramsRef arriba).
+        segChartReferenciasInstancia = new Chart(ctxRef, {
+          type: 'bar',
+          data: {
+            labels: datosRef.map(d => d.referencia),
+            datasets: [{ label: 'Veces reportado', data: datosRef.map(d => d.cantidad), backgroundColor: '#38a169' }],
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+      } catch (e) {
+        console.error('Error cargando gráficas de contexto del motivo:', e);
+      }
+    }
+
+    function renderizarDetalleSeguimiento() {
+      const p = segCasoActual;
+      if (!p) return;
+      const etiquetaTipo = p.tipo_contexto === 'referencia' ? 'Referencia' : 'Motivo';
+      const etiquetaValor = p.tipo_contexto === 'referencia' ? '% Desperdicio' : 'Unidades rechazadas';
+
+      document.getElementById('segModalContexto').innerHTML = `
+        <div><span>Fábrica</span><strong>${escapeHtml(nombreDisplay(p.fabrica))}</strong></div>
+        <div><span>${etiquetaTipo}</span><strong>${escapeHtml(p.valor_contexto)}</strong></div>
+        <div><span>Semana</span><strong>${escapeHtml(p.semana)}</strong></div>
+        <div><span>${etiquetaValor}</span><strong>${p.pct_desperdicio_inicial != null ? p.pct_desperdicio_inicial + (p.tipo_contexto === 'referencia' ? '%' : '') : '--'}</strong></div>
+        <div><span>Criticidad</span><strong>${criticidadPill(p.criticidad)}</strong></div>
+      `;
+      document.getElementById('segModalEstado').innerHTML = estadoPill(p.estado);
+
+      const puedeGestionar = tienePermiso('problemas.gestionar');
+      const causas = p.causas || [];
+      const medidas = p.medidas || [];
+      const cont = document.getElementById('segModalCausas');
+
+      if (causas.length === 0) {
+        cont.innerHTML = '<div class="empty-hint">Todavía no hay ninguna causa raíz registrada.</div>';
+        return;
+      }
+
+      cont.innerHTML = causas.map(c => renderizarCausaCardSeguimiento(c, medidas.filter(m => m.causa_id === c.id), puedeGestionar)).join('');
+
+      if (puedeGestionar) {
+        cont.querySelectorAll('select.trz-medida-estado').forEach(sel => {
+          sel.onchange = () => cambiarEstadoMedidaSeguimiento(sel.dataset.medidaId, sel.value);
+        });
+      }
+    }
+
+    function renderizarMedidaItemSeguimiento(m, puedeGestionar) {
+      return `
+        <div class="trz-item" data-medida-id="${m.id}">
+          <div class="trz-item-meta">
+            <span class="trz-item-kind">Medida</span>
+            <select class="trz-medida-estado" data-medida-id="${m.id}" ${puedeGestionar ? '' : 'disabled'}>
+              ${Object.entries(ETIQUETAS_ESTADO_MEDIDA).map(([valor, texto]) => `<option value="${valor}" ${m.estado === valor ? 'selected' : ''}>${texto}</option>`).join('')}
+            </select>
+          </div>
+          <div class="trz-item-texto">${escapeHtml(m.texto)}</div>
+          <div class="trz-item-resp">Registrada por <b>${escapeHtml(m.autor_nombre || m.responsable_nombre || 'Usuario')}</b> el ${escapeHtml(m.creado_en || '')}</div>
+        </div>`;
+    }
+
+    function renderizarCausaCardSeguimiento(causa, medidasDeCausa, puedeGestionar) {
+      return `
+        <div class="trz-causa-card">
+          <div class="trz-item-causa-info">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind causa">Causa raíz</span>
+              <span>${escapeHtml(causa.fecha || '')}</span>
+            </div>
+            <div class="trz-item-texto">${escapeHtml(causa.texto)}</div>
+            <div class="trz-item-resp">Registrada por <b>${escapeHtml(causa.autor_nombre || causa.responsable_nombre || 'Usuario')}</b></div>
+          </div>
+          <div class="trz-medidas-de-causa">
+            ${medidasDeCausa.length
+              ? medidasDeCausa.map(m => renderizarMedidaItemSeguimiento(m, puedeGestionar)).join('')
+              : '<div class="empty-hint" style="margin:0;">Todavía no hay medidas para esta causa.</div>'}
+          </div>
+        </div>`;
+    }
+
+    async function cambiarEstadoMedidaSeguimiento(medidaId, estado) {
+      if (!segCasoActual) return;
+      try {
+        const res = await fetch(`/api/problemas/${segCasoActual.id}/medidas/${medidaId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ estado }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al actualizar la medida');
+        segCasoActual = data;
+        renderizarDetalleSeguimiento();
+        // La fila de la tabla de fondo (estado, total de medidas, última
+        // actualización) también pudo cambiar -- se refresca sola.
+        await cargarSeguimiento(true);
+      } catch (e) {
+        alert('Error: ' + e.message);
+        renderizarDetalleSeguimiento(); // revertir el selector a lo que de verdad quedó guardado
+      }
+    }
+
+    function cerrarDetalleSeguimiento() {
+      document.getElementById('segModalOverlay').style.display = 'none';
+      segCasoActual = null;
+    }
+
+    // ======================== SUB-PESTAÑAS "CASOS" / "CATÁLOGO" ========================
+    function activarSubTabSeguimiento(tab) {
+      document.querySelectorAll('.subtabs-nav .subtab-btn').forEach(b => b.classList.remove('activa'));
+      document.querySelectorAll('.subtab-pane').forEach(p => p.classList.remove('activa'));
+      document.getElementById('segSubtabBtn-' + tab).classList.add('activa');
+      document.getElementById('segSubtabPane-' + tab).classList.add('activa');
+      // Pedido por Julio (07/09): antes solo se cargaba la primera vez
+      // (catalogoTrazCache === null) -- si mientras tanto se agregó una
+      // causa desde otro módulo (p.ej. Reportes por Áreas, en otra pestaña
+      // del navegador), esta pestaña se quedaba con la lista vieja hasta
+      // recargar toda la página. Ahora se refresca siempre que se entra a
+      // esta pestaña (el catálogo es chico, no tiene costo real).
+      if (tab === 'catalogo') cargarCatalogoTraz(true);
+    }
+
+    // ======================== CATÁLOGO DE CAUSAS Y MEDIDAS ========================
+    // Movido acá desde Gestión → Catálogos (pedido por Julio 04/09): queda
+    // mejor junto al seguimiento real de los casos que en la administración
+    // de roles y usuarios. Ver los mismos endpoints /produccion/trazabilidad/
+    // catalogo/... que ya usaba gestion.html.
+    let catalogoTrazCache = null; // null = todavía no se ha cargado ni una vez
+    // Pedido por Julio (07/09, cuarta vuelta): esta lista no decía a qué
+    // Problema/Defecto pertenecía cada causa -- una causa agregada desde
+    // Reportes por Áreas (o desde el nuevo selector de Producción por
+    // Fábrica) sí quedaba bien guardada y ligada, pero como acá no se veía
+    // esa conexión, parecía que "no había cargado". Mismo catálogo de
+    // Defectos ISO 2859 que ya usan Reportes y Producción por Fábrica.
+    let catalogoDefectosCache = null;
+
+    function badgeEstadoActivo(activo) {
+      const esActivo = activo !== 'Inactivo';
+      return `<span class="pill ${esActivo ? 'pill-ok' : 'pill-muted'}">${esActivo ? 'Activo' : 'Inactivo'}</span>`;
+    }
+
+    function badgeDefecto(defectoId) {
+      if (!defectoId) return '<span class="pill pill-muted">Sin problema asignado</span>';
+      const d = (catalogoDefectosCache || []).find(x => String(x.id) === String(defectoId));
+      // Si tiene defecto_id pero no aparece en el catálogo de defectos
+      // ACTIVOS (ver /api/problemas/defectos, MIGRACIÓN #38), no es que le
+      // falte el problema -- es que ese defecto quedó Inactivo mientras
+      // tanto. No
+      // se confunde con "Sin problema asignado" (defecto_id realmente NULL).
+      if (!d) return '<span class="pill pill-muted">Problema no encontrado (puede estar Inactivo)</span>';
+      return `<span class="pill pill-info">${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</span>`;
+    }
+
+    function buscarCausaCatalogoCache(id) {
+      return (catalogoTrazCache || []).find(c => String(c.id) === String(id)) || null;
+    }
+    function buscarMedidaCatalogoCache(causaId, medidaId) {
+      const c = buscarCausaCatalogoCache(causaId);
+      return c ? (c.medidas || []).find(m => String(m.id) === String(medidaId)) || null : null;
+    }
+
+    async function cargarCatalogoTraz(forzar) {
+      const cont = document.getElementById('catTrazContainer');
+      if (!forzar && catalogoTrazCache !== null) { renderizarCatalogoTraz(); return; }
+      cont.innerHTML = '<div class="empty-hint">Cargando...</div>';
+      try {
+        const [resCatalogo, resDefectos] = await Promise.all([
+          fetch('/api/problemas/catalogo', { headers: { 'Authorization': 'Bearer ' + token } }),
+          fetch('/api/problemas/defectos', { headers: { 'Authorization': 'Bearer ' + token } }),
+        ]);
+        if (!resCatalogo.ok) throw new Error('HTTP ' + resCatalogo.status);
+        catalogoTrazCache = await resCatalogo.json();
+        // Los defectos son opcionales para esta pantalla -- si por lo que
+        // sea no se pudieron traer, se sigue mostrando el catálogo igual,
+        // solo que sin la etiqueta de a qué problema pertenece cada causa.
+        catalogoDefectosCache = resDefectos.ok ? await resDefectos.json() : [];
+        renderizarCatalogoTraz();
+      } catch (e) {
+        console.error('Error cargando catálogo de causas/medidas:', e);
+        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error cargando el catálogo.</div>';
+      }
+    }
+
+    function renderizarCatalogoTraz() {
+      const cont = document.getElementById('catTrazContainer');
+      const puedeGestionar = tienePermiso('catalogos.gestionar');
+      document.getElementById('catBtnAgregarCausa').style.display = puedeGestionar ? 'inline-flex' : 'none';
+      const datos = catalogoTrazCache || [];
+      cont.innerHTML = datos.length
+        ? datos.map(c => renderizarCausaCatalogoAdmin(c, puedeGestionar)).join('')
+        : '<div class="empty-hint">Todavía no hay ninguna causa raíz en el catálogo.</div>';
+
+      // Limpieza de una sola vez (pedido por Julio, 07/09) del backlog de
+      // causas sin "problema" (defecto) asignado -- ver borrarCausasSinProblema().
+      // Solo se muestra si hay algo que limpiar, para que no quede ahí de
+      // adorno una vez ya se usó.
+      const sinProblema = datos.filter(c => !c.defecto_id).length;
+      const cajaLimpieza = document.getElementById('catLimpiezaBox');
+      if (puedeGestionar && sinProblema > 0) {
+        cajaLimpieza.style.display = 'block';
+        document.getElementById('catBtnLimpiar').innerHTML = `<i class="fa-solid fa-broom"></i> Borrar ${sinProblema} causa${sinProblema === 1 ? '' : 's'} sin problema asignado`;
+      } else {
+        cajaLimpieza.style.display = 'none';
+      }
+    }
+
+    async function borrarCausasSinProblema() {
+      const datos = catalogoTrazCache || [];
+      const sinProblema = datos.filter(c => !c.defecto_id).length;
+      if (!confirm(
+        `¿Borrar las ${sinProblema} causa${sinProblema === 1 ? '' : 's'} raíz del catálogo que no tienen ningún "problema" asignado?\n\n` +
+        'Esto incluye causas ya usadas en casos reales -- su texto se mantiene en el historial de cada caso, pero dejan de poder reusarse desde el catálogo. Esta acción no se puede deshacer.'
+      )) return;
+      try {
+        const res = await fetch('/api/problemas/catalogo/causas-sin-defecto', {
+          method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo completar la limpieza');
+        alert(`Listo: se borraron ${data.causasEliminadas} causa(s) (${data.medidasEliminadas} medida(s) propia(s), ${data.referenciasDesvinculadas} referencia(s) en casos reales desvinculada(s)).`);
+        await cargarCatalogoTraz(true);
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function renderizarCausaCatalogoAdmin(c, puedeGestionar) {
+      const filasMedidas = (c.medidas || []).length
+        ? c.medidas.map(m => `
+          <div class="trz-item" data-medida-id="${m.id}">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind">Medida</span>
+              ${badgeEstadoActivo(m.activo)}
+            </div>
+            <div class="trz-item-texto">${escapeHtml(m.texto)}</div>
+            ${puedeGestionar ? `<div style="display:flex; gap:6px; margin-top:8px;">
+              <button type="button" class="btn-secondary-trz" onclick="abrirModalMedidaCatalogo(${c.id}, ${m.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+              <button type="button" class="btn-eliminar-trz" onclick="eliminarMedidaCatalogo(${c.id}, ${m.id}, '${escapeHtml(m.texto).replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
+            </div>` : ''}
+          </div>`).join('')
+        : '<div class="empty-hint" style="margin:0;">Todavía no hay medidas para esta causa.</div>';
+
+      return `
+        <div class="trz-causa-card" data-causa-id="${c.id}">
+          <div class="trz-item-causa-info">
+            <div class="trz-item-meta">
+              <span class="trz-item-kind causa">Causa raíz</span>
+              <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                ${badgeDefecto(c.defecto_id)}
+                ${badgeEstadoActivo(c.activo)}
+              </span>
+            </div>
+            <div class="trz-item-texto">${escapeHtml(c.texto)}</div>
+            ${puedeGestionar ? `<div style="display:flex; gap:6px; margin-top:8px;">
+              <button type="button" class="btn-secondary-trz" onclick="abrirModalCausaCatalogo(${c.id})"><i class="fa-solid fa-pen"></i> Editar</button>
+              <button type="button" class="btn-eliminar-trz" onclick="eliminarCausaCatalogo(${c.id}, '${escapeHtml(c.texto).replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
+            </div>` : ''}
+          </div>
+          <div class="trz-medidas-de-causa">
+            ${filasMedidas}
+            ${puedeGestionar ? `<button type="button" class="btn-secondary-trz" style="align-self:flex-start;" onclick="abrirModalMedidaCatalogo(${c.id})"><i class="fa-solid fa-plus"></i> Agregar medida</button>` : ''}
+          </div>
+        </div>`;
+    }
+
+    function cerrarModalCatalogo() {
+      document.getElementById('catModalOverlay').style.display = 'none';
+    }
+
+    function campoModalCatalogo(id, label, valor, placeholder) {
+      return `<div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:5px;">${label}</label>
+        <input type="text" id="${id}" value="${valor}" placeholder="${placeholder}" style="width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid #cbd5e0; border-radius:8px; font-size:13.5px; font-family:inherit;">
+      </div>`;
+    }
+    function campoEstadoModalCatalogo(id, activo) {
+      return `<div>
+        <label style="display:block; font-size:12px; font-weight:700; color:#4a5568; margin-bottom:5px;">Estado</label>
+        <select id="${id}" style="width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid #cbd5e0; border-radius:8px; font-size:13.5px; font-family:inherit;">
+          <option value="Activo" ${activo !== 'Inactivo' ? 'selected' : ''}>Activo</option>
+          <option value="Inactivo" ${activo === 'Inactivo' ? 'selected' : ''}>Inactivo</option>
+        </select>
+      </div>`;
+    }
+
+    function abrirModalCausaCatalogo(id) {
+      const c = id ? buscarCausaCatalogoCache(id) : null;
+      document.getElementById('catModalTitulo').innerHTML = `<i class="fa-solid fa-diagram-project"></i> ${c ? 'Editar' : 'Agregar'} Causa Raíz`;
+      document.getElementById('catModalBody').innerHTML =
+        campoModalCatalogo('catInputTexto', 'Causa raíz', c ? escapeHtml(c.texto) : '', 'Ej: Molde desgastado') +
+        (c ? campoEstadoModalCatalogo('catInputEstado', c.activo) : '');
+      document.getElementById('catModalGuardar').onclick = () => guardarCausaCatalogo(id);
+      document.getElementById('catModalOverlay').style.display = 'flex';
+    }
+
+    async function guardarCausaCatalogo(id) {
+      const texto = document.getElementById('catInputTexto').value.trim();
+      if (!texto) return alert('Escribe el texto de la causa raíz.');
+      const payload = { texto };
+      const estadoSel = document.getElementById('catInputEstado');
+      if (estadoSel) payload.activo = estadoSel.value;
+      const url = id ? `/api/problemas/catalogo/causas/${id}` : '/api/problemas/catalogo/causas';
+      const method = id ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { cerrarModalCatalogo(); await cargarCatalogoTraz(true); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarCausaCatalogo(id, texto) {
+      if (!confirm(`¿Seguro que quieres eliminar la causa raíz "${texto}"? Si tiene medidas en el catálogo o ya se usó en algún caso real, el sistema te va a pedir que la desactives en vez de eliminarla.`)) return;
+      try {
+        const res = await fetch(`/api/problemas/catalogo/causas/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatalogoTraz(true);
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    function abrirModalMedidaCatalogo(causaId, medidaId) {
+      const m = medidaId ? buscarMedidaCatalogoCache(causaId, medidaId) : null;
+      document.getElementById('catModalTitulo').innerHTML = `<i class="fa-solid fa-diagram-project"></i> ${m ? 'Editar' : 'Agregar'} Medida`;
+      document.getElementById('catModalBody').innerHTML =
+        campoModalCatalogo('catInputTexto', 'Medida', m ? escapeHtml(m.texto) : '', 'Ej: Llevar molde a mantenimiento al taller') +
+        (m ? campoEstadoModalCatalogo('catInputEstado', m.activo) : '');
+      document.getElementById('catModalGuardar').onclick = () => guardarMedidaCatalogo(causaId, medidaId);
+      document.getElementById('catModalOverlay').style.display = 'flex';
+    }
+
+    async function guardarMedidaCatalogo(causaId, medidaId) {
+      const texto = document.getElementById('catInputTexto').value.trim();
+      if (!texto) return alert('Escribe el texto de la medida.');
+      const payload = { texto };
+      const estadoSel = document.getElementById('catInputEstado');
+      if (estadoSel) payload.activo = estadoSel.value;
+      const url = medidaId ? `/api/problemas/catalogo/medidas/${medidaId}` : `/api/problemas/catalogo/causas/${causaId}/medidas`;
+      const method = medidaId ? 'PUT' : 'POST';
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) });
+        if (res.ok) { cerrarModalCatalogo(); await cargarCatalogoTraz(true); }
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo guardar')); }
+      } catch (e) { alert('Error de conexión: ' + e.message); }
+    }
+
+    async function eliminarMedidaCatalogo(causaId, medidaId, texto) {
+      if (!confirm(`¿Seguro que quieres eliminar la medida "${texto}"?`)) return;
+      try {
+        const res = await fetch(`/api/problemas/catalogo/medidas/${medidaId}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.ok) await cargarCatalogoTraz(true);
+        else { const err = await res.json().catch(() => ({})); alert('Error: ' + (err.error || 'No se pudo eliminar')); }
+      } catch (e) { alert('Error de conexión'); }
+    }
+
+    document.getElementById('loginPass').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+    init();
+  </script>
+</body>
+</html>

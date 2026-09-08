@@ -514,6 +514,23 @@ async function obtenerProduccionPorReferencia(meses, fabrica, limite) {
 // La llave de cruce es rechazos_produccion.lote_produccion = el número de
 // lote (lotes.no_lote / entregas_produccion.lote_entrega) — verificado
 // 31/08 contra los datos reales: 99.5% de los rechazos encuentran su lote.
+//
+// Revisión 08/09 (Julio, al mapear qué tablas quedan sin conectar): del
+// resto que no cruzaba, 149 filas eran el mismo lote escrito con otra
+// combinación de mayúsculas (SQLite compara texto distinguiendo mayúscula
+// de minúscula) — corregido con scripts/normalizar_mayusculas_lotes.js,
+// que se puede volver a correr sin riesgo si vuelve a pasar. Lo que quedó
+// después de eso son excepciones reales, no errores a corregir, y se
+// dejan así a propósito (sin FOREIGN KEY formal, el cruce sigue siendo
+// por texto):
+//   - Lotes de Cableado muy recientes que entran a rechazos/entregas antes
+//     de que corra la sincronización que los crea en `lotes` — se
+//     resuelven solos en la siguiente corrida de sincronizar_produccion.js.
+//   - Números de orden de compra digitados en el campo de lote en vez del
+//     número de lote (ej. "PO18948"), y lotes con el formato viejo
+//     "SMD2024-00XX" de antes del esquema actual de numeración.
+//   - Entregas de maquila/servicio externo, que de entrada no tienen
+//     número de lote propio (se identifican por hash_fila, no por lote).
 
 // Tabla buscable: producido/rechazado/% desperdicio por lote, enriquecido
 // con Referencia/Color/Voltaje/Código desde la tabla `lotes`. Igual que

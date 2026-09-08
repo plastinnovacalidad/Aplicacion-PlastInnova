@@ -106,10 +106,9 @@
     .btn-secondary-trz { background: #f8fafc; border: 1px solid #e2e8f0; color: #4a5568; border-radius: 6px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
     .btn-secondary-trz:hover { background: #edf2f7; }
     /* Botón de eliminar causa raíz/medida (pedido por Julio 04/09) -- pide
-       su propio permiso 'produccion.trazabilidad.eliminar', aparte del de
-       agregar ('produccion.trazabilidad.gestionar'), así que puede aparecer
-       aunque no se muestre el select de "cambiar estado" (que sí depende de
-       gestionar). */
+       su propio permiso 'problemas.eliminar' (MIGRACIÓN #38), aparte del de
+       agregar ('problemas.gestionar'), así que puede aparecer aunque no se
+       muestre el select de "cambiar estado" (que sí depende de gestionar). */
     .btn-eliminar-trz { background: #fff5f5; border: 1px solid #fed7d7; color: #c53030; border-radius: 6px; padding: 3px 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; }
     .btn-eliminar-trz:hover { background: #fed7d7; }
     /* Botón "+" para agregar otra causa raíz (pedido por Julio 04/09): antes
@@ -351,22 +350,29 @@
            el responsable ya no se elige, es automáticamente quien la esté
            registrando. -->
       <form id="trzFormNuevo" onsubmit="crearCasoTrazabilidad(event)">
-        <!-- Pedido por Julio (07/09, tercera vuelta): elegir "el problema"
-             (mismo catálogo de Defectos de Muestreos ISO 2859 que ya usa
-             Reportes por Áreas) es opcional -- si se elige uno, la Causa
-             Raíz de abajo se filtra para mostrar solo las ya ligadas a ESE
-             Defecto (para reusarlas); si se deja en blanco, se comporta
-             igual que siempre (todo el catálogo, sin filtrar). -->
-        <label for="trzDefectoInicialSelect">Problema / Defecto (opcional)</label>
-        <select id="trzDefectoInicialSelect" onchange="alCambiarDefectoTrazabilidad('inicial')">
-          <option value="">Sin problema asignado</option>
-        </select>
-        <label for="trzCausaInicialSelect" style="margin-top:10px;">Causa Raíz</label>
+        <!-- MIGRACIÓN #38 (08/09, pedido por Julio): ya no se pide elegir
+             "el problema" (Defecto de Muestreos ISO 2859) aparte -- para
+             Producción, motivo de rechazo y defecto son lo mismo, así que la
+             Causa Raíz de abajo se filtra sola por el motivo de este caso
+             (ver poblarSelectCausasPorMotivo), sin ningún selector extra que
+             elegir. -->
+        <label for="trzCausaInicialSelect">Causa Raíz</label>
         <select id="trzCausaInicialSelect" data-otra="trzCausaInicialOtra" onchange="alCambiarSelectCatalogo(this)">
           <option value="">Elige una causa del catálogo...</option>
           <option value="__otra__">Otra (escribir)</option>
         </select>
         <textarea id="trzCausaInicialOtra" rows="2" placeholder="¿Qué originó el problema?" style="display:none; margin-top:8px;"></textarea>
+        <!-- MIGRACIÓN #38 (08/09, pedido por Julio): este caso ahora se
+             registra en el módulo unificado "Problemas" -- criticidad
+             (Baja/Media/Alta, sin un cuarto nivel "Crítica") es obligatoria
+             desde ahí, para poder priorizar la lista abierta y disparar la
+             alerta de críticos. -->
+        <label for="trzCriticidadInicialSelect" style="margin-top:10px;">Criticidad</label>
+        <select id="trzCriticidadInicialSelect">
+          <option value="Baja">Baja</option>
+          <option value="Media" selected>Media</option>
+          <option value="Alta">Alta</option>
+        </select>
         <button type="submit" class="btn-trazabilidad-guardar" id="trzBtnCrear"><i class="fa-solid fa-floppy-disk"></i> Crear Caso</button>
       </form>
 
@@ -387,13 +393,6 @@
             <span><i class="fa-solid fa-diagram-project"></i> Causas raíz y sus medidas</span>
             <span style="display:flex; gap:6px;">
               <button type="button" class="btn-trz-agregar-causa" id="trzBtnMostrarCausaNueva" onclick="toggleCausaNuevaBox()" title="Agregar otra causa raíz"><i class="fa-solid fa-plus"></i></button>
-              <!-- MIGRACIÓN #37 (07/09, pedido por Julio): cuando la misma causa
-                   real ya está registrada en un Reporte por Áreas (u otro caso de
-                   Producción), en vez de escribirla de nuevo se busca y se
-                   vincula -- así comparten medidas y progreso. Nunca automático,
-                   siempre una búsqueda + elección del analista (ver
-                   abrirModalVincularCausa). -->
-              <button type="button" class="btn-trz-agregar-causa" id="trzBtnVincularCausa" onclick="abrirModalVincularCausa()" title="Vincular una causa que ya existe en otro caso o módulo"><i class="fa-solid fa-link"></i></button>
             </span>
           </h4>
           <div id="trzCausasLista" class="trz-item-lista"></div>
@@ -403,13 +402,6 @@
                abre/cierra con el botón "+" de arriba (ver
                toggleCausaNuevaBox). -->
           <div class="trz-item-nuevo" id="trzCausaNuevaBox" style="display:none; margin-top:12px;">
-            <!-- Pedido por Julio (07/09, tercera vuelta): mismo selector de
-                 Problema/Defecto opcional que en el formulario de "Crear Caso"
-                 (ver trzDefectoInicialSelect) -- filtra la Causa Raíz de abajo. -->
-            <label for="trzDefectoNuevaSelect" style="font-size:12px; color:#a0aec0;">Problema / Defecto (opcional)</label>
-            <select id="trzDefectoNuevaSelect" onchange="alCambiarDefectoTrazabilidad('nueva')" style="margin-bottom:8px;">
-              <option value="">Sin problema asignado</option>
-            </select>
             <select id="trzCausaNuevaSelect" data-otra="trzCausaNuevaOtra" onchange="alCambiarSelectCatalogo(this)">
               <option value="">Elige una causa del catálogo...</option>
               <option value="__otra__">Otra (escribir)</option>
@@ -446,28 +438,6 @@
       </div>
       <p style="font-size:12.5px; color:#718096; margin-top:0;">Haz clic sobre la barra del motivo que quieres trabajar -- si ese motivo ya tiene causa raíz registrada (de esta u otra referencia), la vas a ver directo.</p>
       <div id="motivoSelectorLista"></div>
-    </div>
-  </div>
-
-  <!-- ======================== VINCULAR CAUSA EXISTENTE (MIGRACIÓN #37) ========================
-       Pedido por Julio (07/09): buscar una causa raíz ya registrada (en este
-       mismo caso de Producción, en otro caso, o en un Reporte por Áreas) y
-       vincularla a este caso -- a partir de ahí comparten medidas y estado.
-       Siempre una búsqueda + elección manual, nunca automático (ver
-       data/causasRaiz.js: el mismo defecto puede tener causas distintas
-       según la fábrica/área). -->
-  <div class="trz-modal-overlay" id="vincularCausaOverlay" onclick="if (event.target === this) cerrarModalVincularCausa();">
-    <div class="trz-modal-panel" style="max-width: 560px;">
-      <div class="trz-modal-header">
-        <h3><i class="fa-solid fa-link"></i> Vincular una causa raíz existente</h3>
-        <button class="trz-modal-cerrar" onclick="cerrarModalVincularCausa()">&times;</button>
-      </div>
-      <p style="font-size:12.5px; color:#718096; margin-top:0;">Busca por el texto de la causa. Antes de vincular, revisa en qué caso(s) ya está -- el mismo defecto puede tener causas distintas según la fábrica o el área, así que vincula solo si de verdad es el mismo problema real.</p>
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
-        <input type="text" id="vincularCausaInput" placeholder="Escribe parte del texto de la causa..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); buscarCausasParaVincular();}">
-        <button type="button" class="btn-secondary-trz" onclick="buscarCausasParaVincular()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
-      </div>
-      <div id="vincularCausaResultados" class="trz-item-lista"></div>
     </div>
   </div>
 
@@ -929,7 +899,8 @@
       });
       // Rediseño 04/09: la bitácora de todos los casos ("Seguimiento") ya no
       // es una pestaña de esta pantalla -- Julio la pidió como su propio
-      // módulo dentro de Calidad (ver seguimiento_produccion.html).
+      // módulo dentro de Calidad. Pestañas (08/09): ese módulo ahora vive
+      // dentro de Problemas, como su segunda pestaña (ver problemas.html).
 
       document.getElementById('tabsNav').innerHTML = pestañas.map(p => `
         <button class="tab-btn ${p.key === pestañaActiva ? 'activa' : ''}" id="tabBtn-${p.key}" onclick="activarPestaña('${p.key}')">${escapeHtml(p.label)}</button>
@@ -1118,8 +1089,10 @@
     // Todos los casos de todas las fábricas juntos, filtrables -- para no
     // tener que ir fábrica por fábrica buscando qué quedó pendiente.
     // Rediseño 04/09: la bitácora de todos los casos ya no vive aquí --
-    // Julio la pidió como su propio módulo (ver seguimiento_produccion.html),
-    // no como una pestaña de esta pantalla de reportes de Producción.
+    // Julio la pidió como su propio módulo, no como una pestaña de esta
+    // pantalla de reportes de Producción. Pestañas (08/09): ese módulo
+    // ahora vive dentro de Problemas, como su segunda pestaña (ver
+    // problemas.html).
 
     function estadoPill(estado) {
       const clase = { Pendiente: 'pill-warning', En_Proceso: 'pill-info', Implementado: 'pill-ok' }[estado] || 'pill-muted';
@@ -1154,7 +1127,7 @@
     async function cargarCatalogoTrazabilidad(forzar) {
       if (trzCatalogoCache && !forzar) return trzCatalogoCache;
       try {
-        const res = await fetch('/api/produccion/trazabilidad/catalogo', { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await fetch('/api/problemas/catalogo', { headers: { 'Authorization': 'Bearer ' + token } });
         trzCatalogoCache = res.ok ? await res.json() : [];
       } catch (e) {
         trzCatalogoCache = [];
@@ -1162,22 +1135,9 @@
       return trzCatalogoCache;
     }
 
-    function causasCatalogoActivas() {
-      return (trzCatalogoCache || []).filter(c => c.activo === 'Activo');
-    }
-
     function medidasCatalogoDeCausa(causaCatalogoId) {
       const causa = (trzCatalogoCache || []).find(c => String(c.id) === String(causaCatalogoId));
       return causa ? (causa.medidas || []).filter(m => m.activo === 'Activo') : [];
-    }
-
-    function poblarSelectCausasCatalogo(select) {
-      if (!select) return;
-      const valorPrevio = select.value;
-      select.innerHTML = '<option value="">Elige una causa del catálogo...</option>' +
-        causasCatalogoActivas().map(c => `<option value="${c.id}">${escapeHtml(c.texto)}</option>`).join('') +
-        '<option value="__otra__">Otra (escribir)</option>';
-      if (valorPrevio) select.value = valorPrevio;
     }
 
     // Genérico para cualquier select de catálogo (causa o medida): muestra
@@ -1193,62 +1153,34 @@
       if (select.value === '__otra__') textarea.focus();
     }
 
-    // Pedido por Julio (07/09, tercera vuelta): catálogo de "el problema"
-    // (mismo catálogo de Defectos de Muestreos ISO 2859 que ya usa Reportes
-    // por Áreas) -- se carga una sola vez por sesión de modal (igual que
-    // trzCatalogoCache) y sirve para poblar los dos selects "Problema /
-    // Defecto (opcional)" (al crear el caso, y al agregar otra causa).
-    let trzDefectosCache = null;
-
-    async function cargarDefectosTrazabilidad(forzar) {
-      if (trzDefectosCache && !forzar) return trzDefectosCache;
-      try {
-        const res = await fetch('/api/produccion/trazabilidad/defectos', { headers: { 'Authorization': 'Bearer ' + token } });
-        trzDefectosCache = res.ok ? await res.json() : [];
-      } catch (e) {
-        trzDefectosCache = [];
-      }
-      return trzDefectosCache;
-    }
-
-    function poblarSelectDefectos(select) {
+    // MIGRACIÓN #38 (08/09, pedido por Julio): ya no se pide elegir "el
+    // problema" (Defecto del catálogo de Muestreos ISO 2859) aparte -- para
+    // Producción, "motivo de rechazo" y "defecto" son la misma idea, así que
+    // la Causa Raíz siempre se filtra sola, directo por el motivo del caso
+    // (trzContextoActual.valor_contexto): solo trae las causas que ya se
+    // usaron en otro problema con ese mismo motivo (ver `motivo` en
+    // routes/problemas.js#/problemas/catalogo-causas y
+    // data/trazabilidadCatalogo.js#listarCausasCatalogo). Se vuelve a pedir
+    // cada vez que se abre el modal o se agrega otra causa -- no se cachea,
+    // porque la lista puede crecer con lo que se vaya escribiendo como
+    // "Otra" en otros motivos.
+    async function poblarSelectCausasPorMotivo(selectId, otraId, motivo) {
+      const select = document.getElementById(selectId);
       if (!select) return;
-      const valorPrevio = select.value;
-      select.innerHTML = '<option value="">Sin problema asignado</option>' +
-        (trzDefectosCache || []).map(d => `<option value="${d.id}">${escapeHtml(d.codigo)} — ${escapeHtml(d.descripcion || '')}</option>`).join('');
-      if (valorPrevio) select.value = valorPrevio;
-    }
-
-    // Al elegir (o quitar) un Defecto en cualquiera de los dos selects
-    // "Problema / Defecto (opcional)", refiltra la Causa Raíz emparejada:
-    // con un Defecto elegido, solo muestra las causas del catálogo ya
-    // ligadas a ESE Defecto (para reusarlas) + "Otra"; sin Defecto, vuelve a
-    // mostrar todo el catálogo, igual que siempre (cambio opcional, no
-    // rompe el comportamiento de quien no lo use).
-    async function alCambiarDefectoTrazabilidad(cual) {
-      const causaSelect = document.getElementById(cual === 'inicial' ? 'trzCausaInicialSelect' : 'trzCausaNuevaSelect');
-      const defectoSelect = document.getElementById(cual === 'inicial' ? 'trzDefectoInicialSelect' : 'trzDefectoNuevaSelect');
-      if (!causaSelect || !defectoSelect) return;
-      const otraTextarea = document.getElementById(causaSelect.dataset.otra);
-      const defectoId = defectoSelect.value;
-      if (!defectoId) {
-        poblarSelectCausasCatalogo(causaSelect);
-        causaSelect.value = '';
-        if (otraTextarea) otraTextarea.style.display = 'none';
-        return;
-      }
-      causaSelect.innerHTML = '<option value="">Cargando causas...</option>';
+      select.innerHTML = '<option value="">Cargando causas...</option>';
       let causas = [];
       try {
-        const res = await fetch(`/api/produccion/trazabilidad/catalogo-causas?defecto_id=${defectoId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const params = new URLSearchParams({ motivo });
+        const res = await fetch(`/api/problemas/catalogo-causas?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
         causas = res.ok ? await res.json() : [];
       } catch (e) {
         causas = [];
       }
-      causaSelect.innerHTML = '<option value="">Elige una causa del catálogo...</option>' +
+      select.innerHTML = '<option value="">Elige una causa del catálogo...</option>' +
         causas.map(c => `<option value="${c.id}">${escapeHtml(c.texto)}</option>`).join('') +
         '<option value="__otra__">Otra (escribir)</option>';
-      causaSelect.value = '';
+      select.value = '';
+      const otraTextarea = document.getElementById(otraId);
       if (otraTextarea) otraTextarea.style.display = 'none';
     }
 
@@ -1258,25 +1190,16 @@
     // servidor la agrega sola al catálogo (ver resolverCausaConCatalogo en
     // routes/produccion.js), sin duplicar si ya existía con otras
     // mayúsculas/tildes.
-    // `defectoSelectId` (pedido por Julio, 07/09, tercera vuelta): opcional --
-    // si se pasa el id de un select de Defecto (trzDefectoInicialSelect o
-    // trzDefectoNuevaSelect) y tiene un valor elegido, se manda `defecto_id`
-    // junto con la causa, para que quede ligada a ese mismo Defecto en el
-    // catálogo compartido (ver resolverCausaConCatalogo en
-    // routes/produccion.js). Sin defectoSelectId (o sin elegir uno), se
-    // comporta exactamente igual que siempre.
-    function leerSelectCausa(selectId, otraId, campoTexto, defectoSelectId) {
+    function leerSelectCausa(selectId, otraId, campoTexto) {
       const select = document.getElementById(selectId);
       const valor = select ? select.value : '';
       if (!valor) return { error: 'Elige una causa raíz del catálogo, o "Otra" para escribirla.' };
-      const defectoSelect = defectoSelectId ? document.getElementById(defectoSelectId) : null;
-      const defectoExtra = (defectoSelect && defectoSelect.value) ? { defecto_id: defectoSelect.value } : {};
       if (valor === '__otra__') {
         const texto = (document.getElementById(otraId)?.value || '').trim();
         if (!texto) return { error: 'Escribe la causa raíz.' };
-        return { body: { [campoTexto]: texto, ...defectoExtra } };
+        return { body: { [campoTexto]: texto } };
       }
-      return { body: { causa_catalogo_id: valor, ...defectoExtra } };
+      return { body: { causa_catalogo_id: valor } };
     }
 
     // Igual que leerSelectCausa, pero para la medida de una causa puntual
@@ -1302,7 +1225,6 @@
       document.getElementById('trzModalMensaje').style.display = 'none';
       document.getElementById('trzModalContexto').innerHTML = '<div class="empty-hint">Cargando...</div>';
       await cargarCatalogoTrazabilidad();
-      await cargarDefectosTrazabilidad();
 
       // Gráficas de contexto (pedido por Julio 04/09): solo para casos de
       // tipo Motivo -- se cargan una sola vez al entrar, no en cada
@@ -1316,14 +1238,14 @@
 
       try {
         const params = new URLSearchParams({ fabrica: fabricaValor, tipo_contexto: tipoContexto, valor_contexto: valorContexto });
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/activo?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await fetch(`/api/problemas/activo?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         trzProblemaActual = await res.json();
         if (!trzProblemaActual) {
           // No hay caso activo -- si el último para este contexto ya quedó
           // Implementado, se pregunta antes de crear uno nuevo (AJUSTE 03/09,
           // ver confirmarSolucionAnteriorFallo()/tratarComoCasoNuevo()).
-          const res2 = await fetch(`/api/produccion/trazabilidad/problemas/ultimo?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
+          const res2 = await fetch(`/api/problemas/ultimo?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
           if (res2.ok) {
             const ultimo = await res2.json();
             if (ultimo && ultimo.estado === 'Implementado') trzUltimoImplementado = ultimo;
@@ -1517,7 +1439,7 @@
       const etiquetaTipo = ctx.tipo_contexto === 'referencia' ? 'Referencia' : 'Motivo';
       const valorNumerico = p ? p.pct_desperdicio_inicial : ctx.pct_desperdicio_inicial;
       const etiquetaValor = ctx.tipo_contexto === 'referencia' ? '% Desperdicio' : 'Unidades rechazadas';
-      const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+      const puedeGestionar = tienePermiso('problemas.gestionar');
 
       document.getElementById('trzModalTitulo').innerHTML = p
         ? '<i class="fa-solid fa-wrench"></i> Seguimiento del Problema'
@@ -1560,12 +1482,7 @@
         // u "Otra" para escribirla). El responsable ya no se elige: lo pone
         // el servidor solo, con quien esté conectado.
         document.getElementById('trzFormNuevo').style.display = puedeGestionar ? 'block' : 'none';
-        const defInicial = document.getElementById('trzDefectoInicialSelect');
-        poblarSelectDefectos(defInicial);
-        if (defInicial) defInicial.value = '';
-        const selInicial = document.getElementById('trzCausaInicialSelect');
-        poblarSelectCausasCatalogo(selInicial);
-        if (selInicial) selInicial.value = '';
+        if (puedeGestionar) poblarSelectCausasPorMotivo('trzCausaInicialSelect', 'trzCausaInicialOtra', ctx.valor_contexto);
         const otraInicial = document.getElementById('trzCausaInicialOtra');
         if (otraInicial) { otraInicial.value = ''; otraInicial.style.display = 'none'; }
         if (!puedeGestionar) {
@@ -1591,12 +1508,6 @@
       if (btnMostrarCausaNueva) btnMostrarCausaNueva.style.display = puedeGestionar ? 'inline-flex' : 'none';
       document.getElementById('trzCausaNuevaBox').style.display = 'none';
       if (puedeGestionar) {
-        const defNueva = document.getElementById('trzDefectoNuevaSelect');
-        poblarSelectDefectos(defNueva);
-        if (defNueva) defNueva.value = '';
-        const selNueva = document.getElementById('trzCausaNuevaSelect');
-        poblarSelectCausasCatalogo(selNueva);
-        if (selNueva) selNueva.value = '';
         const otraNueva = document.getElementById('trzCausaNuevaOtra');
         if (otraNueva) { otraNueva.value = ''; otraNueva.style.display = 'none'; }
       }
@@ -1610,80 +1521,8 @@
       if (!box) return;
       const estaAbierta = box.style.display === 'flex';
       box.style.display = estaAbierta ? 'none' : 'flex';
-      if (!estaAbierta) {
-        const defNueva = document.getElementById('trzDefectoNuevaSelect');
-        if (defNueva) { poblarSelectDefectos(defNueva); defNueva.value = ''; }
-        const selNueva = document.getElementById('trzCausaNuevaSelect');
-        if (selNueva) { poblarSelectCausasCatalogo(selNueva); selNueva.value = ''; }
-        const otraNueva = document.getElementById('trzCausaNuevaOtra');
-        if (otraNueva) { otraNueva.value = ''; otraNueva.style.display = 'none'; }
-      }
-    }
-
-    // ======================== VINCULAR CAUSA EXISTENTE (MIGRACIÓN #37) ========================
-    function abrirModalVincularCausa() {
-      if (!trzProblemaActual) return;
-      document.getElementById('vincularCausaInput').value = '';
-      document.getElementById('vincularCausaResultados').innerHTML = '<div class="empty-hint">Escribe algo y presiona Buscar.</div>';
-      document.getElementById('vincularCausaOverlay').style.display = 'flex';
-      document.getElementById('vincularCausaInput').focus();
-    }
-
-    function cerrarModalVincularCausa() {
-      document.getElementById('vincularCausaOverlay').style.display = 'none';
-    }
-
-    // Describe en qué caso(s) ya está una causa encontrada -- ayuda al
-    // analista a decidir si de verdad es el mismo problema real antes de
-    // vincular (ver el porqué en data/causasRaiz.js).
-    function describirCasosVinculados(casos) {
-      if (!casos || casos.length === 0) return 'Sin ningún caso vinculado todavía.';
-      return casos.map(c => c.tipo_caso === 'problema'
-        ? `Producción, caso #${c.caso_id}`
-        : `Reporte por Áreas #${c.caso_id}`).join(' · ');
-    }
-
-    async function buscarCausasParaVincular() {
-      const q = document.getElementById('vincularCausaInput').value.trim();
-      const cont = document.getElementById('vincularCausaResultados');
-      cont.innerHTML = '<div class="empty-hint">Buscando...</div>';
-      try {
-        const params = new URLSearchParams({ q, limite: 20 });
-        const res = await fetch(`/api/produccion/trazabilidad/causas/buscar?${params}`, { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const causas = await res.json();
-        if (causas.length === 0) {
-          cont.innerHTML = '<div class="empty-hint">No se encontró ninguna causa con ese texto.</div>';
-          return;
-        }
-        cont.innerHTML = causas.map(c => `
-          <div class="trz-item">
-            <div class="trz-item-texto">${escapeHtml(c.texto)}</div>
-            <div class="trz-item-resp" style="margin-bottom:8px;">${escapeHtml(describirCasosVinculados(c.casos_vinculados))}</div>
-            <button type="button" class="btn-secondary-trz" onclick="vincularCausaExistenteTrazabilidad(${c.id})"><i class="fa-solid fa-link"></i> Vincular a este caso</button>
-          </div>`).join('');
-      } catch (e) {
-        cont.innerHTML = '<div class="empty-hint" style="color:red;">Error al buscar.</div>';
-      }
-    }
-
-    async function vincularCausaExistenteTrazabilidad(causaId) {
-      if (!trzProblemaActual) return;
-      try {
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/causas/vincular`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ causa_id: causaId }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al vincular la causa');
-        trzProblemaActual = data;
-        cerrarModalVincularCausa();
-        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
-        renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
-        document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
-      } catch (e) {
-        alert('Error: ' + e.message);
+      if (!estaAbierta && trzContextoActual) {
+        poblarSelectCausasPorMotivo('trzCausaNuevaSelect', 'trzCausaNuevaOtra', trzContextoActual.valor_contexto);
       }
     }
 
@@ -1720,7 +1559,7 @@
       // agregar -- y no se puede dejar un caso sin ninguna causa raíz, así
       // que si es la única, ni se ofrece el botón (el servidor lo rechazaría
       // igual, pero así se evita el viaje al servidor para nada).
-      const puedeEliminar = tienePermiso('produccion.trazabilidad.eliminar') && totalCausas > 1;
+      const puedeEliminar = tienePermiso('problemas.eliminar') && totalCausas > 1;
       return `
         <div class="trz-causa-card" data-causa-id="${causa.id}">
           <div class="trz-item-causa-info">
@@ -1733,7 +1572,6 @@
             </div>
             <div class="trz-item-texto">${escapeHtml(causa.texto)}</div>
             <div class="trz-item-resp">Registrada por <b>${escapeHtml(causa.autor_nombre || causa.responsable_nombre || 'Usuario')}</b></div>
-            ${causa.compartida_con && causa.compartida_con.length ? `<div class="pill pill-muted" style="margin-top:6px; display:inline-block;" title="Las medidas de esta causa se ven y editan igual desde el otro caso"><i class="fa-solid fa-link"></i> También vinculada a: ${escapeHtml(describirCasosVinculados(causa.compartida_con))}</div>` : ''}
           </div>
           <div class="trz-medidas-de-causa">
             ${medidasDeCausa.length
@@ -1756,7 +1594,7 @@
     }
 
     function renderizarMedidaItem(m, puedeGestionar) {
-      const puedeEliminar = tienePermiso('produccion.trazabilidad.eliminar');
+      const puedeEliminar = tienePermiso('problemas.eliminar');
       return `
         <div class="trz-item" data-medida-id="${m.id}">
           <div class="trz-item-meta">
@@ -1786,7 +1624,7 @@
 
     async function crearCasoTrazabilidad(event) {
       event.preventDefault();
-      const lectura = leerSelectCausa('trzCausaInicialSelect', 'trzCausaInicialOtra', 'causa_raiz', 'trzDefectoInicialSelect');
+      const lectura = leerSelectCausa('trzCausaInicialSelect', 'trzCausaInicialOtra', 'causa_raiz');
       if (lectura.error) { alert(lectura.error); return; }
       const btn = document.getElementById('trzBtnCrear');
       const original = btn.innerHTML;
@@ -1795,10 +1633,11 @@
       const msg = document.getElementById('trzModalMensaje');
       msg.style.display = 'none';
       try {
-        const res = await fetch('/api/produccion/trazabilidad/problemas', {
+        const criticidad = document.getElementById('trzCriticidadInicialSelect')?.value || 'Media';
+        const res = await fetch('/api/problemas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ ...trzContextoActual, ...lectura.body }),
+          body: JSON.stringify({ origen: 'produccion', criticidad, ...trzContextoActual, ...lectura.body }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al crear el caso');
@@ -1821,7 +1660,7 @@
     async function confirmarSolucionAnteriorFallo() {
       if (!trzUltimoImplementado) return;
       try {
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzUltimoImplementado.id}/marcar-fallo`, {
+        const res = await fetch(`/api/problemas/${trzUltimoImplementado.id}/marcar-fallo`, {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token },
         });
@@ -1844,10 +1683,10 @@
 
     async function agregarCausaTrazabilidad() {
       if (!trzProblemaActual) return;
-      const lectura = leerSelectCausa('trzCausaNuevaSelect', 'trzCausaNuevaOtra', 'texto', 'trzDefectoNuevaSelect');
+      const lectura = leerSelectCausa('trzCausaNuevaSelect', 'trzCausaNuevaOtra', 'texto');
       if (lectura.error) { alert(lectura.error); return; }
       try {
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/causas`, {
+        const res = await fetch(`/api/problemas/${trzProblemaActual.id}/causas`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify(lectura.body),
@@ -1856,15 +1695,9 @@
         if (!res.ok) throw new Error(data.error || 'Error al agregar la causa raíz');
         trzProblemaActual = data;
         await cargarCatalogoTrazabilidad(true);
-        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        const puedeGestionar = tienePermiso('problemas.gestionar');
         renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
-        const defSelect = document.getElementById('trzDefectoNuevaSelect');
-        if (defSelect) { poblarSelectDefectos(defSelect); defSelect.value = ''; }
-        const select = document.getElementById('trzCausaNuevaSelect');
-        poblarSelectCausasCatalogo(select);
-        if (select) select.value = '';
-        const textarea = document.getElementById('trzCausaNuevaOtra');
-        if (textarea) { textarea.value = ''; textarea.style.display = 'none'; }
+        if (trzContextoActual) await poblarSelectCausasPorMotivo('trzCausaNuevaSelect', 'trzCausaNuevaOtra', trzContextoActual.valor_contexto);
       } catch (e) {
         alert('Error: ' + e.message);
       }
@@ -1875,7 +1708,7 @@
       const lectura = leerSelectMedida(causaId);
       if (lectura.error) { alert(lectura.error); return; }
       try {
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/medidas`, {
+        const res = await fetch(`/api/problemas/${trzProblemaActual.id}/medidas`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ ...lectura.body, causa_id: causaId }),
@@ -1884,7 +1717,7 @@
         if (!res.ok) throw new Error(data.error || 'Error al agregar la medida');
         trzProblemaActual = data;
         await cargarCatalogoTrazabilidad(true);
-        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        const puedeGestionar = tienePermiso('problemas.gestionar');
         renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
         document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
       } catch (e) {
@@ -1895,7 +1728,7 @@
     async function cambiarEstadoMedidaTrazabilidad(medidaId, estado) {
       if (!trzProblemaActual) return;
       try {
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/medidas/${medidaId}`, {
+        const res = await fetch(`/api/problemas/${trzProblemaActual.id}/medidas/${medidaId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ estado }),
@@ -1903,7 +1736,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al actualizar la medida');
         trzProblemaActual = data;
-        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        const puedeGestionar = tienePermiso('problemas.gestionar');
         renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
         document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
       } catch (e) {
@@ -1914,10 +1747,10 @@
 
     // Pedido por Julio (04/09): poder borrar una causa raíz o una medida ya
     // registrada (por ejemplo, si se agregó por error) -- pide su propio
-    // permiso 'produccion.trazabilidad.eliminar', separado del de agregar
-    // ('produccion.trazabilidad.gestionar') y del de solo ver
-    // ('produccion.trazabilidad.ver'), así se puede dar a alguien la
-    // capacidad de borrar sin también darle la de agregar, o viceversa.
+    // permiso 'problemas.eliminar' (MIGRACIÓN #38), separado del de agregar
+    // ('problemas.gestionar') y del de solo ver ('problemas.ver'), así se
+    // puede dar a alguien la capacidad de borrar sin también darle la de
+    // agregar, o viceversa.
     // Borrar una causa raíz borra también sus medidas (recalcularEstadoProblema
     // en el servidor ajusta el estado general del caso solo); el servidor
     // rechaza borrar la última causa raíz de un caso (ver DELETE
@@ -1926,14 +1759,14 @@
       if (!trzProblemaActual) return;
       if (!confirm('¿Eliminar esta causa raíz? También se eliminarán todas sus medidas. Esta acción no se puede deshacer.')) return;
       try {
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/causas/${causaId}`, {
+        const res = await fetch(`/api/problemas/${trzProblemaActual.id}/causas/${causaId}`, {
           method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + token },
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al eliminar la causa raíz');
         trzProblemaActual = data;
-        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        const puedeGestionar = tienePermiso('problemas.gestionar');
         renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
         document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
       } catch (e) {
@@ -1945,14 +1778,14 @@
       if (!trzProblemaActual) return;
       if (!confirm('¿Eliminar esta medida? Esta acción no se puede deshacer.')) return;
       try {
-        const res = await fetch(`/api/produccion/trazabilidad/problemas/${trzProblemaActual.id}/medidas/${medidaId}`, {
+        const res = await fetch(`/api/problemas/${trzProblemaActual.id}/medidas/${medidaId}`, {
           method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + token },
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Error al eliminar la medida');
         trzProblemaActual = data;
-        const puedeGestionar = tienePermiso('produccion.trazabilidad.gestionar');
+        const puedeGestionar = tienePermiso('problemas.gestionar');
         renderizarCausasYMedidas(data.causas, data.medidas, puedeGestionar);
         document.getElementById('trzEstadoGeneral').innerHTML = estadoPill(data.estado);
       } catch (e) {

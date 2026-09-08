@@ -103,6 +103,21 @@ function normalizarFabrica(valor) {
   return `Fabrica ${numero[1]}`;
 }
 
+// Encontrado 08/09 al mapear qué tablas cruzan entre sí y cuáles no: 149
+// filas de rechazos_produccion/entregas_produccion no encontraban su lote
+// real en `lotes` solo porque en Cableado.xlsx algunas quedan tipiadas en
+// minúscula (ej. "c1048000914") mientras que en Lotes.xlsx el mismo lote
+// está en mayúscula ("C1048000914") -- SQLite compara texto distinguiendo
+// mayúscula de minúscula, así que nunca cruzaban. Normalizar aquí, en el
+// punto donde se lee cada Excel, evita que el problema vuelva a aparecer
+// en cada sincronización (a diferencia de corregir solo lo que ya estaba
+// guardado, que la siguiente sincronización habría vuelto a desordenar).
+function normalizarLote(valor) {
+  if (valor === null || valor === undefined) return valor;
+  const limpio = String(valor).trim();
+  return limpio ? limpio.toUpperCase() : limpio;
+}
+
 function formatearFecha(valor) {
   if (!valor) return null;
   if (valor instanceof Date) {
@@ -180,7 +195,7 @@ async function sincronizarRechazos(db, filas) {
            OR excluded.observaciones IS NOT rechazos_produccion.observaciones
       `, [
         fabrica, f.Id_Rechazo, formatearFecha(f.Fecha_Rechazo), f.LineaOrg_Rechazo, f.ProcesoOrg_Rechazo,
-        f.LineaRep_Rechazo, f.ProcesoRep_Rechazo, f.LoteProduccion_Rechazo, f.Lote_Rechazo, f.Referencia_Rechazo,
+        f.LineaRep_Rechazo, f.ProcesoRep_Rechazo, normalizarLote(f.LoteProduccion_Rechazo), f.Lote_Rechazo, f.Referencia_Rechazo,
         f.Cantidad_Rechazo, f.Motivo_Rechazo, f.Observaciones
       ]);
       if (!existente) nuevos++;
@@ -217,7 +232,7 @@ async function sincronizarLotes(db, filas) {
   await db.exec('BEGIN IMMEDIATE');
   try {
     for (const f of filas) {
-      const noLote = (f.No_Lote === null || f.No_Lote === undefined) ? '' : String(f.No_Lote).trim();
+      const noLote = normalizarLote(f.No_Lote) || '';
       if (!noLote) { sinNoLote++; continue; }
       const existente = await db.get('SELECT id FROM lotes WHERE no_lote = ?', [noLote]);
       const resultado = await db.run(`
@@ -259,12 +274,17 @@ async function sincronizarEntregas(db, filas) {
 
       if (f.Id_Entrega === null || f.Id_Entrega === undefined) {
         sinIdEntrega++;
+        // El hash se calcula sobre f.Lote_Entrega tal cual viene del Excel
+        // (sin normalizar) para no cambiarle el hash a filas que ya estaban
+        // sincronizadas de ciclos anteriores -- si cambiara, INSERT OR
+        // IGNORE ya no reconocería la fila como la misma y la duplicaría.
+        // Lo que sí se guarda normalizado es el valor visible de la columna.
         const hash = hashFila([fabrica, fecha, f.Linea_Entrega, f.Lote_Entrega, f.Referencia_Entrega, f.Operacion_Entrega, f.CantidadBuenas_Entrega]);
         const resultado = await db.run(`
           INSERT OR IGNORE INTO entregas_produccion
             (fabrica, id_entrega, fecha_entrega, linea_entrega, lote_entrega, referencia_entrega, operacion_entrega, cantidad_buenas, hash_fila)
           VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)
-        `, [fabrica, fecha, f.Linea_Entrega, f.Lote_Entrega, f.Referencia_Entrega, f.Operacion_Entrega, f.CantidadBuenas_Entrega, hash]);
+        `, [fabrica, fecha, f.Linea_Entrega, normalizarLote(f.Lote_Entrega), f.Referencia_Entrega, f.Operacion_Entrega, f.CantidadBuenas_Entrega, hash]);
         if (resultado.changes > 0) nuevas++; else sinCambios++;
         continue;
       }
@@ -287,7 +307,7 @@ async function sincronizarEntregas(db, filas) {
            OR excluded.referencia_entrega IS NOT entregas_produccion.referencia_entrega
            OR excluded.operacion_entrega IS NOT entregas_produccion.operacion_entrega
            OR excluded.cantidad_buenas IS NOT entregas_produccion.cantidad_buenas
-      `, [fabrica, f.Id_Entrega, fecha, f.Linea_Entrega, f.Lote_Entrega, f.Referencia_Entrega, f.Operacion_Entrega, f.CantidadBuenas_Entrega]);
+      `, [fabrica, f.Id_Entrega, fecha, f.Linea_Entrega, normalizarLote(f.Lote_Entrega), f.Referencia_Entrega, f.Operacion_Entrega, f.CantidadBuenas_Entrega]);
       if (!existente) nuevas++;
       else if (resultado.changes > 0) actualizadas++;
       else sinCambios++;
