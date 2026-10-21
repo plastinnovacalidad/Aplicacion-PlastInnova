@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { DB_PATH, SALT_ROUNDS } = require('../settings/paths');
 const { PERMISOS_DISPONIBLES } = require('../settings/permisos');
 const { ahoraISO } = require('../utils/fechas');
-const { setDb, getDb } = require('./connection');
+const { setDb, getDb, motorBd } = require('./connection');
 const { recargarPermisos } = require('../middleware/auth');
 const { importarCsvMetrologia } = require('../data/metrologia');
 // Solo se usa para sembrar whatsapp_numeros una sola vez (MIGRACIÓN #13) con
@@ -214,7 +214,92 @@ async function migrarContrasenasAntiguas() {
 // existentes también reciban el cambio la próxima vez que arranque el
 // servidor.
 // -------------------------------------------------------------------------
+// Roles que la app crea al arrancar si no existen, con sus permisos por
+// defecto. Se movió aquí (antes estaba dentro de inicializarBaseDatos) para
+// que el arranque con SQL Server (inicializarSqlServer, más abajo) use
+// exactamente la misma lista. El contenido no cambió.
+const ROLES_POR_DEFECTO = [
+  { nombre: 'admin',     permisos: PERMISOS_DISPONIBLES.map(p => p.codigo) },
+  // 'metrologia.gestion' se agrega explícitamente aquí porque el rol
+  // inspector ya lo tenía asignado desde antes (con el código viejo que no
+  // estaba en este catálogo); se deja igual para no quitarle a inspector
+  // ningún permiso que ya tenía en la práctica.
+  // 'iso2859.gestion' se agrega por la misma razón: inspector ya tiene
+  // acceso maestro a los demás módulos de calidad (metrologia.gestion),
+  // y el muestreo ISO 2859 es justamente una función de inspección de
+  // calidad, así que sigue la misma lógica.
+  { nombre: 'inspector', permisos: ['referencias.ver','referencias.editar','referencias.eliminar','versiones.crear','recomendaciones.ver','recomendaciones.crear','recomendaciones.eliminar','gestion.ver','observaciones.ver','observaciones.editar','garantias.ver','garantias.crear','garantias.editar','garantias.eliminar','garantias.dashboard','portal.volver','whatsapp.bot.ver','whatsapp.bot.gestionar','metrologia.ver','metrologia.inspeccionar','metrologia.versiones','metrologia.historial','metrologia.auditoria','metrologia.crear_referencia','metrologia.editar_cotas','metrologia.gestion','iso2859.ver','iso2859.crear_lote','iso2859.muestrear','iso2859.cambiar_plan','iso2859.reportes','iso2859.gestion','calidad.ver','valores_cableado.ver','valores_cableado.gestion'] },
+  { nombre: 'operario',  permisos: ['referencias.ver','recomendaciones.crear','observaciones.ver'] },
+];
+
+// ======================== ARRANQUE CON SQL SERVER (M00) ========================
+// Cuando MOTOR_BD=sqlserver en el .env. Las tablas ya existen en SQL Server
+// (se crean con db/sqlserver/01_crear_tablas.sql y los datos se copian con
+// db/sqlserver/migrar_a_sqlserver.js), así que aquí NO se crean tablas ni se
+// corren las migraciones de SQLite (esas siguen aplicando solo a SQLite).
+// Solo se hacen las tareas de cada arranque que pueden traer algo nuevo:
+// catálogo de permisos, roles por defecto, usuarios iniciales si la tabla
+// está vacía, contraseñas a bcrypt y la recarga de permisos en memoria.
+async function inicializarSqlServer() {
+  const { crearAdaptador } = require('./sqlserver/adaptador');
+  const db = await crearAdaptador();
+  setDb(db);
+
+  const info = await db.get('SELECT DB_NAME() AS base, SCHEMA_NAME() AS esquema, SUSER_SNAME() AS usuario');
+  console.log(`📦 Conexión a SQL Server establecida (${process.env.MSSQL_SERVER} · base ${info.base} · esquema ${info.esquema} · usuario ${info.usuario}).`);
+  if (String(info.esquema).toLowerCase() !== 'calidad') {
+    console.warn(`⚠️ El usuario ${info.usuario} no tiene "calidad" como esquema por defecto (tiene "${info.esquema}"). Las consultas sin esquema no encontrarán las tablas.`);
+  }
+  const tablas = await db.get("SELECT COUNT(*) AS n FROM sys.tables WHERE schema_id = SCHEMA_ID('calidad')");
+  if (!tablas || tablas.n < 52) {
+    throw new Error(`En SQL Server el esquema "calidad" tiene ${tablas ? tablas.n : 0} de 52 tablas. Ejecuta db/sqlserver/01_crear_tablas.sql y la migración de datos.`);
+  }
+
+  for (const p of PERMISOS_DISPONIBLES) {
+    await db.run('INSERT OR IGNORE INTO permisos (codigo, descripcion) VALUES (?, ?)', [p.codigo, p.descripcion]);
+  }
+  await db.run("INSERT OR IGNORE INTO roles (nombre, descripcion, es_sistema) VALUES ('admin', 'Administrador total', 1)");
+  await db.run("INSERT OR IGNORE INTO roles (nombre, descripcion, es_sistema) VALUES ('inspector', 'Inspector de calidad', 1)");
+  await db.run("INSERT OR IGNORE INTO roles (nombre, descripcion, es_sistema) VALUES ('operario', 'Operario de planta', 1)");
+  for (const r of ROLES_POR_DEFECTO) {
+    const rolRow = await db.get('SELECT id FROM roles WHERE nombre = ?', [r.nombre]);
+    if (!rolRow) continue;
+    for (const codigo of r.permisos) {
+      const permRow = await db.get('SELECT id FROM permisos WHERE codigo = ?', [codigo]);
+      if (permRow) {
+        await db.run('INSERT OR IGNORE INTO rol_permisos (rol_id, permiso_id) VALUES (?, ?)', [rolRow.id, permRow.id]);
+      }
+    }
+  }
+
+  const count = await db.get('SELECT COUNT(*) as total FROM usuarios');
+  if (count.total === 0) {
+    const adminRol = await db.get("SELECT id FROM roles WHERE nombre = 'admin'");
+    const inspRol = await db.get("SELECT id FROM roles WHERE nombre = 'inspector'");
+    const opRol = await db.get("SELECT id FROM roles WHERE nombre = 'operario'");
+    await db.run('INSERT INTO usuarios (nombre, usuario, contrasena, rol_id, created_at) VALUES (?, ?, ?, ?, ?)',
+      ['Administrador', 'admin', await bcrypt.hash('admin123', SALT_ROUNDS), adminRol.id, ahoraISO()]);
+    await db.run('INSERT INTO usuarios (nombre, usuario, contrasena, rol_id, created_at) VALUES (?, ?, ?, ?, ?)',
+      ['Inspector Calidad', 'inspector', await bcrypt.hash('inspector123', SALT_ROUNDS), inspRol.id, ahoraISO()]);
+    await db.run('INSERT INTO usuarios (nombre, usuario, contrasena, rol_id, created_at) VALUES (?, ?, ?, ?, ?)',
+      ['Operario Planta', 'operario', await bcrypt.hash('operario123', SALT_ROUNDS), opRol.id, ahoraISO()]);
+    console.log('👤 Usuarios iniciales creados.');
+  }
+
+  await migrarContrasenasAntiguas();
+  // importarCsvMetrologia() no se ejecuta aquí: es la carga inicial de planos
+  // y cotas desde CSV, que ya se hizo en SQLite y llegó con la migración de
+  // datos. Se revisa en el módulo M04 (Metrología).
+  await recargarPermisos();
+  console.log('✅ Base de datos lista (SQL Server).');
+  return db;
+}
+
 async function inicializarBaseDatos() {
+  // Migración a SQL Server (M00): con MOTOR_BD=sqlserver la app arranca
+  // contra SQL Server; si no, sigue exactamente igual que siempre (SQLite).
+  if (motorBd() === 'sqlserver') return inicializarSqlServer();
+
   const db = await open({
     filename: DB_PATH,
     driver: sqlite3.Database,
@@ -222,7 +307,8 @@ async function inicializarBaseDatos() {
   });
   db.configure('busyTimeout', 5000);
   await db.run('PRAGMA journal_mode = WAL;');
-  console.log('📦 Conexión a SQLite establecida (WAL mode, busyTimeout=5000ms).');
+  await db.run('PRAGMA foreign_keys = ON;');
+  console.log('📦 Conexión a SQLite establecida (WAL mode, busyTimeout=5000ms, FK=ON).');
   setDb(db);
 
   await db.exec(`
@@ -622,19 +708,7 @@ async function inicializarBaseDatos() {
   await db.run("INSERT OR IGNORE INTO roles (nombre, descripcion, es_sistema) VALUES ('operario', 'Operario de planta', 1)");
 
   // Asignar permisos a roles por defecto
-  const rolesDefault = [
-    { nombre: 'admin',     permisos: PERMISOS_DISPONIBLES.map(p => p.codigo) },
-    // 'metrologia.gestion' se agrega explícitamente aquí porque el rol
-    // inspector ya lo tenía asignado desde antes (con el código viejo que no
-    // estaba en este catálogo); se deja igual para no quitarle a inspector
-    // ningún permiso que ya tenía en la práctica.
-    // 'iso2859.gestion' se agrega por la misma razón: inspector ya tiene
-    // acceso maestro a los demás módulos de calidad (metrologia.gestion),
-    // y el muestreo ISO 2859 es justamente una función de inspección de
-    // calidad, así que sigue la misma lógica.
-    { nombre: 'inspector', permisos: ['referencias.ver','referencias.editar','referencias.eliminar','versiones.crear','recomendaciones.ver','recomendaciones.crear','recomendaciones.eliminar','gestion.ver','observaciones.ver','observaciones.editar','garantias.ver','garantias.crear','garantias.editar','garantias.eliminar','garantias.dashboard','portal.volver','whatsapp.bot.ver','whatsapp.bot.gestionar','metrologia.ver','metrologia.inspeccionar','metrologia.versiones','metrologia.historial','metrologia.auditoria','metrologia.crear_referencia','metrologia.editar_cotas','metrologia.gestion','iso2859.ver','iso2859.crear_lote','iso2859.muestrear','iso2859.cambiar_plan','iso2859.reportes','iso2859.gestion','calidad.ver','valores_cableado.ver','valores_cableado.gestion'] },
-    { nombre: 'operario',  permisos: ['referencias.ver','recomendaciones.crear','observaciones.ver'] },
-  ];
+  const rolesDefault = ROLES_POR_DEFECTO;
 
   for (const r of rolesDefault) {
     const rolRow = await db.get('SELECT id FROM roles WHERE nombre = ?', [r.nombre]);
@@ -2192,6 +2266,209 @@ async function inicializarBaseDatos() {
     }
   } catch (e) {
     console.error('⚠️ Error conectando iso_referencias con iso_planes_muestreo:', e.message);
+  }
+
+  // MIGRACIÓN #42 (08/09, pedido por Julio): 3 campos nuevos en el módulo
+  // "Problemas", pensados para el reporte PDF de cada problema --
+  //   - Cantidades: para un problema de Producción (origen='produccion') ya
+  //     existe `pct_desperdicio_inicial` (una foto del % de desperdicio o de
+  //     las unidades rechazadas, tomada del tablero de Producción en el
+  //     momento -- MIGRACIÓN #24) y se sigue usando igual, sin pedir nada
+  //     nuevo. Para un problema de Reporte de área o General
+  //     (origen='reporte'/'general') no existía ningún dato de cantidad --
+  //     se agregan `cantidad_total` y `cantidad_afectada` (Julio: "que yo le
+  //     ponga la cantidad, pero que me genere solo el % de desperdicio" --
+  //     con las dos, el % se calcula solo, nunca a mano, mismo criterio que
+  //     ya usa data/garantias.js con sus porcentajes).
+  //   - Tratamiento: disposición única -- Liberar/Rechazar/Reclasificar/
+  //     Reparar -- que Julio pidió poder elegir SOLO al crear un problema de
+  //     Reporte de área o General (no aplica a Producción, que no tiene esa
+  //     decisión). A propósito SIN CHECK de SQLite (igual que
+  //     iso_muestreos.decision): se valida en la app (ver TRATAMIENTOS en
+  //     data/problemas.js), porque un problema de Producción nunca debe
+  //     tener que cumplir esa restricción.
+  //   - Evidencia gráfica: nueva tabla `problemas_adjuntos`, calcada de
+  //     `reportes_adjuntos` (MIGRACIÓN #38) -- Julio pidió poder "agregar una
+  //     foto" a un problema de Reporte de área o General, en cualquier
+  //     momento (no solo al crearlo). Mismo patrón de siempre: multer +
+  //     EVIDENCIAS_DIR + una fila por archivo (ver routes/problemas.js).
+  try {
+    const colsProblemas = await db.all('PRAGMA table_info(problemas)');
+    const nombresColsProblemas = colsProblemas.map((c) => c.name);
+    if (!nombresColsProblemas.includes('cantidad_total')) {
+      await db.run('ALTER TABLE problemas ADD COLUMN cantidad_total REAL');
+      console.log('➕ Columna cantidad_total agregada a problemas');
+    }
+    if (!nombresColsProblemas.includes('cantidad_afectada')) {
+      await db.run('ALTER TABLE problemas ADD COLUMN cantidad_afectada REAL');
+      console.log('➕ Columna cantidad_afectada agregada a problemas');
+    }
+    if (!nombresColsProblemas.includes('tratamiento')) {
+      await db.run('ALTER TABLE problemas ADD COLUMN tratamiento TEXT');
+      console.log('➕ Columna tratamiento agregada a problemas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando cantidad_total/cantidad_afectada/tratamiento a problemas:', e.message);
+  }
+  try {
+    const tablaProblemasAdjuntos = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='problemas_adjuntos'");
+    if (!tablaProblemasAdjuntos) {
+      await db.exec(`
+        CREATE TABLE problemas_adjuntos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          problema_id INTEGER NOT NULL REFERENCES problemas(id),
+          archivo TEXT NOT NULL,
+          nombre_original TEXT,
+          autor_id INTEGER REFERENCES usuarios(id),
+          autor_nombre TEXT,
+          fecha DATETIME DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX idx_problemas_adjuntos_problema ON problemas_adjuntos(problema_id);
+      `);
+      console.log('🆕 Tabla problemas_adjuntos creada (evidencia gráfica del módulo Problemas).');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando problemas_adjuntos:', e.message);
+  }
+
+  // MIGRACIÓN #43 (08/09, pedido por Julio): rediseño del Reporte de
+  // Problema a partir de la plantilla Excel que ya usaban en fábricas
+  // ("Reporte No Conformidades de fabricas") -- revisado con varios mockups
+  // antes de tocar nada (Julio: "podriamos revisar varios mockups antes de
+  // modificarlo?"). 3 campos nuevos, los 3 opcionales y editables en
+  // cualquier momento (mismo criterio que la evidencia gráfica de la
+  // MIGRACIÓN #42: "en cualquier momento", no solo al crear):
+  //   - Lista de verificación: Julio confirmó "el checklist es para todo" --
+  //     aplica a los 3 orígenes (produccion/reporte/general), a diferencia de
+  //     cantidades/tratamiento (MIGRACIÓN #42) que solo aplican a
+  //     reporte/general. Son 4 preguntas FIJAS (no un catálogo editable, ver
+  //     CHECKLIST_PREGUNTAS en data/problemas.js) -- por eso son columnas
+  //     propias en vez de una tabla hija: no hace falta relacionar filas de
+  //     "pregunta" con filas de "respuesta" cuando la lista de preguntas
+  //     nunca cambia. Sin CHECK (mismo criterio que tratamiento en la
+  //     MIGRACIÓN #42): 'Si'/'No'/NULL (todavía sin responder), validado en
+  //     la app.
+  //   - Acciones propuestas: Julio confirmó que ES el campo `medidas` que ya
+  //     existe (por causa raíz) -- no se agrega nada nuevo, el reporte solo
+  //     lo muestra bajo ese título.
+  //   - "¿Qué se hizo para evitar que vuelva a pasar?": distinto de
+  //     `medidas` (que son las acciones concretas, cada una con su propio
+  //     seguimiento En_Proceso/Funcionó/No_Funcionó) -- este es un resumen
+  //     libre de cierre/lección aprendida, sin seguimiento propio. Columna
+  //     `prevencion`.
+  //   - Firma: Julio confirmó "la firma que sea digital" -- Firma Calidad no
+  //     necesita columna nueva (siempre es quien registró el problema,
+  //     `autor_nombre`, ya existente). Firma Implicados sí es nueva
+  //     (`firma_implicados_nombre` + su fecha) porque puede ser una persona
+  //     distinta de quien registra, y no siempre está disponible de una vez.
+  try {
+    const colsProblemasV43 = await db.all('PRAGMA table_info(problemas)');
+    const nombresColsProblemasV43 = colsProblemasV43.map((c) => c.name);
+    const columnasNuevasV43 = [
+      ['chk_falla_funcional', 'TEXT'],
+      ['chk_problema_visual', 'TEXT'],
+      ['chk_retraso_tiempo', 'TEXT'],
+      ['chk_fuera_tolerancias', 'TEXT'],
+      ['prevencion', 'TEXT'],
+      ['firma_implicados_nombre', 'TEXT'],
+      ['firma_implicados_fecha', 'DATETIME'],
+    ];
+    for (const [columna, tipo] of columnasNuevasV43) {
+      if (!nombresColsProblemasV43.includes(columna)) {
+        await db.run(`ALTER TABLE problemas ADD COLUMN ${columna} ${tipo}`);
+        console.log(`➕ Columna ${columna} agregada a problemas`);
+      }
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando columnas del rediseño del Reporte de Problema (MIGRACIÓN #43):', e.message);
+  }
+
+  // MIGRACIÓN #44 (11/09): tabla singleton para estado de sincronización de
+  // producción (alerta por fallos consecutivos). Guarda:
+  // - fallos_consecutivos: contador de ciclos fallidos seguidos
+  // - alerta_enviada: si ya se envió la alerta de "3 fallos consecutivos"
+  // - ultimo_ciclo_exitoso: timestamp del último ciclo que completó OK
+  // - ultima_actualizacion: timestamp de la última actualización del registro
+  // La fila singleton usa id=1.
+  try {
+    const tablaEstado = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='sincronizacion_estado'");
+    if (!tablaEstado) {
+      console.log('🔄 Creando tabla sincronizacion_estado...');
+      await db.exec(`
+        CREATE TABLE sincronizacion_estado (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          fallos_consecutivos INTEGER NOT NULL DEFAULT 0,
+          alerta_enviada INTEGER NOT NULL DEFAULT 0,
+          ultimo_ciclo_exitoso DATETIME,
+          ultima_actualizacion DATETIME DEFAULT (datetime('now','localtime'))
+        );
+      `);
+      // Insertar fila singleton inicial
+      await db.run('INSERT INTO sincronizacion_estado (id, fallos_consecutivos, alerta_enviada) VALUES (1, 0, 0)');
+      console.log('✅ Tabla sincronizacion_estado creada con fila singleton inicial.');
+    }
+  } catch (e) {
+    console.error('⚠️ Error creando tabla sincronizacion_estado:', e.message);
+  }
+
+  // MIGRACIÓN #44b: agregar tipos de alerta para sincronización de producción
+  // (fallos consecutivos y recuperación) a whatsapp_alertas_config.
+  try {
+    await db.run(
+      "INSERT OR IGNORE INTO whatsapp_alertas_config (tipo, activo, umbral, ventana_dias) VALUES ('sync_falla_consecutiva', 1, NULL, NULL)"
+    );
+    await db.run(
+      "INSERT OR IGNORE INTO whatsapp_alertas_config (tipo, activo, umbral, ventana_dias) VALUES ('sync_recuperacion', 1, NULL, NULL)"
+    );
+    console.log('✅ Tipos de alerta sync_falla_consecutiva y sync_recuperacion agregados a whatsapp_alertas_config.');
+  } catch (e) {
+    console.error('⚠️ Error agregando tipos de alerta de sincronización:', e.message);
+  }
+
+  // MIGRACIÓN #45 (09/09, pedido por Julio): "Aviso rápido" -- un segundo
+  // formulario, más corto, para avisar de inmediato que algo anda mal en
+  // fábrica aunque todavía no se sepa la causa (a diferencia del formulario
+  // completo de "Nuevo Problema", que Julio consideró "muy grande... la
+  // gente no lo va a leer"). Crea un Problema real (mismo listado, mismo
+  // banner de alertas críticas, causa raíz fija "Por determinar"), pero
+  // marcado con esta columna para que el botón "Generar reporte" de su
+  // detalle sepa mostrar una tarjeta simple (imagen, pensada para compartir
+  // por chat) en vez del PDF formal completo -- ver generarTarjetaAviso en
+  // Public/reportes.html (antes Public/problemas.html, MIGRACIÓN #50).
+  try {
+    const colsProblemasV45 = await db.all('PRAGMA table_info(problemas)');
+    if (!colsProblemasV45.some((c) => c.name === 'es_aviso_rapido')) {
+      await db.run('ALTER TABLE problemas ADD COLUMN es_aviso_rapido INTEGER DEFAULT 0');
+      console.log('➕ Columna es_aviso_rapido agregada a problemas');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando columna es_aviso_rapido a problemas (MIGRACIÓN #45):', e.message);
+  }
+
+  // MIGRACIÓN #48 (09/09, pedido por Julio): la MIGRACIÓN #46 hizo que
+  // es_aviso_rapido pasara de 1 a 0 cuando el problema ya tenía Defecto +
+  // causa raíz real, pero era de un solo sentido -- si después borraban esa
+  // causa real, se quedaba como "Reporte de área" para siempre. Julio pidió
+  // que sí se revierta ("si se revierte quede como reporte rapido"). Para
+  // poder revertir hace falta saber si el problema NACIÓ como Aviso rápido
+  // (eso no cambia nunca), separado de si ESTÁ clasificado como uno en este
+  // momento (eso sí puede subir y bajar) -- es_aviso_rapido pasa a ser el
+  // segundo, y esta columna nueva guarda el primero. Ver reevaluarAvisoRapido
+  // en data/problemas.js.
+  try {
+    const colsProblemasV48 = await db.all('PRAGMA table_info(problemas)');
+    if (!colsProblemasV48.some((c) => c.name === 'aviso_rapido_origen')) {
+      await db.run('ALTER TABLE problemas ADD COLUMN aviso_rapido_origen INTEGER DEFAULT 0');
+      console.log('➕ Columna aviso_rapido_origen agregada a problemas');
+      // Los que ya existan con es_aviso_rapido = 1 obviamente nacieron como
+      // Aviso rápido; los que la MIGRACIÓN #46 ya haya bajado a 0 antes de
+      // que existiera esta columna no se pueden distinguir de un reporte
+      // normal, así que se quedan sin la marca (no hay forma de recuperar
+      // ese dato retroactivamente, y es preferible a marcar de más).
+      await db.run('UPDATE problemas SET aviso_rapido_origen = 1 WHERE es_aviso_rapido = 1');
+    }
+  } catch (e) {
+    console.error('⚠️ Error agregando columna aviso_rapido_origen a problemas (MIGRACIÓN #48):', e.message);
   }
 
   // Usuarios por defecto si está vacío

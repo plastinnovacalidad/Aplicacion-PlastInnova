@@ -7,16 +7,12 @@
 // información personal ya no queda escrita directamente en el código fuente.
 const { WHATSAPP_NUMEROS, WHATSAPP_ADMIN_NUMERO, WHATSAPP_MENSAJE_SALIDA } = require('./paths');
 
-const AREAS = [
-  { id: 1, nombre: 'Producción' },
-  { id: 2, nombre: 'Almacén' },
-  { id: 3, nombre: 'Calidad' },
-  { id: 4, nombre: 'Mantenimiento' },
-  { id: 5, nombre: 'Oficina' },
-  { id: 6, nombre: 'Recepción' },
-  { id: 7, nombre: 'Limpieza' },
-  { id: 8, nombre: 'Seguridad' },
-];
+// La lista fija de 8 áreas genéricas que vivía aquí (Producción, Almacén,
+// Calidad...) se eliminó en la Fase 4 (09/09, pedido por Julio): el
+// registro de entrada/salida por WhatsApp ahora usa las zonas reales del
+// catálogo `iso_areas` (el mismo que ya administra el módulo de Muestreos
+// ISO 2859), en vez de su propia lista aparte -- ver
+// obtenerAreasActivas() en whatsapp_bot_service.js.
 
 const { ALLOWED_NUMBERS, NOMBRES } = WHATSAPP_NUMEROS;
 
@@ -45,7 +41,6 @@ const MENSAJES_SALIDA = {};
 ALLOWED_NUMBERS.forEach(numero => { MENSAJES_SALIDA[numero] = WHATSAPP_MENSAJE_SALIDA; });
 
 module.exports = {
-  AREAS,
   ALLOWED_NUMBERS,
   NOMBRES,
   TIMEZONE,

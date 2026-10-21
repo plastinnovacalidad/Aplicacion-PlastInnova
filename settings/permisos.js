@@ -127,10 +127,12 @@ const PERMISOS_DISPONIBLES = [
   // entre áreas). Todo lo que era seguimiento de un problema real (causa
   // raíz + medidas) se mudó al módulo Problemas (ver permisos
   // 'problemas.*' más abajo).
-  { codigo: 'reportes.ver',        descripcion: 'Ver el módulo de Reportes por Áreas (Reportes Informativos de todas las áreas)' },
-  { codigo: 'reportes.crear',      descripcion: 'Publicar Reportes Informativos' },
-  { codigo: 'reportes.gestionar',  descripcion: 'Editar un Reporte Informativo ya publicado' },
-  { codigo: 'reportes.eliminar',   descripcion: 'Eliminar adjuntos ya registrados en un Reporte de Áreas' },
+  // MIGRACIÓN #49 (09/09): módulo renombrado a "Comunicados" de cara al
+  // usuario -- los códigos de permiso (reportes.*) no cambiaron.
+  { codigo: 'reportes.ver',        descripcion: 'Ver el módulo de Comunicados (Reportes Informativos de todas las áreas)' },
+  { codigo: 'reportes.crear',      descripcion: 'Publicar Comunicados (Reportes Informativos)' },
+  { codigo: 'reportes.gestionar',  descripcion: 'Editar un Comunicado ya publicado' },
+  { codigo: 'reportes.eliminar',   descripcion: 'Eliminar adjuntos ya registrados en un Comunicado' },
   // Módulo "Problemas" (rediseño de la MIGRACIÓN #38, pedido por Julio
   // 08/09): reemplaza a Trazabilidad de Producción y a la parte de causa
   // raíz/medidas de Reportes por Áreas -- un solo lugar para registrar y

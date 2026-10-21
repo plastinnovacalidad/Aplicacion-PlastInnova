@@ -6,68 +6,83 @@
   <title>Calidad General - Circuitos SMD</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/vendor/chart.4.4.7.min.js"></script>
   <style>
-    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
-    .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; overflow-y: auto; }
-    .content-area { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(17,27,67,0.08); padding: 25px; }
+    /* Tablero Calidad General — Estilos alineados al Design System de Plast Innova */
+    html, body { height: 100%; margin: 0; font-family: 'Rubik', 'Segoe UI', sans-serif; background: #F7F8FA; color: #1A202C; }
+    .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 24px 32px 60px; gap: 20px; overflow-y: auto; max-width: 1400px; margin: 0 auto; }
+    .content-area { background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 30px rgba(17,27,67,0.06); padding: 32px; border: 1px solid #DFE3EA; }
 
-    .kpis { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-    .kpi-tile { flex: 1; min-width: 180px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
-    .kpi-tile .kpi-num { font-size: 26px; font-weight: 800; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
-    .kpi-tile .kpi-label { font-size: 12px; color: #718096; font-weight: 600; margin-top: 2px; }
-    .kpi-tile.danger .kpi-num { color: #c53030; }
-    .kpi-tile.warning .kpi-num { color: #b7791f; }
+    .kpis { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+    .kpi-tile { flex: 1; min-width: 200px; background: #F8FAFC; border: 1px solid #DFE3EA; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(17,27,67,0.03); }
+    .kpi-tile .kpi-num { font-size: 28px; font-weight: 800; color: #1A202C; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .kpi-tile .kpi-label { font-size: 11.5px; color: #6E7787; font-weight: 700; margin-top: 4px; text-transform: uppercase; font-family: 'Rubik', sans-serif; letter-spacing: 0.04em; }
+    .kpi-tile.danger .kpi-num { color: #C53030; }
+    .kpi-tile.warning .kpi-num { color: #DD6B20; }
 
-    .charts-row { display: flex; gap: 18px; margin-bottom: 25px; flex-wrap: wrap; }
-    .chart-box { flex: 1; min-width: 320px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
-    .chart-box h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; }
+    .charts-row { display: flex; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
+    .chart-box { flex: 1; min-width: 320px; background: #FFFFFF; border: 1px solid #DFE3EA; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(17,27,67,0.03); }
+    .chart-box h4 { margin: 0 0 16px 0; font-size: 15px; color: #2C43A2; font-weight: 600; font-family: 'Rubik', sans-serif; }
     .chart-box canvas { max-height: 260px; }
 
-    .aviso-datos { background: #ebf8ff; border: 1px solid #bee3f8; color: #2c5282; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; margin-bottom: 18px; }
+    .aviso-datos { background: #EEF1FA; border: 1px solid #DFE3EA; color: #2C43A2; border-radius: 12px; padding: 14px 18px; font-size: 13px; margin-bottom: 24px; font-family: 'Segoe UI', sans-serif; line-height: 1.5; }
 
-    .prod-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
-    .prod-controls input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; width: 260px; max-width: 100%; }
+    .prod-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 16px; flex-wrap: wrap; }
+    .prod-controls input { padding: 10px 14px; border: 1px solid #CBD5E0; border-radius: 10px; font-size: 13.5px; width: 280px; max-width: 100%; font-family: 'Segoe UI', sans-serif; outline: none; }
+    .prod-controls input:focus { border-color: #2C43A2; box-shadow: 0 0 0 3px rgba(44,67,162,0.15); }
 
-    .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .admin-table th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #ddd; cursor: pointer; user-select: none; }
-    .admin-table th:hover { color: var(--brand-primary); }
-    .admin-table td { padding: 9px 12px; border-bottom: 1px solid #eee; color: #444; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
-    .admin-table tr:hover td { background: #f9f9f9; }
-    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-    .pill-danger { background: #fff5f5; color: #c53030; }
-    .pill-ok { background: #f0fff4; color: #38a169; }
-    .pill-muted { background: #f0f0f0; color: #888; }
-    .pill-warning { background: #fffaf0; color: #b7791f; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .admin-table th { background: #EEF1FA; padding: 12px 16px; text-align: left; font-weight: 600; color: #2C43A2; border-bottom: 2px solid #DFE3EA; cursor: pointer; user-select: none; font-family: 'Rubik', sans-serif; text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.04em; }
+    .admin-table th:hover { color: #233685; }
+    .admin-table td { padding: 12px 16px; border-bottom: 1px solid #EEF2F6; color: #1A202C; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .admin-table tr:hover td { background: #F7F9FC; }
 
-    .panel-grid { display: flex; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; align-items: stretch; }
-    .panel-card { flex: 1; min-width: 320px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; }
-    .panel-card h4 { margin: 0 0 12px 0; font-size: 14px; color: #4a5568; display: flex; align-items: center; justify-content: space-between; }
-    .mini-kpis { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-    .mini-kpi { flex: 1; min-width: 100px; background: #f8fafc; border: 1px solid #edf2f7; border-radius: 8px; padding: 8px 10px; text-align: center; }
-    .mini-kpi .num { font-size: 18px; font-weight: 800; color: #2d3748; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
-    .mini-kpi .num.danger { color: #c53030; }
-    .mini-kpi .lbl { font-size: 10.5px; color: #718096; font-weight: 600; }
-    .mini-list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
-    .mini-list li { padding: 6px 0; border-bottom: 1px dashed #edf2f7; display: flex; justify-content: space-between; gap: 8px; }
+    .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; font-family: 'Rubik', sans-serif; letter-spacing: 0.04em; text-transform: uppercase; }
+    .pill-danger { background: #FFF0F0; color: #C53030; }
+    .pill-ok { background: #E9FBF0; color: #22874C; }
+    .pill-muted { background: #EDF1F7; color: #4A5568; }
+    .pill-warning { background: #FFF7ED; color: #DD6B20; }
+
+    .panel-grid { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: stretch; }
+    .panel-card { flex: 1; min-width: 320px; background: #FFFFFF; border: 1px solid #DFE3EA; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(17,27,67,0.03); }
+    .panel-card h4 { margin: 0 0 16px 0; font-size: 15px; color: #2C43A2; font-weight: 600; display: flex; align-items: center; justify-content: space-between; font-family: 'Rubik', sans-serif; }
+
+    .mini-kpis { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .mini-kpi { flex: 1; min-width: 100px; background: #F8FAFC; border: 1px solid #DFE3EA; border-radius: 10px; padding: 10px 12px; text-align: center; }
+    .mini-kpi .num { font-size: 20px; font-weight: 800; color: #1A202C; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+    .mini-kpi .num.danger { color: #C53030; }
+    .mini-kpi .lbl { font-size: 11px; color: #6E7787; font-weight: 700; font-family: 'Rubik', sans-serif; text-transform: uppercase; }
+
+    .mini-list { list-style: none; margin: 0; padding: 0; font-size: 13px; font-family: 'Segoe UI', sans-serif; }
+    .mini-list li { padding: 8px 0; border-bottom: 1px dashed #EEF2F6; display: flex; justify-content: space-between; gap: 12px; }
     .mini-list li:last-child { border-bottom: none; }
-    .mini-subtitle { font-size: 11.5px; color: #a0aec0; font-weight: 700; text-transform: uppercase; margin: 12px 0 6px 0; }
-    .empty-hint { color: #a0aec0; text-align: center; padding: 14px 0; font-size: 12.5px; }
-    .wpp-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #edf2f7; font-size: 13px; }
-    .wpp-item:last-child { border-bottom: none; }
-    .wpp-dot { width: 8px; height: 8px; border-radius: 50%; background: #38a169; display: inline-block; margin-right: 8px; flex-shrink: 0; }
-    .feed-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 25px; }
-    .feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f1f1; }
-    .feed-item:last-child { border-bottom: none; }
-    .feed-icon { font-size: 16px; }
-    .feed-body { flex: 1; font-size: 13px; color: #444; }
-    .feed-meta { font-size: 11px; color: #a0aec0; margin-top: 3px; }
-    .badge-tipo { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; margin-right: 6px; }
-    .badge-recomendacion { background: #ebf8ff; color: #2b6cb0; }
-    .badge-observacion { background: #fffaf0; color: #b7791f; }
-    .btn-toggle-tabla { background: #f8fafc; border: 1px solid #e2e8f0; color: #2d3748; border-radius: 6px; padding: 7px 16px; font-size: 12.5px; cursor: pointer; font-weight: 600; margin-top: 10px; }
-    .btn-toggle-tabla:hover { background: #edf2f7; }
+    .mini-subtitle { font-size: 11.5px; color: #6E7787; font-weight: 700; text-transform: uppercase; margin: 16px 0 8px 0; font-family: 'Rubik', sans-serif; letter-spacing: 0.04em; }
+    .empty-hint { color: #6E7787; text-align: center; padding: 16px 0; font-size: 13px; font-style: italic; }
 
+    .wpp-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #EEF2F6; font-size: 13.5px; font-family: 'Segoe UI', sans-serif; }
+    .wpp-item:last-child { border-bottom: none; }
+    .wpp-dot { width: 8px; height: 8px; border-radius: 50%; background: #22874C; display: inline-block; margin-right: 8px; flex-shrink: 0; }
+
+    .feed-card { background: #FFFFFF; border: 1px solid #DFE3EA; border-radius: 16px; padding: 24px; margin-bottom: 28px; box-shadow: 0 4px 12px rgba(17,27,67,0.03); }
+    .feed-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F6; }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-icon { font-size: 18px; color: #2C43A2; }
+    .feed-body { flex: 1; font-size: 13.5px; color: #1A202C; font-family: 'Segoe UI', sans-serif; }
+    .feed-meta { font-size: 11.5px; color: #6E7787; margin-top: 4px; font-family: 'Rubik', sans-serif; }
+    .badge-tipo { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; margin-right: 8px; font-family: 'Rubik', sans-serif; text-transform: uppercase; }
+    .badge-recomendacion { background: #EEF1FA; color: #2C43A2; }
+    .badge-observacion { background: #FFF7ED; color: #DD6B20; }
+
+    .btn-toggle-tabla { background: #F8FAFC; border: 1px solid #DFE3EA; color: #2C43A2; border-radius: 999px; padding: 8px 18px; font-size: 13px; cursor: pointer; font-weight: 600; margin-top: 14px; font-family: 'Rubik', sans-serif; transition: all 0.14s ease; }
+    .btn-toggle-tabla:hover { background: #EEF1FA; border-color: #2C43A2; }
+
+    @media print {
+      body { background: #FFFFFF; color: #000000; }
+      #appHeader, .prod-controls, .btn-toggle-tabla, button { display: none !important; }
+      .content-area, .panel-card, .chart-box { box-shadow: none !important; border: none !important; padding: 0 !important; }
+      .admin-table th { background: #EEF1FA !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tr, .panel-card, .chart-box { page-break-inside: avoid; }
+    }
   </style>
 </head>
 <body>

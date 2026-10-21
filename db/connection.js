@@ -5,6 +5,18 @@
 // módulo actúa como punto único de acceso (patrón singleton).
 let dbInstance = null;
 
+// Migración a SQL Server (M00): MOTOR_BD en el .env elige con qué base trabaja
+// la app. Si no está, se usa SQLite como siempre. Con "sqlserver", db/init.js
+// conecta a través de db/sqlserver/adaptador.js, que ofrece este mismo objeto
+// (db.get / db.all / db.run / db.exec), así que el resto de la app no cambia.
+function motorBd() {
+  return String(process.env.MOTOR_BD || 'sqlite').trim().toLowerCase() === 'sqlserver' ? 'sqlserver' : 'sqlite';
+}
+
+function esSqlServer() {
+  return motorBd() === 'sqlserver';
+}
+
 function setDb(instance) {
   dbInstance = instance;
 }
@@ -28,6 +40,9 @@ function getDb() {
 // responda el mismo mensaje de error de siempre.
 async function enTransaccion(fn) {
   const db = getDb();
+  // SQL Server (M01): el adaptador maneja la transacción completa para que
+  // solo las consultas de esta operación queden dentro de ella.
+  if (typeof db.transaccion === 'function') return db.transaccion(fn);
   // "BEGIN IMMEDIATE" (en vez de "BEGIN" a secas) toma el bloqueo de
   // escritura desde el inicio de la transacción. Esto evita, por ejemplo,
   // que dos personas guardando una garantía al mismo tiempo lean "el mismo
@@ -45,4 +60,4 @@ async function enTransaccion(fn) {
   }
 }
 
-module.exports = { setDb, getDb, enTransaccion };
+module.exports = { setDb, getDb, enTransaccion, motorBd, esSqlServer };

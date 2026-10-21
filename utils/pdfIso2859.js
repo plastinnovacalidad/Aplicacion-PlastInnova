@@ -53,15 +53,20 @@ function coloresEstado(valor) {
   // 'implementado' (estado) son del módulo Problemas (utils del "Reporte de
   // Problema", 08/09) -- mismo criterio de color que ya usan sus píldoras en
   // pantalla (pill-critica/pill-warning/pill-info/pill-ok en
-  // Public/problemas.html). 'baja' y 'descartado' caen en el gris por
+  // Public/reportes.html, antes Public/problemas.html -- MIGRACIÓN #50).
+  // 'baja' y 'descartado' caen en el gris por
   // defecto a propósito (igual que su pill-muted en pantalla). 'funciono'/
   // 'no_funciono' (estado de una medida) no tienen píldora de color en
   // pantalla todavía (ahí es un <select> simple) -- se agregan solo para el
   // PDF, verde/rojo por ser el criterio más intuitivo al leer el reporte.
-  if (['aceptado', 'seguir', 'aprobado', 'ninguna', 'conforme', 'implementado', 'funciono', 'funcionó'].includes(v)) return { bg: COLORES.verdeBg, color: COLORES.verde };
-  if (['rechazado', 'parar', 'critico', 'crítico', 'fuera de tolerancia', 'alta', 'no_funciono', 'no_funcionó'].includes(v)) return { bg: COLORES.rojoBg, color: COLORES.rojo };
-  if (['alerta', 'aceptado_con_obs', 'mayor', 'media', 'pendiente'].includes(v)) return { bg: COLORES.naranjaBg, color: COLORES.naranja };
-  if (['menor', 'en_proceso'].includes(v)) return { bg: COLORES.azulClaro, color: COLORES.azul };
+  // 'liberar'/'rechazar'/'reclasificar'/'reparar' (Tratamiento del módulo
+  // Problemas, MIGRACIÓN #42) reusan el mismo criterio de intuición que el
+  // resto: liberar = verde (sigue su curso), rechazar = rojo, reclasificar
+  // y reparar comparten familia con "hay que hacer algo más" (naranja/azul).
+  if (['aceptado', 'seguir', 'aprobado', 'ninguna', 'conforme', 'implementado', 'funciono', 'funcionó', 'liberar'].includes(v)) return { bg: COLORES.verdeBg, color: COLORES.verde };
+  if (['rechazado', 'parar', 'critico', 'crítico', 'fuera de tolerancia', 'alta', 'no_funciono', 'no_funcionó', 'rechazar'].includes(v)) return { bg: COLORES.rojoBg, color: COLORES.rojo };
+  if (['alerta', 'aceptado_con_obs', 'mayor', 'media', 'pendiente', 'reclasificar'].includes(v)) return { bg: COLORES.naranjaBg, color: COLORES.naranja };
+  if (['menor', 'en_proceso', 'reparar'].includes(v)) return { bg: COLORES.azulClaro, color: COLORES.azul };
   return { bg: COLORES.grisEstadoBg, color: COLORES.grisEstado };
 }
 

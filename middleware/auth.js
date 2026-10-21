@@ -1,4 +1,5 @@
 const fs = require('fs');
+const crypto = require('crypto');
 const { SESSIONS_FILE, SESSION_INACTIVITY_MS } = require('../settings/paths');
 const { getDb } = require('../db/connection');
 
@@ -58,7 +59,7 @@ function guardarSesiones(sesiones) {
   fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sesiones, null, 2));
 }
 function generarToken() {
-  return Math.random().toString(36).substr(2) + Date.now().toString(36);
+  return crypto.randomBytes(32).toString('hex');
 }
 
 // Busca la sesión de un token, la invalida si lleva más de SESSION_INACTIVITY_MS

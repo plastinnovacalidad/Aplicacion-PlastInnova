@@ -81,7 +81,7 @@ router.put('/reportes/:id', validarToken, puedeGestionar, asyncHandler(async (re
   if (resultado.error === 'no_encontrado') return res.status(404).json({ error: 'Reporte no encontrado' });
   if (resultado.error === 'nada_que_actualizar') return res.status(400).json({ error: 'No se mandó ningún campo para actualizar.' });
   await registrarCambio({
-    modulo: 'Reportes por Áreas', entidad: 'reportes', entidadId: resultado.reporte.id, accion: 'Edición',
+    modulo: 'Comunicados', entidad: 'reportes', entidadId: resultado.reporte.id, accion: 'Edición',
     detalle: `Reporte Informativo editado — por ${req.usuario.nombre}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
   });
@@ -106,7 +106,7 @@ router.post('/reportes/informativo', validarToken, puedeCrear, asyncHandler(asyn
     areasDestino, autorId: req.usuario.id, autorNombre: req.usuario.nombre,
   });
   await registrarCambio({
-    modulo: 'Reportes por Áreas', entidad: 'reportes', entidadId: reporte.id, accion: 'Creación',
+    modulo: 'Comunicados', entidad: 'reportes', entidadId: reporte.id, accion: 'Creación',
     detalle: `Reporte Informativo publicado: "${reporte.titulo}" a ${reporte.destinos.map((d) => d.nombre).join(', ')} — registrado por ${req.usuario.nombre}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
   });
@@ -139,7 +139,7 @@ router.post('/reportes/:id/adjuntos', validarToken, puedeAdjuntar, upload.single
     autor_id: req.usuario.id, autor_nombre: req.usuario.nombre,
   });
   await registrarCambio({
-    modulo: 'Reportes por Áreas', entidad: 'reportes_adjuntos', entidadId: result.lastID, accion: 'Creación',
+    modulo: 'Comunicados', entidad: 'reportes_adjuntos', entidadId: result.lastID, accion: 'Creación',
     detalle: `Adjunto "${req.file.originalname}" agregado al reporte #${req.params.id} — por ${req.usuario.nombre}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
   });
@@ -161,7 +161,7 @@ router.delete('/reportes/:id/adjuntos/:adjId', validarToken, puedeEliminar, asyn
   const ruta = path.join(CARPETA_ADJUNTOS, adjunto.archivo);
   if (fs.existsSync(ruta)) fs.unlinkSync(ruta);
   await registrarCambio({
-    modulo: 'Reportes por Áreas', entidad: 'reportes_adjuntos', entidadId: req.params.adjId, accion: 'Eliminación',
+    modulo: 'Comunicados', entidad: 'reportes_adjuntos', entidadId: req.params.adjId, accion: 'Eliminación',
     detalle: `Adjunto "${adjunto.nombre_original || adjunto.archivo}" eliminado del reporte #${req.params.id} — por ${req.usuario.nombre}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
   });

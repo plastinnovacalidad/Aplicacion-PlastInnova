@@ -6,7 +6,7 @@
   <title>Producción por Fábrica - Circuitos SMD</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="css/comun.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/vendor/chart.4.4.7.min.js"></script>
   <style>
     body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; color: #333; min-height: 100vh; }
     .main-container { display: flex; flex-direction: column; height: calc(100vh - 70px); padding: 15px; gap: 15px; overflow-y: auto; }
@@ -900,7 +900,8 @@
       // Rediseño 04/09: la bitácora de todos los casos ("Seguimiento") ya no
       // es una pestaña de esta pantalla -- Julio la pidió como su propio
       // módulo dentro de Calidad. Pestañas (08/09): ese módulo ahora vive
-      // dentro de Problemas, como su segunda pestaña (ver problemas.html).
+      // dentro de Reportes (antes Problemas), como una de sus pestañas (ver
+      // reportes.html, MIGRACIÓN #50).
 
       document.getElementById('tabsNav').innerHTML = pestañas.map(p => `
         <button class="tab-btn ${p.key === pestañaActiva ? 'activa' : ''}" id="tabBtn-${p.key}" onclick="activarPestaña('${p.key}')">${escapeHtml(p.label)}</button>
@@ -1091,8 +1092,8 @@
     // Rediseño 04/09: la bitácora de todos los casos ya no vive aquí --
     // Julio la pidió como su propio módulo, no como una pestaña de esta
     // pantalla de reportes de Producción. Pestañas (08/09): ese módulo
-    // ahora vive dentro de Problemas, como su segunda pestaña (ver
-    // problemas.html).
+    // ahora vive dentro de Reportes (antes Problemas), como una de sus
+    // pestañas (ver reportes.html, MIGRACIÓN #50).
 
     function estadoPill(estado) {
       const clase = { Pendiente: 'pill-warning', En_Proceso: 'pill-info', Implementado: 'pill-ok' }[estado] || 'pill-muted';
@@ -2156,14 +2157,25 @@
       if (!Array.isArray(data) || data.length === 0) return;
 
       const activeMotivo = (filtrosActivos[k] || {}).motivo;
-      const bgColorsCant = data.map(m => m.motivo === activeMotivo ? '#1d4ed8' : '#2C43A2');
+
+      // Pedido por Julio (10/09): "la grafica de frecuencia esta bien
+      // organizada, pero la grafica de por unidades no esta organizada... me
+      // gustaria que la grafica de unidades fuera de la mas grande a la
+      // menos, no que se organizara en el mismo orden que la de frecuencia"
+      // -- antes las dos gráficas usaban el mismo `data` (y por lo tanto el
+      // mismo orden, el que manda el backend ya ordenado por Frecuencia).
+      // Copia aparte, ordenada de mayor a menor por unidades, solo para la
+      // gráfica de Unidades -- Frecuencia y la tabla de abajo (sub-pestaña
+      // Datos) siguen usando `data` tal cual, sin tocar su orden.
+      const dataPorUnidades = [...data].sort((a, b) => (b.unidades || 0) - (a.unidades || 0));
+      const bgColorsCant = dataPorUnidades.map(m => m.motivo === activeMotivo ? '#1d4ed8' : '#2C43A2');
       const bgColorsFreq = data.map(m => m.motivo === activeMotivo ? '#047857' : '#38a169');
 
       chartMotivosCantInstances[k] = new Chart(ctxCant, {
         type: 'bar',
         data: {
-          labels: data.map(m => m.motivo),
-          datasets: [{ label: 'Unidades rechazadas', data: data.map(m => m.unidades), backgroundColor: bgColorsCant }]
+          labels: dataPorUnidades.map(m => m.motivo),
+          datasets: [{ label: 'Unidades rechazadas', data: dataPorUnidades.map(m => m.unidades), backgroundColor: bgColorsCant }]
         },
         options: {
           indexAxis: 'y',
@@ -2172,7 +2184,7 @@
           onClick: (e, elements) => {
             if (elements.length > 0) {
               const idx = elements[0].index;
-              filtrarPorMotivo(k, data[idx].motivo);
+              filtrarPorMotivo(k, dataPorUnidades[idx].motivo);
             }
           },
           scales: { x: { beginAtZero: true } }
@@ -2253,16 +2265,23 @@
       const activeLinea = (filtrosActivos[k] || {}).linea;
       const activeProceso = (filtrosActivos[k] || {}).proceso;
       const esActivo = (l) => l.linea === activeLinea && l.proceso === activeProceso;
-      const bgColorsCant = data.map(l => esActivo(l) ? '#b91c1c' : '#c53030');
+
+      // Pedido por Julio (10/09): mismo criterio que en renderizarMotivos --
+      // la gráfica de Unidades va ordenada de mayor a menor por SU PROPIO
+      // valor, en vez de heredar el orden de Frecuencia (el que manda el
+      // backend). Copia aparte para no tocar el orden de Frecuencia.
+      const dataPorUnidades = [...data].sort((a, b) => (b.unidades || 0) - (a.unidades || 0));
+      const bgColorsCant = dataPorUnidades.map(l => esActivo(l) ? '#b91c1c' : '#c53030');
       const bgColorsFreq = data.map(l => esActivo(l) ? '#b45309' : '#b7791f');
 
-      const labels = data.map(l => `${l.linea} · ${l.proceso}`);
+      const labelsPorUnidades = dataPorUnidades.map(l => `${l.linea} · ${l.proceso}`);
+      const labelsPorFrecuencia = data.map(l => `${l.linea} · ${l.proceso}`);
 
       chartLineasCantInstances[k] = new Chart(ctxCant, {
         type: 'bar',
         data: {
-          labels: labels,
-          datasets: [{ label: 'Unidades rechazadas', data: data.map(l => l.unidades), backgroundColor: bgColorsCant }]
+          labels: labelsPorUnidades,
+          datasets: [{ label: 'Unidades rechazadas', data: dataPorUnidades.map(l => l.unidades), backgroundColor: bgColorsCant }]
         },
         options: {
           indexAxis: 'y',
@@ -2271,7 +2290,7 @@
           onClick: (e, elements) => {
             if (elements.length > 0) {
               const idx = elements[0].index;
-              filtrarPorLinea(k, data[idx].linea, data[idx].proceso);
+              filtrarPorLinea(k, dataPorUnidades[idx].linea, dataPorUnidades[idx].proceso);
             }
           },
           scales: { x: { beginAtZero: true } }
@@ -2281,7 +2300,7 @@
       chartLineasFreqInstances[k] = new Chart(ctxFreq, {
         type: 'bar',
         data: {
-          labels: labels,
+          labels: labelsPorFrecuencia,
           datasets: [{ label: 'Frecuencia (Reportes)', data: data.map(l => l.cantidad), backgroundColor: bgColorsFreq }]
         },
         options: {

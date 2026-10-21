@@ -113,6 +113,25 @@ function eliminarDefectoCatalogo(id) {
   return getDb().run(`DELETE FROM iso_tipificacion_defectos WHERE id = ?`, [id]);
 }
 
+// FASE 6 (09/09, pedido por Julio): con PRAGMA foreign_keys activado,
+// borrar un defecto ya usado en muestreos, problemas, reportes o el
+// catálogo de causas de trazabilidad haría fallar el DELETE. Se cuenta
+// antes de intentar borrar, para avisar en vez de tirar un error crudo.
+// Ojo: iso_defectos_encontrados referencia por "codigo", no por "id" --
+// las otras tres tablas sí usan el "id".
+async function contarUsosDeDefecto(id, codigo) {
+  const db = getDb();
+  const filas = await db.all(
+    `SELECT 'muestreos' AS tabla, COUNT(*) AS total FROM iso_defectos_encontrados WHERE codigo_defecto = ?
+     UNION ALL SELECT 'problemas', COUNT(*) FROM problemas WHERE defecto_id = ?
+     UNION ALL SELECT 'reportes', COUNT(*) FROM reportes WHERE defecto_id = ?
+     UNION ALL SELECT 'catálogo de causas de trazabilidad', COUNT(*) FROM trazabilidad_catalogo_causas WHERE defecto_id = ?`,
+    [codigo, id, id, id]
+  );
+  const total = filas.reduce((acc, f) => acc + f.total, 0);
+  return { total, detalle: filas.filter(f => f.total > 0) };
+}
+
 function listarAreasCatalogo() {
   return getDb().all(`SELECT id, nombre, modulo, estado, encargado FROM iso_areas ORDER BY nombre`);
 }
@@ -133,6 +152,26 @@ function actualizarAreaCatalogo(id, nombre, modulo, estado, encargado) {
     `UPDATE iso_areas SET nombre = ?, modulo = ?, estado = ?, encargado = ? WHERE id = ?`,
     [nombre, modulo, estado, encargado || null, id]
   );
+}
+
+// FASE 6 (09/09, pedido por Julio): con PRAGMA foreign_keys activado,
+// borrar un área usada en registros de WhatsApp, problemas o reportes
+// haría fallar el DELETE. Se cuenta antes de intentar borrar, para avisar
+// en vez de tirar un error crudo (las 18 filas viejas documentadas de
+// whatsapp_registros con área_id 1/2 son justamente el caso que esto
+// evita que rompa algo si alguien intenta borrar esas áreas viejas).
+async function contarUsosDeArea(id) {
+  const db = getDb();
+  const filas = await db.all(
+    `SELECT 'registros de WhatsApp' AS tabla, COUNT(*) AS total FROM whatsapp_registros WHERE area_id = ?
+     UNION ALL SELECT 'sesiones activas de WhatsApp', COUNT(*) FROM whatsapp_sesiones_activas WHERE area_id = ?
+     UNION ALL SELECT 'problemas', COUNT(*) FROM problemas WHERE area_origen_id = ?
+     UNION ALL SELECT 'reportes', COUNT(*) FROM reportes WHERE area_origen_id = ?
+     UNION ALL SELECT 'destinos de reportes', COUNT(*) FROM reportes_destinos WHERE area_id = ?`,
+    Array(5).fill(id)
+  );
+  const total = filas.reduce((acc, f) => acc + f.total, 0);
+  return { total, detalle: filas.filter(f => f.total > 0) };
 }
 
 function eliminarAreaCatalogo(id) {
@@ -159,6 +198,14 @@ function actualizarPlanCatalogo(producto, nivelInspeccion, ncaMayores, ncaMenore
 
 function eliminarPlanCatalogo(producto) {
   return getDb().run(`DELETE FROM iso_planes_muestreo WHERE producto = ?`, [producto]);
+}
+
+// FASE 6 (09/09, pedido por Julio): con PRAGMA foreign_keys activado,
+// borrar un plan de muestreo ya asignado a alguna referencia (iso_referencias.tipo_producto)
+// haría fallar el DELETE. Se cuenta antes de intentar borrar, para avisar
+// en vez de tirar un error crudo.
+function contarUsosDePlan(producto) {
+  return getDb().get('SELECT COUNT(*) AS total FROM iso_referencias WHERE tipo_producto = ?', [producto]);
 }
 
 // ======================== LOTES ========================
@@ -573,12 +620,15 @@ module.exports = {
   crearDefectoCatalogo,
   actualizarDefectoCatalogo,
   eliminarDefectoCatalogo,
+  contarUsosDeDefecto,
   listarAreasCatalogo,
   crearAreaCatalogo,
   actualizarAreaCatalogo,
   eliminarAreaCatalogo,
+  contarUsosDeArea,
   listarPlanesCatalogo,
   crearPlanCatalogo,
   actualizarPlanCatalogo,
   eliminarPlanCatalogo,
+  contarUsosDePlan,
 };

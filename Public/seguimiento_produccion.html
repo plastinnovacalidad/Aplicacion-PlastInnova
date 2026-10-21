@@ -6,17 +6,21 @@
   <title>Seguimiento de Producción - Calidad & Circuitos SMD</title>
   <!-- Pestañas (08/09, pedido por Julio): "el modulo de seguimiento de
        produccion podriamos volverlo una pestaña dentro de problemas" --
-       este módulo ya no es una página aparte, ahora es la segunda pestaña
-       de Public/problemas.html. Este archivo se deja como una simple
+       este módulo ya no es una página aparte, ahora es una pestaña de
+       Public/reportes.html. Este archivo se deja como una simple
        redirección (en vez de borrarlo) para que un acceso directo o
-       favorito viejo a esta URL siga funcionando, sin caer en un error. -->
+       favorito viejo a esta URL siga funcionando, sin caer en un error.
+
+       MIGRACIÓN #50 (09/09): apunta directo a Public/reportes.html (antes
+       Public/problemas.html, que a su vez ahora es OTRA redirección hacia
+       acá) para no encadenar dos redirecciones de más. -->
   <script>
-    location.replace('problemas.html?pestaña=seguimiento');
+    location.replace('reportes.html?modulo=generales&pestaña=seguimiento');
   </script>
 </head>
 <body>
   <p style="font-family: sans-serif; color: #718096; padding: 40px; text-align:center;">
-    Este módulo ahora vive dentro de <a href="problemas.html?pestaña=seguimiento">Problemas</a>, en la pestaña "Seguimiento de Producción".
+    Este módulo ahora vive dentro de <a href="reportes.html?modulo=generales&pestaña=seguimiento">Reportes</a>, en la pestaña "Reportes Generales" → "Seguimiento de Producción".
   </p>
 </body>
 </html>

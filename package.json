@@ -24,6 +24,7 @@
     "express-rate-limit": "^8.6.2",
     "file-type": "^16.5.4",
     "helmet": "^8.3.0",
+    "mssql": "^12.7.6",
     "multer": "^2.2.0",
     "pdfkit": "^0.19.1",
     "qrcode-terminal": "^0.12.0",

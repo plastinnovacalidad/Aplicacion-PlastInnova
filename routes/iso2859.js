@@ -114,6 +114,15 @@ router.delete('/iso2859/catalogos/defectos/:id', validarToken, puedeGestionarCat
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
   const defecto = await iso.listarDefectosCatalogo().then(lista => lista.find(d => d.id === id));
+  if (!defecto) return res.status(404).json({ error: 'Defecto no encontrado' });
+
+  const uso = await iso.contarUsosDeDefecto(id, defecto.codigo);
+  if (uso.total > 0) {
+    return res.status(409).json({
+      error: `No se puede eliminar: hay ${uso.total} registro(s) que usan este defecto (${uso.detalle.map(d => d.tabla).join(', ')}). Desactívalo en vez de eliminarlo, para no perder esa relación en el historial.`
+    });
+  }
+
   await iso.eliminarDefectoCatalogo(id);
   await registrarCambio({
     modulo: 'Catálogos', entidad: 'defectos_iso', entidadId: id, accion: 'Eliminación',
@@ -160,6 +169,15 @@ router.delete('/iso2859/catalogos/areas/:id', validarToken, puedeGestionarCatalo
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
   const area = await iso.listarAreasCatalogo().then(lista => lista.find(a => a.id === id));
+  if (!area) return res.status(404).json({ error: 'Área no encontrada' });
+
+  const uso = await iso.contarUsosDeArea(id);
+  if (uso.total > 0) {
+    return res.status(409).json({
+      error: `No se puede eliminar: hay ${uso.total} registro(s) que usan esta área (${uso.detalle.map(d => d.tabla).join(', ')}). Desactívala en vez de eliminarla, para no perder esa relación en el historial.`
+    });
+  }
+
   await iso.eliminarAreaCatalogo(id);
   await registrarCambio({
     modulo: 'Catálogos', entidad: 'areas_iso', entidadId: id, accion: 'Eliminación',
@@ -203,6 +221,13 @@ router.put('/iso2859/catalogos/planes/:producto', validarToken, puedeGestionarCa
 }));
 
 router.delete('/iso2859/catalogos/planes/:producto', validarToken, puedeGestionarCatalogos, asyncHandler(async (req, res) => {
+  const uso = await iso.contarUsosDePlan(req.params.producto);
+  if (uso.total > 0) {
+    return res.status(409).json({
+      error: `No se puede eliminar: hay ${uso.total} referencia(s) asignadas a este plan de muestreo. Reasígnalas a otro plan antes de eliminarlo.`
+    });
+  }
+
   await iso.eliminarPlanCatalogo(req.params.producto);
   await registrarCambio({
     modulo: 'Catálogos', entidad: 'planes_muestreo', entidadId: req.params.producto, accion: 'Eliminación',
@@ -517,6 +542,17 @@ router.get('/iso2859/reportes/operativo/:id', validarToken, puedeVerReportes, as
   let y = pdf.dibujarEncabezado(doc, subtitulo);
   const obsTexto = muestreo.observaciones || 'Sin observaciones';
 
+  // OJO (bug encontrado y corregido 08/09 al construir el Reporte de
+  // Problema, ver routes/problemas.js): doc.heightOfString(texto, {width,
+  // font, fontSize}) IGNORA el font/fontSize que se le pase por options --
+  // mide con lo que esté ACTIVO en el doc en ese momento. Justo antes de
+  // esta línea, dibujarEncabezado() deja activo Helvetica a 8pt (por el
+  // texto "Generado: ..."), así que sin este fix se media el texto como si
+  // fuera de 8pt aunque acá se pida 9pt -- con un texto largo, la última
+  // línea podía quedar cortada por el borde inferior de la fila. El fix es
+  // fijar explícitamente la fuente/tamaño ANTES de medir, con los MISMOS
+  // valores que ya se le pasaban en options (que antes se ignoraban).
+  doc.font('Helvetica').fontSize(9);
   y = pdf.dibujarPanelInfo(doc, y, [
     { label: 'Criticidad', value: criticidad, badge: true },
     { label: 'Lote', value: muestreo.id_lote },

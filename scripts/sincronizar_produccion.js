@@ -33,6 +33,8 @@ try {
 
 const { inicializarBaseDatos } = require('../db/init');
 const { getDb } = require('../db/connection');
+const whatsappAlertas = require('../data/whatsappAlertas');
+const { enviarAlerta } = require('../whatsapp_bot_service');
 
 // Configurables por variable de entorno (para no tener que tocar
 // settings/paths.js todavía); si no están definidas, usan la ruta real donde
@@ -320,6 +322,125 @@ async function sincronizarEntregas(db, filas) {
   return { nuevas, actualizadas, sinCambios, sinIdEntrega, total: filas.length };
 }
 
+// ======================== ESTADO DE SINCRONIZACIÓN (fallos consecutivos) ========================
+// Funciones para leer y actualizar la tabla singleton sincronizacion_estado.
+
+async function obtenerEstadoSincronizacion(db) {
+  const fila = await db.get('SELECT * FROM sincronizacion_estado WHERE id = 1');
+  if (!fila) {
+    // Si por alguna razón no existe la fila, la creamos con valores por defecto
+    await db.run('INSERT OR IGNORE INTO sincronizacion_estado (id, fallos_consecutivos, alerta_enviada) VALUES (1, 0, 0)');
+    return { fallos_consecutivos: 0, alerta_enviada: 0, ultimo_ciclo_exitoso: null, ultima_actualizacion: null };
+  }
+  return fila;
+}
+
+async function actualizarEstadoSincronizacion(db, fallosConsecutivos, alertaEnviada, cicloExitoso = false) {
+  const ahora = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  if (cicloExitoso) {
+    await db.run(
+      'UPDATE sincronizacion_estado SET fallos_consecutivos = 0, alerta_enviada = 0, ultimo_ciclo_exitoso = ?, ultima_actualizacion = ? WHERE id = 1',
+      [ahora, ahora]
+    );
+  } else {
+    await db.run(
+      'UPDATE sincronizacion_estado SET fallos_consecutivos = ?, alerta_enviada = ?, ultima_actualizacion = ? WHERE id = 1',
+      [fallosConsecutivos, alertaEnviada ? 1 : 0, ahora]
+    );
+  }
+}
+
+// Envía alerta de WhatsApp y devuelve true si al menos un envío fue confirmado (no lanzó excepción).
+// NOTA: enviarAlerta() del bot actual NO devuelve estado de envío real (fire-and-forget).
+// Esta función intenta detectar si el cliente WhatsApp está conectado antes de considerar "enviado".
+async function enviarAlertaConConfirmacion(tipo, mensaje) {
+  try {
+    const { client } = require('../whatsapp_bot_service');
+    if (!client) {
+      console.warn(`⚠️  WhatsApp no inicializado: no se puede enviar alerta "${tipo}"`);
+      return false;
+    }
+    // whatsapp-web.js expone client.info cuando está conectado; si es null/undefined, no hay sesión activa
+    if (!client.info || !client.info.wid) {
+      console.warn(`⚠️  WhatsApp desconectado (sin sesión activa): alerta "${tipo}" NO se envió`);
+      return false;
+    }
+    await enviarAlerta(tipo, mensaje);
+    // Si llegamos aquí sin excepción, asumimos que el envío fue solicitado correctamente.
+    // LIMITACIÓN: no hay confirmación real de entrega (el bot no devuelve recibo).
+    return true;
+  } catch (e) {
+    console.error(`❌ Error enviando alerta "${tipo}":`, e.message);
+    return false;
+  }
+}
+
+// Maneja la lógica de alertas según el resultado del ciclo.
+// Devuelve { exito: boolean, alertaEnviada: boolean, recuperacion: boolean }
+async function procesarResultadoCiclo(db, esAutomatico, huboFallo) {
+  if (!esAutomatico) {
+    // Ejecución manual: no afecta contador ni envía alertas
+    console.log('ℹ️  Ejecución manual: no se actualiza contador de fallos consecutivos ni se envían alertas.');
+    return { exito: !huboFallo, alertaEnviada: false, recuperacion: false };
+  }
+
+  const estado = await obtenerEstadoSincronizacion(db);
+  let fallosConsecutivos = estado.fallos_consecutivos;
+  let alertaEnviada = estado.alerta_enviada === 1;
+
+  if (huboFallo) {
+    // Ciclo fallido: incrementar contador
+    fallosConsecutivos++;
+    console.log(`⚠️  Ciclo fallido. Fallos consecutivos: ${fallosConsecutivos}`);
+
+    if (fallosConsecutivos === 3 && !alertaEnviada) {
+      // Tercer fallo consecutivo y no se ha enviado alerta aún
+      const mensaje = `⚠️ ALERTA: Sincronización de producción fallida 3 ciclos consecutivos
+
+Las últimas 3 sincronizaciones automáticas (cada 6 horas) han presentado fallos.
+
+Los datos de Calidad/Lotes/Producción pueden estar desactualizados.
+
+Revisar logs del servidor y estado de Excel/NAS.`;
+      const enviado = await enviarAlertaConConfirmacion('sync_falla_consecutiva', mensaje);
+      if (enviado) {
+        alertaEnviada = true;
+        console.log('🔔 Alerta de 3 fallos consecutivos enviada por WhatsApp.');
+      } else {
+        console.log('⚠️  No se pudo confirmar envío de alerta (WhatsApp desconectado). No se marca como enviada.');
+      }
+    } else if (fallosConsecutivos > 3) {
+      console.log(`ℹ️  Fallos consecutivos: ${fallosConsecutivos} (alerta ya ${alertaEnviada ? 'enviada' : 'no enviada'}).`);
+    }
+
+    await actualizarEstadoSincronizacion(db, fallosConsecutivos, alertaEnviada);
+    return { exito: false, alertaEnviada: enviado === true, recuperacion: false };
+  } else {
+    // Ciclo exitoso
+    const huboAlertaPrevia = alertaEnviada;
+    await actualizarEstadoSincronizacion(db, 0, false, true);
+    console.log('✅ Ciclo exitoso. Contador de fallos reiniciado a 0.');
+
+    if (huboAlertaPrevia) {
+      // Hubo alerta previa y ahora se recuperó: enviar alerta de recuperación
+      const mensaje = `✅ Sincronización de producción recuperada
+
+El ciclo automático volvió a completarse correctamente.
+
+Los datos de producción están actualizados.`;
+      const enviado = await enviarAlertaConConfirmacion('sync_recuperacion', mensaje);
+      if (enviado) {
+        console.log('🔔 Alerta de recuperación enviada por WhatsApp.');
+      } else {
+        console.log('⚠️  No se pudo confirmar envío de alerta de recuperación (WhatsApp desconectado).');
+      }
+      return { exito: true, alertaEnviada: false, recuperacion: enviado === true };
+    }
+
+    return { exito: true, alertaEnviada: false, recuperacion: false };
+  }
+}
+
 // ======================== ORQUESTACIÓN ========================
 const COLUMNAS_CALIDAD = ['Id_Rechazo', 'Fecha_Rechazo', 'LineaOrg_Rechazo', 'ProcesoOrg_Rechazo', 'LineaRep_Rechazo', 'ProcesoRep_Rechazo', 'LoteProduccion_Rechazo', 'Lote_Rechazo', 'Referencia_Rechazo', 'Cantidad_Rechazo', 'Motivo_Rechazo', 'Observaciones', 'Area'];
 const COLUMNAS_LOTES = ['No_Lote', 'Referencia_Lote', 'Color_Lote', 'Voltaje_Lote', 'Codigo_Lote'];
@@ -331,7 +452,11 @@ const COLUMNAS_PRODUCCION = ['Id_Entrega', 'Fecha_Entrega', 'Linea_Entrega', 'Lo
 // servidor). A propósito NO llama a process.exit() en ningún punto — si lo
 // hiciera, un ciclo llamado desde dentro del servidor tumbaría toda la app,
 // no solo esta sincronización.
-async function sincronizarProduccion(forzarRefresco = false) {
+// Parámetros:
+// - forzarRefresco: true = refrescar Excel antes de leer (CLI manual), false = usar archivos tal como están (ciclo automático)
+// - esAutomatico: true = ciclo automático del servidor (cada 6h), false = ejecución manual CLI
+// Devuelve: { exito: boolean, alertaEnviada: boolean, recuperacion: boolean }
+async function sincronizarProduccion(forzarRefresco = false, esAutomatico = false) {
   console.log('======================== Sincronización de Producción (rechazos + lotes + entregas) ========================');
   console.log(new Date().toLocaleString('es-CO'), '\n');
 
@@ -359,6 +484,11 @@ async function sincronizarProduccion(forzarRefresco = false) {
     db = getDb();
   }
 
+  // Flags para rastrear si cada fuente se procesó correctamente
+  let calidadOk = true;
+  let lotesOk = true;
+  let produccionOk = true;
+
   // Si el refresco de un archivo falló en este ciclo, igual se sincroniza con
   // lo último que haya quedado guardado en el Excel (no es lo más nuevo de la
   // NAS, pero tampoco hay razón para no sincronizarlo) — solo cambia el
@@ -372,6 +502,7 @@ async function sincronizarProduccion(forzarRefresco = false) {
     console.log(`✅ Rechazos: ${r.total} filas en el Excel → ${r.nuevos} nuevas, ${r.actualizados} actualizadas, ${r.sinCambios} sin cambios.`);
   } catch (e) {
     console.error('⚠️  Error leyendo/sincronizando Calidad.xlsx:', e.message);
+    calidadOk = false;
   }
 
   if (!estadoRefresco[RUTA_LOTES]) {
@@ -383,6 +514,7 @@ async function sincronizarProduccion(forzarRefresco = false) {
     console.log(`✅ Lotes: ${r.total} filas en el Excel → ${r.nuevos} nuevos, ${r.actualizados} actualizados, ${r.sinCambios} sin cambios${r.sinNoLote ? ` (${r.sinNoLote} sin No_Lote, descartadas)` : ''}.`);
   } catch (e) {
     console.error('⚠️  Error leyendo/sincronizando Lotes.xlsx:', e.message);
+    lotesOk = false;
   }
 
   if (!estadoRefresco[RUTA_PRODUCCION]) {
@@ -394,9 +526,17 @@ async function sincronizarProduccion(forzarRefresco = false) {
     console.log(`✅ Entregas de producción: ${r.total} filas en el Excel → ${r.nuevas} nuevas, ${r.actualizadas} actualizadas, ${r.sinCambios} sin cambios${r.sinIdEntrega ? ` (${r.sinIdEntrega} sin Id_Entrega, identificadas por hash)` : ''}.`);
   } catch (e) {
     console.error('⚠️  Error leyendo/sincronizando Produccion.xlsx:', e.message);
+    produccionOk = false;
   }
 
   console.log('\n✅ Ciclo de sincronización terminado.\n');
+
+  // Un ciclo es EXITOSO solo si las TRES fuentes se procesaron sin errores
+  const huboFallo = !(calidadOk && lotesOk && produccionOk);
+
+  // Procesar alertas según resultado (solo para ciclos automáticos)
+  const resultado = await procesarResultadoCiclo(db, esAutomatico, huboFallo);
+  return resultado;
 }
 
 module.exports = { sincronizarProduccion };
@@ -405,8 +545,9 @@ module.exports = { sincronizarProduccion };
 // scripts/sincronizar_produccion.js), no cuando app_circuitos.js hace
 // require('./scripts/sincronizar_produccion') para engancharlo al ciclo de
 // 6 horas.
+// CLI: forzarRefresco=true, esAutomatico=false (no cuenta para alertas)
 if (require.main === module) {
-  sincronizarProduccion(true)
+  sincronizarProduccion(true, false)
     .then(() => process.exit(0))
     .catch(err => {
       console.error('❌ Error inesperado durante la sincronización:', err);

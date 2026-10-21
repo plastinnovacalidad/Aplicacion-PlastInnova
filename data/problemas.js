@@ -29,6 +29,23 @@ const TIPOS_CONTEXTO = ['referencia', 'motivo'];
 const CRITICIDADES = ['Baja', 'Media', 'Alta'];
 const ESTADOS = ['Pendiente', 'En_Proceso', 'Implementado', 'Descartado'];
 const ESTADOS_MEDIDA = ['En_Proceso', 'Funciono', 'No_Funciono'];
+// MIGRACIÓN #42 (08/09, pedido por Julio): disposición única de un problema
+// de Reporte de área o General -- no aplica a Producción (esa no es una
+// decisión que exista en ese origen). Solo 4 valores, Julio fue explícito:
+// "Tratamiento: Liberar, Rechazar, Reclasificar, Reparar".
+const TRATAMIENTOS = ['Liberar', 'Rechazar', 'Reclasificar', 'Reparar'];
+// MIGRACIÓN #43 (08/09, rediseño del Reporte de Problema): 4 preguntas FIJAS
+// de la "Lista de verificación" -- Julio: "el checklist es para todo" (a
+// diferencia de cantidades/tratamiento, aplica a los 3 orígenes). `campo` es
+// la columna real en `problemas`; cada una guarda 'Si'/'No'/null (sin CHECK,
+// mismo criterio que tratamiento -- se valida acá, ver VALORES_CHECKLIST).
+const CHECKLIST_PREGUNTAS = [
+  { campo: 'chk_falla_funcional', pregunta: '¿Falla funcional?' },
+  { campo: 'chk_problema_visual', pregunta: '¿Problema visual?' },
+  { campo: 'chk_retraso_tiempo', pregunta: '¿Retraso de tiempo?' },
+  { campo: 'chk_fuera_tolerancias', pregunta: '¿Fuera de tolerancias?' },
+];
+const VALORES_CHECKLIST = ['Si', 'No'];
 
 function nowSql() {
   // Mismo formato que usa el resto del esquema para DATETIME
@@ -50,6 +67,19 @@ function semanaISO(fecha) {
   const inicioAño = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   const numSemana = Math.ceil((((d - inicioAño) / 86400000) + 1) / 7);
   return `${d.getUTCFullYear()}-W${String(numSemana).padStart(2, '0')}`;
+}
+
+// MIGRACIÓN #42: % de desperdicio de un problema de Reporte de área o
+// General, calculado siempre sobre la marcha a partir de cantidad_total y
+// cantidad_afectada -- nunca se guarda el % ya calculado (mismo criterio que
+// ya usa data/garantias.js: "porcentaje: Math.round((f.cantidad/total)*1000)/10").
+// Devuelve null si falta cualquiera de las dos cantidades, o si el total es 0
+// (no se puede dividir).
+function calcularPctDesperdicio(cantidadTotal, cantidadAfectada) {
+  const total = Number(cantidadTotal);
+  const afectada = Number(cantidadAfectada);
+  if (!Number.isFinite(total) || !Number.isFinite(afectada) || total <= 0) return null;
+  return Math.round((afectada / total) * 1000) / 10;
 }
 
 // ======================== CATÁLOGOS DE APOYO ========================
@@ -129,7 +159,14 @@ async function obtenerProblemaCompleto(id) {
         causas.map((c) => c.id)
       )
     : [];
-  return { ...problema, causas, medidas };
+  // MIGRACIÓN #42: adjuntos (evidencia gráfica) -- mismo criterio de
+  // "siempre vienen incluidos en el objeto completo" que ya usa
+  // obtenerReporteCompleto() en data/reportes.js.
+  const adjuntos = await db.all('SELECT * FROM problemas_adjuntos WHERE problema_id = ? ORDER BY fecha ASC, id ASC', [id]);
+  return {
+    ...problema, causas, medidas, adjuntos,
+    pct_desperdicio: calcularPctDesperdicio(problema.cantidad_total, problema.cantidad_afectada),
+  };
 }
 
 // Identidad de un problema de origen 'produccion': fabrica + tipo_contexto +
@@ -165,7 +202,19 @@ function buscarUltimo({ fabrica, tipo_contexto, valor_contexto }) {
 function listarProblemas({ origen, fabrica, area_id, estado, criticidad, defecto_id, q, limit } = {}) {
   const condiciones = [];
   const params = [];
-  if (origen && ORIGENES.includes(origen)) { condiciones.push('p.origen = ?'); params.push(origen); }
+  // MIGRACIÓN #46 (09/09, pedido por Julio): "Aviso rápido" no es un origen
+  // real en la columna `origen` (por dentro sigue siendo 'reporte') -- es un
+  // filtro aparte sobre `es_aviso_rapido`, para poder diferenciarlo en la
+  // lista de un Reporte de área ya completo (ver reevaluarAvisoRapido: deja
+  // de contar como aviso rápido en cuanto tiene Defecto + causa raíz real).
+  if (origen === 'aviso_rapido') {
+    condiciones.push('p.es_aviso_rapido = 1');
+  } else if (origen && ORIGENES.includes(origen)) {
+    condiciones.push('p.origen = ?'); params.push(origen);
+    // "Reporte de área" ya no incluye los que todavía se muestran como
+    // Aviso rápido -- esos solo aparecen bajo su propio filtro.
+    if (origen === 'reporte') condiciones.push('(p.es_aviso_rapido IS NULL OR p.es_aviso_rapido = 0)');
+  }
   if (fabrica) { condiciones.push('p.fabrica = ?'); params.push(fabrica); }
   if (area_id) { condiciones.push('p.area_origen_id = ?'); params.push(area_id); }
   if (criticidad && CRITICIDADES.includes(criticidad)) { condiciones.push('p.criticidad = ?'); params.push(criticidad); }
@@ -233,7 +282,11 @@ async function crearCausa({ problemaId, texto, causaCatalogoId, autorId, autorNo
 async function crearProblema({
   origen, fabrica, tipo_contexto, valor_contexto, pct_desperdicio_inicial,
   area_origen_id, referencia, lote, defecto_id, descripcion, criticidad,
-  causaInicial, causaCatalogoId, autorId, autorNombre,
+  cantidad_total, cantidad_afectada, tratamiento,
+  chk_falla_funcional, chk_problema_visual, chk_retraso_tiempo, chk_fuera_tolerancias,
+  prevencion, firma_implicados_nombre,
+  causaInicial, causaCatalogoId, medidasIniciales, autorId, autorNombre,
+  esAvisoRapido,
 }) {
   const db = getDb();
   const semana = origen === 'produccion' ? semanaISO(new Date()) : null;
@@ -260,18 +313,60 @@ async function crearProblema({
   const result = await db.run(
     `INSERT INTO problemas
        (origen, fabrica, tipo_contexto, valor_contexto, semana, pct_desperdicio_inicial,
-        area_origen_id, referencia, lote, defecto_id, descripcion, criticidad, estado, autor_id, autor_nombre)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?, ?)`,
+        area_origen_id, referencia, lote, defecto_id, descripcion, criticidad, estado, autor_id, autor_nombre,
+        cantidad_total, cantidad_afectada, tratamiento,
+        chk_falla_funcional, chk_problema_visual, chk_retraso_tiempo, chk_fuera_tolerancias,
+        prevencion, firma_implicados_nombre, firma_implicados_fecha, es_aviso_rapido, aviso_rapido_origen)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       origen, fabrica || null, tipo_contexto || null, valor_contexto || null, semana,
       pct_desperdicio_inicial != null ? pct_desperdicio_inicial : null,
       area_origen_id || null, referencia || null, lote || null, defectoIdFinal, descripcionFinal,
       criticidadFinal, autorId || null, autorNombre || null,
+      // MIGRACIÓN #42: cantidad_total/cantidad_afectada/tratamiento solo
+      // tienen sentido para 'reporte'/'general' -- en 'produccion' quedan
+      // NULL sin importar qué se haya mandado (esa validación ya la hizo
+      // routes/problemas.js antes de llamar aquí).
+      cantidad_total != null ? cantidad_total : null,
+      cantidad_afectada != null ? cantidad_afectada : null,
+      tratamiento || null,
+      // MIGRACIÓN #43: los 4 de la lista de verificación SÍ aplican a los 3
+      // orígenes (Julio: "el checklist es para todo") -- se validan en
+      // routes/problemas.js antes de llegar acá (VALORES_CHECKLIST o null).
+      chk_falla_funcional || null, chk_problema_visual || null, chk_retraso_tiempo || null, chk_fuera_tolerancias || null,
+      prevencion && String(prevencion).trim() ? String(prevencion).trim() : null,
+      firma_implicados_nombre && String(firma_implicados_nombre).trim() ? String(firma_implicados_nombre).trim() : null,
+      firma_implicados_nombre && String(firma_implicados_nombre).trim() ? nowSql() : null,
+      // MIGRACIÓN #45: marca los problemas creados desde "Aviso rápido" --
+      // el detalle usa esto para saber si "Generar reporte" debe mostrar la
+      // tarjeta simple o el PDF formal completo. Puede bajar a 0 (y volver a
+      // subir) según reevaluarAvisoRapido más abajo.
+      esAvisoRapido ? 1 : 0,
+      // MIGRACIÓN #48: a diferencia de la anterior, esta nunca cambia -- deja
+      // constancia de que el problema nació como Aviso rápido, para poder
+      // revertir es_aviso_rapido más adelante si hace falta.
+      esAvisoRapido ? 1 : 0,
     ]
   );
   const problemaId = result.lastID;
   if (causaInicial) {
-    await crearCausa({ problemaId, texto: causaInicial, causaCatalogoId, autorId, autorNombre });
+    const causaId = await crearCausa({ problemaId, texto: causaInicial, causaCatalogoId, autorId, autorNombre });
+    // MIGRACIÓN #44 (Julio: "medidas no se pueden cargar" y luego "me
+    // gustaria poder agregar varias medidas" -- al crear el problema solo se
+    // pedía la causa raíz, ninguna medida había que esperar a que el
+    // problema ya existiera para agregarla desde el detalle). Opcional, y
+    // ahora son varias (mismo criterio de agregarMedida para cada una:
+    // estado por defecto 'En_Proceso').
+    if (Array.isArray(medidasIniciales)) {
+      for (const texto of medidasIniciales) {
+        if (!texto) continue;
+        await db.run(
+          `INSERT INTO medidas (causa_id, texto, estado, autor_id, autor_nombre, responsable_id, responsable_nombre)
+           VALUES (?, ?, 'En_Proceso', ?, ?, ?, ?)`,
+          [causaId, texto, autorId || null, autorNombre || null, autorId || null, autorNombre || null]
+        );
+      }
+    }
   }
   return obtenerProblemaCompleto(problemaId);
 }
@@ -280,6 +375,38 @@ async function crearProblema({
 // ("poder editarlos después de que los creemos"): cada campo es opcional,
 // solo se cambia lo que venga (comparar con undefined, no con falsy, para
 // poder borrar un campo opcional a propósito mandando '').
+// MIGRACIÓN #46 (09/09, pedido por Julio: "que cuando hagamos uno rapido
+// quede como origen aviso rapido... a menos que se agregue mas informacion
+// se volveria de area" -- confirmó que "más información" es, específicamente,
+// que le pongan un Problema/Defecto Y una causa raíz real -- no el texto
+// "Por determinar" con el que se crea). Se revisa cada vez que se edita el
+// problema (ahí se asigna o se quita el Defecto, ver actualizarProblema) o
+// cambia alguna causa raíz (se agrega la causa real o se borra, ver
+// agregarCausa/eliminarCausa) -- cualquiera de las dos dispara el cambio, sin
+// importar el orden.
+//
+// MIGRACIÓN #48 (09/09, pedido por Julio: "si hagamos que si se revierte
+// quede como reporte rapido" -- es decir, si después de subir de categoría
+// le quitan el Defecto o le borran la causa real, que vuelva a Aviso rápido).
+// Solo aplica a problemas que nacieron como Aviso rápido (aviso_rapido_origen
+// -- un Reporte de área normal jamás se convierte en Aviso rápido, aunque se
+// quede sin causa real). Para los que sí, es_aviso_rapido queda como un
+// espejo del estado actual: 0 si tiene Defecto + causa real, 1 si no.
+async function reevaluarAvisoRapido(problemaId) {
+  const db = getDb();
+  const problema = await db.get('SELECT defecto_id, es_aviso_rapido, aviso_rapido_origen FROM problemas WHERE id = ?', [problemaId]);
+  if (!problema || !problema.aviso_rapido_origen) return;
+  const causaReal = await db.get(
+    `SELECT id FROM causas_raiz WHERE problema_id = ? AND TRIM(texto) <> 'Por determinar' LIMIT 1`,
+    [problemaId]
+  );
+  const promovido = !!(problema.defecto_id && causaReal);
+  const nuevoValor = promovido ? 0 : 1;
+  if (nuevoValor !== problema.es_aviso_rapido) {
+    await db.run('UPDATE problemas SET es_aviso_rapido = ? WHERE id = ?', [nuevoValor, problemaId]);
+  }
+}
+
 async function actualizarProblema(id, cambios) {
   const db = getDb();
   const problema = await db.get('SELECT * FROM problemas WHERE id = ?', [id]);
@@ -287,7 +414,7 @@ async function actualizarProblema(id, cambios) {
 
   const sets = [];
   const vals = [];
-  const camposTexto = ['fabrica', 'tipo_contexto', 'valor_contexto', 'area_origen_id', 'referencia', 'lote', 'defecto_id', 'descripcion', 'pct_desperdicio_inicial'];
+  const camposTexto = ['fabrica', 'tipo_contexto', 'valor_contexto', 'area_origen_id', 'referencia', 'lote', 'defecto_id', 'descripcion', 'pct_desperdicio_inicial', 'cantidad_total', 'cantidad_afectada', 'prevencion'];
   for (const campo of camposTexto) {
     if (cambios[campo] !== undefined) { sets.push(`${campo} = ?`); vals.push(cambios[campo] === '' ? null : cambios[campo]); }
   }
@@ -295,10 +422,39 @@ async function actualizarProblema(id, cambios) {
     if (!CRITICIDADES.includes(cambios.criticidad)) return { error: 'criticidad_invalida' };
     sets.push('criticidad = ?'); vals.push(cambios.criticidad);
   }
+  // MIGRACIÓN #42: Julio confirmó que Tratamiento se puede cambiar después
+  // de creado ("Obligatorio y editable después") -- pero solo hacia uno de
+  // los 4 valores válidos, nunca en blanco (eso lo exige routes/problemas.js
+  // según el origen antes de llamar aquí; aquí solo se valida el valor).
+  if (cambios.tratamiento !== undefined) {
+    if (!TRATAMIENTOS.includes(cambios.tratamiento)) return { error: 'tratamiento_invalido' };
+    sets.push('tratamiento = ?'); vals.push(cambios.tratamiento);
+  }
+  // MIGRACIÓN #43: lista de verificación -- cada una de las 4 se puede
+  // cambiar por separado ('Si'/'No'), o volver a "sin responder" mandando ''
+  // (igual que el resto de camposTexto, comparado con undefined y no con
+  // falsy para poder borrarla a propósito).
+  for (const { campo } of CHECKLIST_PREGUNTAS) {
+    if (cambios[campo] !== undefined) {
+      if (cambios[campo] !== '' && !VALORES_CHECKLIST.includes(cambios[campo])) return { error: 'checklist_invalido' };
+      sets.push(`${campo} = ?`); vals.push(cambios[campo] === '' ? null : cambios[campo]);
+    }
+  }
+  // MIGRACIÓN #43: firma de Implicados -- digital (solo el nombre escrito,
+  // sin CHECK ni catálogo detrás, mismo criterio que pidió Julio: "la firma
+  // que sea digital"). Se guarda su fecha junto con el nombre; si se borra el
+  // nombre (manda ''), se borra también la fecha.
+  if (cambios.firma_implicados_nombre !== undefined) {
+    const nombre = cambios.firma_implicados_nombre && String(cambios.firma_implicados_nombre).trim()
+      ? String(cambios.firma_implicados_nombre).trim() : null;
+    sets.push('firma_implicados_nombre = ?'); vals.push(nombre);
+    sets.push('firma_implicados_fecha = ?'); vals.push(nombre ? nowSql() : null);
+  }
   if (sets.length === 0) return { error: 'nada_que_actualizar' };
   sets.push('actualizado_en = ?'); vals.push(nowSql());
   vals.push(id);
   await db.run(`UPDATE problemas SET ${sets.join(', ')} WHERE id = ?`, vals);
+  await reevaluarAvisoRapido(id);
   return { problema: await obtenerProblemaCompleto(id) };
 }
 
@@ -308,6 +464,7 @@ async function agregarCausa({ problema_id, texto, causa_catalogo_id, autor_id, a
   if (!existe) return null;
   await crearCausa({ problemaId: problema_id, texto, causaCatalogoId: causa_catalogo_id, autorId: autor_id, autorNombre: autor_nombre });
   await db.run('UPDATE problemas SET actualizado_en = ? WHERE id = ?', [nowSql(), problema_id]);
+  await reevaluarAvisoRapido(problema_id);
   return obtenerProblemaCompleto(problema_id);
 }
 
@@ -324,6 +481,7 @@ async function eliminarCausa(problemaId, causaId) {
   await db.run('DELETE FROM causas_raiz WHERE id = ?', [causaId]);
   await recalcularEstadoProblema(problemaId);
   await db.run('UPDATE problemas SET actualizado_en = ? WHERE id = ?', [nowSql(), problemaId]);
+  await reevaluarAvisoRapido(problemaId);
   return { causaEliminada: causa, problema: await obtenerProblemaCompleto(problemaId) };
 }
 
@@ -420,6 +578,23 @@ async function descartarProblema(problemaId) {
   return obtenerProblemaCompleto(problemaId);
 }
 
+// ======================== ADJUNTOS (evidencia gráfica) ========================
+// MIGRACIÓN #42, calcado de las funciones homónimas de data/reportes.js.
+function agregarAdjunto({ problema_id, archivo, nombre_original, autor_id, autor_nombre }) {
+  return getDb().run(
+    `INSERT INTO problemas_adjuntos (problema_id, archivo, nombre_original, autor_id, autor_nombre) VALUES (?, ?, ?, ?, ?)`,
+    [problema_id, archivo, nombre_original || null, autor_id || null, autor_nombre || null]
+  );
+}
+
+function obtenerAdjunto(problemaId, adjuntoId) {
+  return getDb().get('SELECT * FROM problemas_adjuntos WHERE id = ? AND problema_id = ?', [adjuntoId, problemaId]);
+}
+
+function eliminarAdjunto(problemaId, adjuntoId) {
+  return getDb().run('DELETE FROM problemas_adjuntos WHERE id = ? AND problema_id = ?', [adjuntoId, problemaId]);
+}
+
 async function reabrirProblema(problemaId) {
   const db = getDb();
   const existe = await db.get('SELECT id FROM problemas WHERE id = ?', [problemaId]);
@@ -435,8 +610,12 @@ module.exports = {
   CRITICIDADES,
   ESTADOS,
   ESTADOS_MEDIDA,
+  TRATAMIENTOS,
+  CHECKLIST_PREGUNTAS,
+  VALORES_CHECKLIST,
   nowSql,
   semanaISO,
+  calcularPctDesperdicio,
   listarAreasActivas,
   listarDefectosActivos,
   resolverDefectoIdPorMotivo,
@@ -456,4 +635,7 @@ module.exports = {
   marcarSolucionAnteriorComoFallida,
   descartarProblema,
   reabrirProblema,
+  agregarAdjunto,
+  obtenerAdjunto,
+  eliminarAdjunto,
 };

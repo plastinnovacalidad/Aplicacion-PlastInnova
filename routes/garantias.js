@@ -83,6 +83,14 @@ router.delete('/garantias/problemas/:id', validarToken, requerirPermiso('catalog
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' });
   const problema = await garData.listarProblemasCatalogo().then(lista => lista.find(p => p.id === id));
+
+  const uso = await garData.contarGarantiasDeProblema(id);
+  if (uso.total > 0) {
+    return res.status(409).json({
+      error: `No se puede eliminar: hay ${uso.total} garantía(s) con esta causal. Desactívala en vez de eliminarla, para no perder esa relación en el historial.`
+    });
+  }
+
   await garData.eliminarProblemaCatalogo(id);
   await registrarCambio({
     modulo: 'Catálogos', entidad: 'causales_garantias', entidadId: id, accion: 'Eliminación',

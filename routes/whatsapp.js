@@ -3,6 +3,7 @@ const { validarToken, requerirPermiso } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errores');
 const whatsappData = require('../data/whatsapp');
 const whatsappAlertas = require('../data/whatsappAlertas');
+const isoData = require('../data/iso2859');
 const { registrarCambio } = require('../data/auditoria');
 const { PERMISOS_BOT_DISPONIBLES } = require('../settings/permisosBot');
 
@@ -46,12 +47,19 @@ router.post('/whatsapp/resumen', validarToken, requerirPermiso('whatsapp.bot.ges
   res.json({ success: true, message: 'Resumen enviado al administrador por WhatsApp' });
 }));
 
-router.get('/whatsapp/areas', validarToken, requerirPermiso('whatsapp.bot.ver'), (req, res) => {
+// Desde la Fase 4 (09/09, pedido por Julio) el registro de entrada/salida
+// por WhatsApp usa las zonas reales de `iso_areas` (mismo catálogo que ya
+// administra Muestreos ISO 2859), en vez de la lista fija de 8 áreas
+// genéricas que vivía en settings/config_whatsapp.js -- ver
+// obtenerAreasActivas() en whatsapp_bot_service.js. Solo se listan las
+// 'Activo', igual criterio que usa el bot.
+router.get('/whatsapp/areas', validarToken, requerirPermiso('whatsapp.bot.ver'), asyncHandler(async (req, res) => {
+  const todas = await isoData.listarAreasCatalogo();
   res.json({
-    areas: whatsappConfig.AREAS,
+    areas: todas.filter(a => a.estado === 'Activo'),
     timezone: whatsappConfig.TIMEZONE
   });
-});
+}));
 
 // ======================== NÚMEROS AUTORIZADOS (roadmap #2) ========================
 // Gestionar quién puede usar el bot y quién recibe los resúmenes/alertas

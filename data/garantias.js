@@ -116,6 +116,14 @@ function eliminarProblemaCatalogo(id) {
   return getDb().run('DELETE FROM garantias_tipificacion_problemas WHERE id = ?', [id]);
 }
 
+// FASE 6 (09/09, pedido por Julio): con la FK real de garantias.problema_id
+// (Fase 3) y PRAGMA foreign_keys activado, borrar una causal ya usada en
+// alguna garantía haría fallar el DELETE con un error de SQLite. Se cuenta
+// antes de intentar borrar, para avisar en vez de tirar un error crudo.
+function contarGarantiasDeProblema(problemaId) {
+  return getDb().get('SELECT COUNT(*) AS total FROM garantias WHERE problema_id = ?', [problemaId]);
+}
+
 // ======================== MODO CONSULTA — CONSULTAS DE GARANTÍAS ========================
 // Roadmap Bot WhatsApp, puntos 10 y 11. Reciben la referencia (y, en la
 // primera, la cantidad N) ya interpretadas de la frase que escribió la
@@ -218,6 +226,7 @@ module.exports = {
   crearProblemaCatalogo,
   actualizarProblemaCatalogo,
   eliminarProblemaCatalogo,
+  contarGarantiasDeProblema,
   consultarUltimosGarantiasPorReferencia,
   consultarPorcentajeCausalPorReferencia,
   consultarUltimasGarantiasIngresadas,

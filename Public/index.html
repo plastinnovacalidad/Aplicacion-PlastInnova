@@ -280,36 +280,23 @@
             </div>
           </a>
 
-          <!-- "Problemas" (MIGRACIÓN #38, 08/09, pedido por Julio): un solo
-               lugar para ver y hacerle seguimiento a CUALQUIER problema de
-               cualquier proceso (Producción, Reportes de áreas, o detectado
-               directamente revisando los "tops"), con alertas de los
-               críticos que siguen abiertos.
-               Pestañas (08/09, pedido por Julio: "el modulo de seguimiento
-               de produccion podriamos volverlo una pestaña dentro de
-               problemas"): "Seguimiento de Producción" ya no es un módulo
-               aparte -- vive ACÁ, como segunda pestaña de esta misma
-               pantalla (ver Public/problemas.html) -- por eso esta tarjeta
-               se muestra con cualquiera de los permisos que antes abrían
-               cualquiera de los dos módulos por separado. -->
-          <a href="problemas.html" class="portal-card" id="cardProblemas" style="display: none;">
-            <div class="card-banner" style="background: linear-gradient(135deg, #c05621 0%, #7c2d12 100%);"><i class="fa-solid fa-list-check"></i></div>
+          <!-- "Reportes" (MIGRACIÓN #50, 09/09, pedido por Julio: "vamos a
+               unir los módulos problemas con seguimiento de producción... y
+               vamos a llamar el modulo 'Reportes'"): una sola tarjeta para
+               lo que antes eran DOS módulos separados --
+               "Problemas" (que ya traía Seguimiento de Producción adentro,
+               desde la MIGRACIÓN #38) y "Comunicados"/Reportes por Áreas.
+               Ahora viven juntos en Public/reportes.html con dos pestañas de
+               nivel superior: "Reportes Generales" (Problemas + Seguimiento
+               de Producción, sin cambios) y "Reportes informativos" (antes
+               Public/reportes_areas.html). Por eso esta tarjeta se muestra
+               con cualquiera de los permisos que antes abrían cualquiera de
+               los DOS módulos por separado -- ver PERMISOS_REPORTES_GENERALES
+               más abajo. -->
+          <a href="reportes.html" class="portal-card" id="cardReportes" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #c05621 0%, #7c2d12 100%);"><i class="fa-solid fa-folder-open"></i></div>
             <div class="card-body">
-              <h3>Problemas</h3>
-            </div>
-          </a>
-
-          <!-- "Reportes por Áreas" (pedido por Julio, 04/09): desde la
-               MIGRACIÓN #38 (08/09) solo administra Reportes Informativos
-               (boletines entre áreas) -- Rápido y Completo se fusionaron con
-               Trazabilidad de Producción en el módulo Problemas de arriba.
-               Se muestra con cualquiera de los 4 permisos del módulo, igual
-               que el propio módulo deja entrar (puedeVerModulo en
-               routes/reportes.js). -->
-          <a href="reportes_areas.html" class="portal-card" id="cardReportesAreas" style="display: none;">
-            <div class="card-banner" style="background: linear-gradient(135deg, #c05621 0%, #9c4221 100%);"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <div class="card-body">
-              <h3>Reportes por Áreas</h3>
+              <h3>Reportes</h3>
             </div>
           </a>
         </div>
@@ -440,24 +427,18 @@
           // de los criterios de siempre).
           const PERMISOS_PROBLEMAS = ['problemas.ver', 'problemas.crear', 'problemas.gestionar', 'problemas.eliminar'];
 
-          // "Problemas" (módulo nuevo, MIGRACIÓN #38) -- cualquiera de sus 4
-          // permisos alcanza, igual que el propio módulo deja entrar
-          // (puedeVer en routes/problemas.js). Pestañas (08/09): esta
-          // tarjeta ahora es la única entrada tanto a Problemas como a
-          // Seguimiento de Producción (ver comentario junto a la tarjeta,
-          // más arriba) -- se muestra con cualquiera de los permisos que
-          // antes abrían cualquiera de los dos módulos por separado.
-          const cardProblemas = document.getElementById('cardProblemas');
-          if (cardProblemas) {
-            cardProblemas.style.display = (PERMISOS_PROBLEMAS.some((p) => tienePermiso(p)) || tienePermiso('produccion.trazabilidad.ver') || tienePermiso('produccion.trazabilidad.gestionar') || tienePermiso('calidad.ver')) ? 'flex' : 'none';
-          }
-
-          // "Reportes por Áreas" es su propio módulo -- mismo criterio que
-          // usa el propio módulo para dejar entrar (puedeVerModulo en
-          // routes/reportes.js): cualquiera de los 4 permisos alcanza.
-          const cardReportesAreas = document.getElementById('cardReportesAreas');
-          if (cardReportesAreas) {
-            cardReportesAreas.style.display = ['reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar'].some(p => tienePermiso(p)) ? 'flex' : 'none';
+          // MIGRACIÓN #50 (09/09, pedido por Julio): "Problemas" y
+          // "Reportes por Áreas"/Comunicados se unieron en un solo módulo,
+          // "Reportes" (ver Public/reportes.html) -- esta tarjeta es ahora la
+          // única entrada a los dos, así que se muestra con cualquiera de
+          // los permisos que antes abrían cualquiera de los TRES módulos
+          // originales por separado (Problemas, Seguimiento de Producción,
+          // Reportes por Áreas).
+          const PERMISOS_REPORTES_GENERALES = PERMISOS_PROBLEMAS.some((p) => tienePermiso(p)) || tienePermiso('produccion.trazabilidad.ver') || tienePermiso('produccion.trazabilidad.gestionar') || tienePermiso('calidad.ver');
+          const PERMISOS_REPORTES_INFORMATIVOS = ['reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar'].some(p => tienePermiso(p));
+          const cardReportes = document.getElementById('cardReportes');
+          if (cardReportes) {
+            cardReportes.style.display = (PERMISOS_REPORTES_GENERALES || PERMISOS_REPORTES_INFORMATIVOS) ? 'flex' : 'none';
           }
 
           // Secciones como "Piezas Plásticas" o "Calidad" solo tienen

@@ -10,7 +10,7 @@ const cors = require('cors');
 
 const { DB_PATH, CARPETAS_FOTOS, CARPETA_FOTOS_CABLEADO, OBSOLETAS_DIR, DIAS_RETENCION_OBSOLETAS, DIAS_INACTIVIDAD_CIERRE_LOTES_ISO, PORT, RAIZ_PROYECTO } = require('./settings/paths');
 const { inicializarBaseDatos } = require('./db/init');
-const { getDb } = require('./db/connection');
+const { getDb, motorBd } = require('./db/connection');
 const { manejadorDeErrores } = require('./middleware/errores');
 const { limpiarObsoletas } = require('./utils/archivos');
 const { cerrarLotesInactivos } = require('./data/iso2859');
@@ -41,7 +41,15 @@ app.use(express.json());
 // se nota (el sistema de archivos no distingue mayúsculas), pero en Linux o
 // Mac sí rompería. Se usa la ruta completa y con el nombre real para que
 // funcione igual sin importar el sistema operativo.
-app.use(express.static(path.join(RAIZ_PROYECTO, 'Public')));
+app.use(express.static(path.join(RAIZ_PROYECTO, 'Public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // Assets de marca (logos, isotipo) servidos directo desde la carpeta que
 // entregó publicidad ("Plast Innova design system/assets"), en vez de
@@ -87,21 +95,41 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'Ruta no encontrada'
 app.use(manejadorDeErrores);
 
 // ======================== INICIAR SERVIDOR ========================
+// Copia de prueba con SQL Server (iniciar_prueba_sqlserver.cmd): SIN_WHATSAPP=1
+// no arranca el bot (la sesión de WhatsApp es una sola y la usa la app
+// normal) y SIN_TAREAS_AUTOMATICAS=1 no corre las tareas programadas
+// (limpieza de obsoletas, cierre de lotes ISO, sincronización con Excel),
+// para que la copia de prueba no haga doble trabajo ni toque archivos
+// compartidos. Sin esas variables, todo funciona igual que siempre.
+const SIN_WHATSAPP = process.env.SIN_WHATSAPP === '1';
+const SIN_TAREAS_AUTOMATICAS = process.env.SIN_TAREAS_AUTOMATICAS === '1';
+
 inicializarBaseDatos().then(() => {
   // whatsapp_bot_service ya fue requerido dentro de routes/whatsapp.js; Node
   // cachea el módulo, así que esta es la misma instancia (comportamiento de
   // siempre: un solo cliente de WhatsApp compartido).
-  const whatsappService = require('./whatsapp_bot_service');
-  whatsappService.iniciarBotWhatsApp(getDb());
+  if (SIN_WHATSAPP) {
+    console.log('📵 Bot de WhatsApp desactivado en esta copia (SIN_WHATSAPP=1).');
+  } else {
+    const whatsappService = require('./whatsapp_bot_service');
+    whatsappService.iniciarBotWhatsApp(getDb());
+  }
 
   app.listen(PORT, () => {
     console.log(`\n🚀 Servidor en http://localhost:${PORT}`);
-    console.log(`📁 BD: ${DB_PATH}`);
+    console.log(motorBd() === 'sqlserver'
+      ? `📁 BD: SQL Server ${process.env.MSSQL_SERVER} / ${process.env.MSSQL_DATABASE}`
+      : `📁 BD: ${DB_PATH}`);
     console.log(`📁 Carpetas activas:`);
     CARPETAS_FOTOS.forEach((c, i) => console.log(`   [${i}] ${c}`));
     console.log(`📁 Fotos de cableado: ${CARPETA_FOTOS_CABLEADO}`);
     console.log(`📁 Obsoletas: ${OBSOLETAS_DIR} (se borra lo de más de ${DIAS_RETENCION_OBSOLETAS} días)\n`);
   });
+
+  if (SIN_TAREAS_AUTOMATICAS) {
+    console.log('⏸️  Tareas automáticas desactivadas en esta copia (SIN_TAREAS_AUTOMATICAS=1).');
+    return;
+  }
 
   // Limpieza de uploads/obsoletas: una vez al arrancar y luego cada 24 horas,
   // para que la carpeta no crezca sin límite con fotos y planos que ya
@@ -135,9 +163,11 @@ inicializarBaseDatos().then(() => {
   // luego cada 6 horas. Un fallo en un ciclo (Excel no abrió, no había
   // sesión de Windows iniciada, etc.) queda en el log y se reintenta solo en
   // el siguiente ciclo, sin tumbar el servidor (ver scripts/sincronizar_produccion.js).
+  // esAutomatico=true: este ciclo SÍ cuenta para el contador de fallos consecutivos
+  // y puede disparar alertas de WhatsApp.
   const ejecutarSincronizacionProduccion = async () => {
     try {
-      await sincronizarProduccion();
+      await sincronizarProduccion(false, true);
     } catch (e) {
       console.error('⚠️ Error en la sincronización de Producción (rechazos/lotes):', e.message);
     }

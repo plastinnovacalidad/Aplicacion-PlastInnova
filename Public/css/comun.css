@@ -15,9 +15,17 @@
 
 /* Tipografía de marca (Rubik) e íconos (FontAwesome 6.4.0) — se cargan acá,
    una sola vez, para las 7+ páginas que enlazan este archivo, en vez de
-   repetir el <link>/@import en cada <head>. */
-@import url("https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap");
-@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
+   repetir el <link>/@import en cada <head>.
+   Rubik ahora se sirve local desde Public/fonts/rubik/ (self-host) en vez
+   de fonts.googleapis.com/fonts.gstatic.com, para que la app funcione sin
+   Internet. Mismos pesos (300–900) e itálicas que antes; ver
+   Public/fonts/rubik/rubik.css para el detalle de los @font-face.
+   FontAwesome 6.4.0 también se sirve local desde
+   Public/css/vendor/fontawesome/ (self-host) en vez de cdnjs.cloudflare.com,
+   para que la app funcione sin Internet. Mismo archivo oficial all.min.css,
+   misma versión exacta (6.4.0), sin modificar. */
+@import url("../fonts/rubik/rubik.css");
+@import url("vendor/fontawesome/css/all.min.css");
 
 /* Reset básico: idéntico carácter por carácter en las 7 páginas que cargan
    este archivo (dashboard_garantias.html no lo usa porque es una página

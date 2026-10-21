@@ -1,6 +1,12 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const { validarToken, requerirPermiso, requerirPermisoAlternativo } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errores');
+const { upload } = require('../utils/upload');
+const { validarOBorrar } = require('../utils/validarArchivo');
+const { moverArchivo } = require('../utils/archivos');
+const { EVIDENCIAS_DIR } = require('../settings/paths');
 const problemasData = require('../data/problemas');
 const catalogoData = require('../data/trazabilidadCatalogo');
 const { registrarCambio } = require('../data/auditoria');
@@ -10,8 +16,18 @@ const { registrarCambio } = require('../data/auditoria');
 // color) que ya usan los reportes PDF de Muestreos ISO 2859-1, para que se
 // sienta como parte del mismo sistema en vez de un documento suelto.
 const pdf = require('../utils/pdfIso2859');
+// MIGRACIÓN #43: rediseño del reporte -- todo el layout vive en su propio
+// módulo (ver utils/pdfProblema.js), separado de pdfIso2859.js porque Julio
+// confirmó que este rediseño es SOLO para el reporte de Problemas por ahora.
+const pdfProblema = require('../utils/pdfProblema');
+const FileType = require('file-type');
 
 const router = express.Router();
+
+// MIGRACIÓN #42: carpeta de evidencia gráfica de Problemas -- mismo patrón
+// que CARPETA_ADJUNTOS en routes/reportes.js (una subcarpeta propia dentro
+// de uploads/evidencias, para no mezclar los archivos de los dos módulos).
+const CARPETA_ADJUNTOS_PROBLEMAS = path.join(EVIDENCIAS_DIR, 'problemas');
 
 // ======================== MÓDULO "PROBLEMAS" (UNIFICADO) ========================
 // MIGRACIÓN #38 (07-08/09, pedido por Julio): reemplaza a Trazabilidad de
@@ -36,6 +52,10 @@ const puedeGestionarCatalogos = requerirPermiso('catalogos.gestionar');
 // poder registrar una causa pero no poder leer de qué lista elegir (mismo
 // criterio que ya usaba Trazabilidad de Producción).
 const puedeVerCatalogo = requerirPermisoAlternativo(['problemas.ver', 'problemas.crear', 'problemas.gestionar', 'problemas.eliminar', 'catalogos.gestionar']);
+// MIGRACIÓN #42: evidencia gráfica -- mismo criterio que puedeAdjuntar en
+// routes/reportes.js (quien puede crear o gestionar el módulo puede subir
+// fotos; eliminarlas sigue exigiendo el permiso de eliminar, más estricto).
+const puedeAdjuntar = requerirPermisoAlternativo(['problemas.crear', 'problemas.gestionar']);
 
 const ESTADOS_MEDIDA_VALIDOS = problemasData.ESTADOS_MEDIDA;
 
@@ -146,127 +166,29 @@ router.get('/problemas/:id', validarToken, puedeVer, asyncHandler(async (req, re
 }));
 
 // ======================== REPORTE (PDF) ========================
-// Dibuja la causa raíz y sus medidas como una tarjeta con una barra de
-// acento a la izquierda (mismo criterio visual que .trz-causa-card en
-// pantalla) -- no usa dibujarPanelInfo/dibujarTablaFila del diseño
-// compartido porque el texto de cada causa/medida es de largo variable, así
-// que la altura de cada bloque se calcula con heightOfString (mismo truco
-// que ya usa el Reporte de Muestreo para su campo "Observación").
-function dibujarCausaConMedidas(doc, y, causa, medidasDeCausa, subtitulo, redibujarEncabezado) {
-  const ancho = pdf.anchoUtil(doc);
-  const anchoTexto = ancho - 24;
-
-  // OJO: heightOfString mide con la fuente/tamaño ACTIVOS del doc en ese
-  // momento -- pasarle `font`/`fontSize` en options no los cambia (es una
-  // trampa de pdfkit que también tiene, sin que nadie se diera cuenta, el
-  // campo "Observación" del Reporte de Muestreo ISO 2859-1). Por eso acá se
-  // fijan primero explícitamente, para medir con la MISMA fuente/tamaño con
-  // la que se va a dibujar el texto real un poco más abajo.
-  doc.font('Helvetica').fontSize(9.5);
-  const alturaCausaTexto = doc.heightOfString(causa.texto || '', { width: anchoTexto });
-  y = pdf.saltoPaginaSiNecesario(doc, y, alturaCausaTexto + 46, redibujarEncabezado);
-
-  doc.rect(pdf.MARGEN, y, 3, alturaCausaTexto + 34).fill(pdf.COLORES.azul);
-  doc.font('Helvetica-Bold').fontSize(8).fillColor(pdf.COLORES.gris)
-    .text('CAUSA RAÍZ', pdf.MARGEN + 12, y + 4, { width: anchoTexto - 100 });
-  doc.font('Helvetica').fontSize(7.5).fillColor(pdf.COLORES.gris)
-    .text(causa.fecha || '', pdf.MARGEN + 12, y + 4, { width: anchoTexto, align: 'right' });
-  doc.font('Helvetica').fontSize(9.5).fillColor(pdf.COLORES.texto)
-    .text(causa.texto || '', pdf.MARGEN + 12, y + 16, { width: anchoTexto });
-  doc.font('Helvetica-Oblique').fontSize(8).fillColor(pdf.COLORES.gris)
-    .text(`Registrada por ${causa.autor_nombre || causa.responsable_nombre || 'Usuario'}`, pdf.MARGEN + 12, y + 20 + alturaCausaTexto);
-  y += alturaCausaTexto + 40;
-
-  if (!medidasDeCausa.length) {
-    doc.font('Helvetica-Oblique').fontSize(8.5).fillColor(pdf.COLORES.gris)
-      .text('Todavía no hay medidas para esta causa.', pdf.MARGEN + 20, y);
-    return y + 18;
-  }
-
-  medidasDeCausa.forEach((m) => {
-    const anchoMedidaTexto = ancho - 36;
-    doc.font('Helvetica').fontSize(9);
-    const alturaMedidaTexto = doc.heightOfString(m.texto || '', { width: anchoMedidaTexto });
-    y = pdf.saltoPaginaSiNecesario(doc, y, alturaMedidaTexto + 42, redibujarEncabezado);
-
-    doc.roundedRect(pdf.MARGEN + 16, y, ancho - 16, alturaMedidaTexto + 32, 4).fillAndStroke(pdf.COLORES.grisFilaAlterna, pdf.COLORES.grisBorde);
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(pdf.COLORES.gris)
-      .text('MEDIDA', pdf.MARGEN + 28, y + 8, { width: 100 });
-    pdf.dibujarInsignia(doc, pdf.MARGEN + ancho - 16 - 100, y + 6, m.estado);
-    doc.font('Helvetica').fontSize(9).fillColor(pdf.COLORES.texto)
-      .text(m.texto || '', pdf.MARGEN + 28, y + 20, { width: anchoMedidaTexto - 8 });
-    doc.font('Helvetica-Oblique').fontSize(7.5).fillColor(pdf.COLORES.gris)
-      .text(`Registrada por ${m.autor_nombre || m.responsable_nombre || 'Usuario'} el ${m.creado_en || ''}`, pdf.MARGEN + 28, y + 24 + alturaMedidaTexto);
-    y += alturaMedidaTexto + 40;
-  });
-
-  return y + 6;
-}
-
+// MIGRACIÓN #43: rediseño completo del reporte (ver utils/pdfProblema.js
+// para todo el layout -- panel de información en dos columnas, Tratamiento
+// grande y centrado, causa raíz dentro del mismo cuadro de la descripción,
+// lista de verificación, evidencia gráfica en grilla, acciones propuestas,
+// "¿qué se hizo?" y firmas digitales, todo garantizado en una sola hoja).
+// Esta ruta ahora solo resuelve las fotos de evidencia a una ruta absoluta
+// en disco (filtrando las que ya no existan, igual que antes) y delega todo
+// el dibujo al módulo dedicado.
 router.get('/problemas/:id/reporte-pdf', validarToken, puedeVer, asyncHandler(async (req, res) => {
   const problema = await problemasData.obtenerProblemaCompleto(req.params.id);
   if (!problema) return res.status(404).json({ error: 'Problema no encontrado' });
 
-  const subtitulo = `Reporte de Problema #${problema.id}`;
-  const doc = pdf.crearDocumento(res, `problema-${problema.id}.pdf`);
-  const redibujarEncabezado = (doc2) => pdf.dibujarEncabezado(doc2, `${subtitulo} (continuación)`);
-  pdf.dibujarPie(doc);
-  doc.on('pageAdded', () => pdf.dibujarPie(doc));
+  const adjuntosConRuta = (problema.adjuntos || [])
+    .map((a) => ({ ...a, ruta: path.join(CARPETA_ADJUNTOS_PROBLEMAS, a.archivo) }))
+    .filter((a) => fs.existsSync(a.ruta));
 
-  let y = pdf.dibujarEncabezado(doc, subtitulo);
-
-  const ORIGEN_LABEL = { produccion: 'Producción', reporte: 'Reporte de área', general: 'General' };
-  const filas = [{ label: 'Origen', value: ORIGEN_LABEL[problema.origen] || problema.origen }];
-  if (problema.origen === 'produccion') {
-    const etiquetaContexto = problema.tipo_contexto === 'referencia' ? 'Referencia' : 'Motivo';
-    filas.push({ label: 'Fábrica', value: problema.fabrica });
-    filas.push({ label: etiquetaContexto, value: problema.valor_contexto });
-    if (problema.semana) filas.push({ label: 'Semana', value: problema.semana });
-  } else {
-    if (problema.area_origen_nombre) filas.push({ label: 'Área', value: problema.area_origen_nombre });
-    if (problema.referencia) filas.push({ label: 'Referencia', value: problema.referencia });
-    if (problema.lote) filas.push({ label: 'Lote', value: problema.lote });
-  }
-  if (problema.defecto_codigo) {
-    filas.push({ label: 'Problema / Defecto', value: `${problema.defecto_codigo} — ${problema.defecto_descripcion || ''}` });
-  }
-  filas.push({ label: 'Criticidad', value: problema.criticidad, badge: true });
-  filas.push({ label: 'Estado', value: problema.estado, badge: true });
-  filas.push({ label: 'Registrado por', value: problema.autor_nombre || '—' });
-  filas.push({ label: 'Creado', value: problema.creado_en });
-  filas.push({ label: 'Actualizado', value: problema.actualizado_en });
-  if (problema.cerrado_en) filas.push({ label: 'Cerrado', value: problema.cerrado_en });
-  const descripcionTexto = problema.descripcion || 'Sin descripción';
-  // Mismo cuidado que en dibujarCausaConMedidas: fijar la fuente/tamaño
-  // ANTES de medir, porque heightOfString ignora el font/fontSize que se le
-  // pase por options y mide con lo que esté activo en el doc en ese momento.
-  doc.font('Helvetica').fontSize(9);
-  filas.push({
-    label: 'Descripción', value: descripcionTexto,
-    alturaExtra: Math.max(22, doc.heightOfString(descripcionTexto, { width: pdf.anchoUtil(doc) - 170 }) + 14),
-  });
-
-  y = pdf.dibujarPanelInfo(doc, y, filas);
-
-  y = pdf.saltoPaginaSiNecesario(doc, y, 60, redibujarEncabezado);
-  y = pdf.dibujarTituloSeccion(doc, y, 'Causas raíz y medidas');
-  const causas = problema.causas || [];
-  const medidas = problema.medidas || [];
-  if (causas.length === 0) {
-    doc.font('Helvetica-Oblique').fontSize(9).fillColor(pdf.COLORES.gris).text('Todavía no hay ninguna causa raíz registrada.', pdf.MARGEN, y);
-  } else {
-    causas.forEach((c) => {
-      y = dibujarCausaConMedidas(doc, y, c, medidas.filter((m) => m.causa_id === c.id), subtitulo, redibujarEncabezado);
-    });
-  }
+  pdfProblema.generarReportePdfProblema(res, problema, adjuntosConRuta);
 
   await registrarCambio({
     modulo: 'Problemas', entidad: 'problemas', entidadId: problema.id, accion: 'Reporte PDF',
     detalle: `Reporte PDF generado — por ${req.usuario.nombre}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
   });
-
-  doc.end();
 }));
 
 // ======================== CREAR ========================
@@ -279,7 +201,12 @@ router.post('/problemas', validarToken, puedeCrear, asyncHandler(async (req, res
   const {
     origen, fabrica, tipo_contexto, valor_contexto, pct_desperdicio_inicial,
     area_origen_id, referencia, lote, defecto_id, descripcion, criticidad,
+    cantidad_total, cantidad_afectada, tratamiento,
+    chk_falla_funcional, chk_problema_visual, chk_retraso_tiempo, chk_fuera_tolerancias,
+    prevencion, firma_implicados_nombre,
     causa_raiz, causa_catalogo_id,
+    medidas_iniciales,
+    es_aviso_rapido,
   } = req.body;
 
   if (!origen || !problemasData.ORIGENES.includes(origen)) {
@@ -306,6 +233,52 @@ router.post('/problemas', validarToken, puedeCrear, asyncHandler(async (req, res
   if (criticidad && !problemasData.CRITICIDADES.includes(criticidad)) {
     return res.status(400).json({ error: `Criticidad inválida. Debe ser: ${problemasData.CRITICIDADES.join(', ')}.` });
   }
+  // MIGRACIÓN #43: lista de verificación -- aplica a los 3 orígenes (Julio:
+  // "el checklist es para todo"), a diferencia de cantidades/tratamiento.
+  // Los 4 son opcionales al crear (se pueden ir llenando después, igual que
+  // la evidencia gráfica); si vienen, cada uno debe ser 'Si' o 'No'.
+  for (const { campo, pregunta } of problemasData.CHECKLIST_PREGUNTAS) {
+    const valor = req.body[campo];
+    if (valor !== undefined && valor !== '' && !problemasData.VALORES_CHECKLIST.includes(valor)) {
+      return res.status(400).json({ error: `Valor inválido para "${pregunta}". Debe ser: Si o No.` });
+    }
+  }
+
+  // MIGRACIÓN #42 (08/09, pedido por Julio): cantidades/tratamiento SOLO
+  // aplican a 'reporte'/'general' -- un problema de Producción ya trae su
+  // propia foto de cantidad (pct_desperdicio_inicial) y no tiene la decisión
+  // de Tratamiento, así que si por error llegan en el body para un problema
+  // de Producción, simplemente se ignoran (quedan NULL) en vez de fallar.
+  let cantidadTotalFinal = null;
+  let cantidadAfectadaFinal = null;
+  let tratamientoFinal = null;
+  if (origen !== 'produccion') {
+    // Julio: "Tratamiento ... cuando haga un reporte de fabrica o general
+    // que me deje escoger el tratamiento que se le va a dar" -- confirmó que
+    // es obligatorio al crear.
+    if (!tratamiento || !problemasData.TRATAMIENTOS.includes(tratamiento)) {
+      return res.status(400).json({ error: `Elige el tratamiento que se le va a dar. Debe ser: ${problemasData.TRATAMIENTOS.join(', ')}.` });
+    }
+    tratamientoFinal = tratamiento;
+    // Las cantidades sí son opcionales (Julio las llena "si escojo un
+    // problema" -- puede ir agregándolas después desde Editar) -- pero si
+    // manda alguna, se valida que sean números válidos y coherentes entre sí.
+    if (cantidad_total !== undefined && cantidad_total !== null && cantidad_total !== '') {
+      cantidadTotalFinal = parseFloat(cantidad_total);
+      if (!Number.isFinite(cantidadTotalFinal) || cantidadTotalFinal < 0) {
+        return res.status(400).json({ error: 'La cantidad total debe ser un número mayor o igual a 0.' });
+      }
+    }
+    if (cantidad_afectada !== undefined && cantidad_afectada !== null && cantidad_afectada !== '') {
+      cantidadAfectadaFinal = parseFloat(cantidad_afectada);
+      if (!Number.isFinite(cantidadAfectadaFinal) || cantidadAfectadaFinal < 0) {
+        return res.status(400).json({ error: 'La cantidad afectada debe ser un número mayor o igual a 0.' });
+      }
+    }
+    if (cantidadTotalFinal != null && cantidadAfectadaFinal != null && cantidadAfectadaFinal > cantidadTotalFinal) {
+      return res.status(400).json({ error: 'La cantidad afectada no puede ser mayor que la cantidad total.' });
+    }
+  }
 
   const resCausa = await resolverCausaConCatalogo(
     { causa_catalogo_id, texto: causa_raiz, defectoId: defecto_id || null },
@@ -313,17 +286,48 @@ router.post('/problemas', validarToken, puedeCrear, asyncHandler(async (req, res
   );
   if (resCausa.error) return res.status(400).json({ error: resCausa.error });
 
+  // MIGRACIÓN #44 (08/09, pedido por Julio: "medidas no se pueden cargar" y
+  // luego "me gustaria poder agregar varias medidas" -- al crear un problema
+  // solo se pedía la causa raíz inicial, ninguna medida (había que esperar a
+  // que el problema ya existiera para agregar la primera desde el detalle).
+  // `medidas_iniciales` es un arreglo opcional de {medida_catalogo_id} o
+  // {medida_texto}, una por cada fila que se haya llenado en el formulario
+  // (las filas vacías ni se mandan). Cada una se resuelve contra el catálogo
+  // de la MISMA causa que se va a crear (resCausa.causaCatalogoId), con el
+  // mismo criterio que ya usa POST /problemas/:id/medidas.
+  const medidasInicialesTextos = [];
+  if (Array.isArray(medidas_iniciales)) {
+    for (const entrada of medidas_iniciales) {
+      if (!entrada) continue;
+      const resMedida = await resolverMedidaConCatalogo(
+        { medida_catalogo_id: entrada.medida_catalogo_id, texto: entrada.medida_texto },
+        resCausa.causaCatalogoId
+      );
+      if (resMedida.error) return res.status(400).json({ error: resMedida.error });
+      medidasInicialesTextos.push(resMedida.texto);
+    }
+  }
+
   const problema = await problemasData.crearProblema({
     origen, fabrica: fabrica || null, tipo_contexto: tipo_contexto || null, valor_contexto: valor_contexto || null,
     pct_desperdicio_inicial: pct_desperdicio_inicial != null && pct_desperdicio_inicial !== '' ? parseFloat(pct_desperdicio_inicial) : null,
     area_origen_id: area_origen_id || null, referencia: referencia || null, lote: lote || null,
     defecto_id: defecto_id || null, descripcion: descripcion && descripcion.trim() ? descripcion.trim() : null, criticidad,
+    cantidad_total: cantidadTotalFinal, cantidad_afectada: cantidadAfectadaFinal, tratamiento: tratamientoFinal,
+    chk_falla_funcional, chk_problema_visual, chk_retraso_tiempo, chk_fuera_tolerancias,
+    prevencion, firma_implicados_nombre,
     causaInicial: resCausa.texto, causaCatalogoId: resCausa.causaCatalogoId,
+    medidasIniciales: medidasInicialesTextos,
     autorId: req.usuario.id, autorNombre: req.usuario.nombre,
+    // MIGRACIÓN #45 (09/09, Julio: "algo mas sencillo" que el formulario
+    // completo, para avisar de inmediato sin saber la causa todavía) --
+    // marca el problema para que su detalle ofrezca la tarjeta simple en
+    // vez del PDF formal al generar el reporte.
+    esAvisoRapido: !!es_aviso_rapido,
   });
   await registrarCambio({
     modulo: 'Problemas', entidad: 'problemas', entidadId: problema.id, accion: 'Creación',
-    detalle: `Nuevo problema (${origen}${valor_contexto ? `, ${tipo_contexto}: ${valor_contexto}` : ''}${fabrica ? `, ${fabrica}` : ''}), criticidad ${problema.criticidad}. Causa raíz: ${resCausa.texto} — registrado por ${req.usuario.nombre}`,
+    detalle: `${es_aviso_rapido ? 'Aviso rápido' : 'Nuevo problema'} (${origen}${valor_contexto ? `, ${tipo_contexto}: ${valor_contexto}` : ''}${fabrica ? `, ${fabrica}` : ''}), criticidad ${problema.criticidad}. Causa raíz: ${resCausa.texto}${medidasInicialesTextos.length ? `. Medidas propuestas: ${medidasInicialesTextos.join(' | ')}` : ''} — registrado por ${req.usuario.nombre}`,
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
   });
   res.status(201).json(problema);
@@ -331,11 +335,22 @@ router.post('/problemas', validarToken, puedeCrear, asyncHandler(async (req, res
 
 router.put('/problemas/:id', validarToken, puedeGestionar, asyncHandler(async (req, res) => {
   const cambios = {};
-  const campos = ['fabrica', 'tipo_contexto', 'valor_contexto', 'area_origen_id', 'referencia', 'lote', 'defecto_id', 'descripcion', 'criticidad', 'pct_desperdicio_inicial'];
+  const campos = ['fabrica', 'tipo_contexto', 'valor_contexto', 'area_origen_id', 'referencia', 'lote', 'defecto_id', 'descripcion', 'criticidad', 'pct_desperdicio_inicial', 'cantidad_total', 'cantidad_afectada', 'prevencion', 'firma_implicados_nombre'];
   for (const campo of campos) if (req.body[campo] !== undefined) cambios[campo] = req.body[campo];
+  // MIGRACIÓN #42: Tratamiento se puede cambiar después de creado (Julio:
+  // "Obligatorio y editable después"), pero nunca a un valor vacío -- si
+  // viene, se valida y se pasa; si no viene, ni se toca.
+  if (req.body.tratamiento !== undefined) cambios.tratamiento = req.body.tratamiento;
+  // MIGRACIÓN #43: lista de verificación -- cada una de las 4 se manda (o
+  // no) por separado, mismo criterio que el resto de campos opcionales.
+  for (const { campo } of problemasData.CHECKLIST_PREGUNTAS) {
+    if (req.body[campo] !== undefined) cambios[campo] = req.body[campo];
+  }
   const resultado = await problemasData.actualizarProblema(req.params.id, cambios);
   if (resultado.error === 'no_encontrado') return res.status(404).json({ error: 'Problema no encontrado' });
   if (resultado.error === 'criticidad_invalida') return res.status(400).json({ error: `Criticidad inválida. Debe ser: ${problemasData.CRITICIDADES.join(', ')}.` });
+  if (resultado.error === 'tratamiento_invalido') return res.status(400).json({ error: `Tratamiento inválido. Debe ser: ${problemasData.TRATAMIENTOS.join(', ')}.` });
+  if (resultado.error === 'checklist_invalido') return res.status(400).json({ error: 'Valor inválido en la lista de verificación. Debe ser: Si o No.' });
   if (resultado.error === 'nada_que_actualizar') return res.status(400).json({ error: 'No se mandó ningún campo para actualizar.' });
   await registrarCambio({
     modulo: 'Problemas', entidad: 'problemas', entidadId: resultado.problema.id, accion: 'Edición',
@@ -343,6 +358,69 @@ router.put('/problemas/:id', validarToken, puedeGestionar, asyncHandler(async (r
     usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
   });
   res.json(resultado.problema);
+}));
+
+// ======================== EVIDENCIA GRÁFICA (adjuntos) ========================
+// MIGRACIÓN #42 (08/09, pedido por Julio: "que me deje agregar una foto"),
+// calcado del patrón de /reportes/:id/adjuntos -- con una diferencia: acá
+// solo se aceptan IMÁGENES (Julio pidió "foto", no ficha técnica en PDF como
+// sí acepta Reportes por Áreas), así que además del filtro de siempre
+// (utils/upload.js) se vuelve a comprobar el contenido real del archivo y se
+// rechaza si es un PDF. Disponible para 'reporte' y 'general' -- un problema
+// de Producción no tiene este campo en el formulario, pero no hace falta
+// bloquearlo aquí a propósito (no rompe nada si alguna vez se necesita).
+router.post('/problemas/:id/adjuntos', validarToken, puedeAdjuntar, upload.single('archivo'), asyncHandler(async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Debe subir un archivo de imagen.' });
+  const problema = await problemasData.obtenerProblemaCompleto(req.params.id);
+  if (!problema) {
+    fs.unlinkSync(req.file.path);
+    return res.status(404).json({ error: 'Problema no encontrado' });
+  }
+  const valido = await validarOBorrar(req, res, req.file.path);
+  if (!valido) return; // validarOBorrar ya respondió el error y borró el archivo
+
+  const tipoReal = await FileType.fromFile(req.file.path);
+  if (!tipoReal || !tipoReal.mime.startsWith('image/')) {
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({ error: 'La evidencia gráfica debe ser una imagen (JPG, PNG, GIF, WEBP o BMP), no un PDF.' });
+  }
+
+  if (!fs.existsSync(CARPETA_ADJUNTOS_PROBLEMAS)) fs.mkdirSync(CARPETA_ADJUNTOS_PROBLEMAS, { recursive: true });
+  const nombreGuardado = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(req.file.originalname)}`;
+  moverArchivo(req.file.path, path.join(CARPETA_ADJUNTOS_PROBLEMAS, nombreGuardado));
+
+  const result = await problemasData.agregarAdjunto({
+    problema_id: req.params.id, archivo: nombreGuardado, nombre_original: req.file.originalname,
+    autor_id: req.usuario.id, autor_nombre: req.usuario.nombre,
+  });
+  await registrarCambio({
+    modulo: 'Problemas', entidad: 'problemas_adjuntos', entidadId: result.lastID, accion: 'Creación',
+    detalle: `Evidencia gráfica "${req.file.originalname}" agregada al problema #${req.params.id} — por ${req.usuario.nombre}`,
+    usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
+  });
+  res.status(201).json(await problemasData.obtenerProblemaCompleto(req.params.id));
+}));
+
+router.get('/problemas/:id/adjuntos/:adjId', validarToken, puedeVer, asyncHandler(async (req, res) => {
+  const adjunto = await problemasData.obtenerAdjunto(req.params.id, req.params.adjId);
+  if (!adjunto) return res.status(404).json({ error: 'Adjunto no encontrado' });
+  const ruta = path.join(CARPETA_ADJUNTOS_PROBLEMAS, adjunto.archivo);
+  if (!fs.existsSync(ruta)) return res.status(404).json({ error: 'El archivo ya no está disponible en el servidor.' });
+  res.sendFile(ruta);
+}));
+
+router.delete('/problemas/:id/adjuntos/:adjId', validarToken, puedeEliminar, asyncHandler(async (req, res) => {
+  const adjunto = await problemasData.obtenerAdjunto(req.params.id, req.params.adjId);
+  if (!adjunto) return res.status(404).json({ error: 'Adjunto no encontrado' });
+  await problemasData.eliminarAdjunto(req.params.id, req.params.adjId);
+  const ruta = path.join(CARPETA_ADJUNTOS_PROBLEMAS, adjunto.archivo);
+  if (fs.existsSync(ruta)) fs.unlinkSync(ruta);
+  await registrarCambio({
+    modulo: 'Problemas', entidad: 'problemas_adjuntos', entidadId: req.params.adjId, accion: 'Eliminación',
+    detalle: `Evidencia gráfica "${adjunto.nombre_original || adjunto.archivo}" eliminada del problema #${req.params.id} — por ${req.usuario.nombre}`,
+    usuarioId: req.usuario.id, usuarioNombre: req.usuario.nombre,
+  });
+  res.json({ success: true });
 }));
 
 // ======================== CAUSAS Y MEDIDAS ========================

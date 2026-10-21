@@ -7,12 +7,15 @@
   <link rel="icon" type="image/png" href="favicon.png">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Rubik (tipografía de marca Plast Innova) -->
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6.4.0 — self-host local, sin depender de cdnjs.cloudflare.com
+         (esta página no usa comun.css, así que mantiene su propia carga directa) -->
+    <link href="css/vendor/fontawesome/css/all.min.css" rel="stylesheet">
+    <!-- Rubik (tipografía de marca Plast Innova) — self-host local, sin
+         depender de fonts.googleapis.com (mismos pesos usados en esta
+         página: 400/500/600/700, incluidos en la fuente variable local) -->
+    <link href="fonts/rubik/rubik.css" rel="stylesheet">
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/vendor/chart.4.4.7.min.js"></script>
     <!-- escapeHtml (evita que texto de garantías se inserte como código en la página) -->
     <script src="js/comun.js"></script>
     <style>
@@ -56,6 +59,17 @@
         .slicer-item { cursor: pointer; padding: 6px 10px; margin-bottom: 3px; border-radius: 6px; background: #F7F8FA; border: 1px solid #DFE3EA; font-size: 0.82rem; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .slicer-item:hover { background: #EEF0F4; }
         .slicer-item.active { background: #EEF1FA; color: #2C43A2; border-color: #B0BCE6; font-weight: 600; }
+
+        /* Barra de filtros activos: muestra qué está filtrando el tablero y
+           permite quitar cada filtro por separado (antes solo existía
+           "Reiniciar", que los borraba todos a la vez). */
+        .filtros-activos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 36px; }
+        .filtros-activos .fa-label { font: 600 11px/1.2 'Rubik', sans-serif; letter-spacing: .04em; text-transform: uppercase; color: #6B7385; }
+        .filtro-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 6px 4px 12px; border-radius: 999px; background: #EEF1FA; border: 1px solid #B0BCE6; color: #2C43A2; font-size: 0.85rem; font-weight: 500; max-width: 100%; }
+        .filtro-chip .chip-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .filtro-chip button { border: none; background: transparent; color: #2C43A2; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+        .filtro-chip button:hover { background: #2C43A2; color: #fff; }
+        .filtros-vacio { color: #6B7385; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -73,7 +87,12 @@
             </div>
         </div>
 
-
+        <!-- Filtros activos (se llena desde renderFiltrosActivos()) -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div id="filtrosActivos" class="filtros-activos"></div>
+            </div>
+        </div>
 
         <!-- KPI Cards -->
         <div class="row mb-4">
@@ -141,7 +160,7 @@
                             <select id="filterAnio" class="form-select form-select-sm" onchange="filterData()" style="width: auto;">
                                 <option value="">Todos los Años</option>
                             </select>
-                            <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                            <button class="btn btn-sm btn-light border" onclick="clearSpecificFilter('Mes')" title="Quitar el filtro de esta gráfica">Reset</button>
                         </div>
                     </div>
                     <div class="card-body chart-container" style="position: relative; height: 320px;">
@@ -153,7 +172,7 @@
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="fa-solid fa-chart-pie me-1 text-success"></i> Tipo de Solicitud</span>
-                        <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                        <button class="btn btn-sm btn-light border" onclick="clearSpecificFilter('Solicitud')" title="Quitar el filtro de esta gráfica">Reset</button>
                     </div>
                     <div class="card-body chart-container" style="position: relative; height: 320px;">
                         <canvas id="chartSolicitud"></canvas>
@@ -168,7 +187,7 @@
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="fa-solid fa-chart-bar me-1 text-success"></i> Top 10 Referencias</span>
-                        <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                        <button class="btn btn-sm btn-light border" onclick="clearSpecificFilter('TipoCir')" title="Quitar el filtro de esta gráfica">Reset</button>
                     </div>
                     <div class="card-body chart-container" style="position: relative; height: 350px;">
                         <canvas id="chartReferencias"></canvas>
@@ -179,7 +198,7 @@
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="fa-solid fa-triangle-exclamation me-1 text-warning"></i> Principales Problemas</span>
-                        <button class="btn btn-sm btn-light border" onclick="resetFilters()">Reset</button>
+                        <button class="btn btn-sm btn-light border" onclick="clearSpecificFilter('Problema')" title="Quitar el filtro de esta gráfica">Reset</button>
                     </div>
                     <div class="card-body chart-container" style="position: relative; height: 350px;">
                         <canvas id="chartProblemas"></canvas>
@@ -267,18 +286,42 @@
             return '01';
         }
 
+        // Firma de la última respuesta del servidor: el refresco de cada 15 s
+        // solo redibuja si los datos cambiaron de verdad.
+        let firmaDatos = null;
+        let initEnCurso = false;
+
         async function init() {
+            // init() lo llama el propio tablero (al cargar y cada 15 s) y
+            // también garantias.html al validar la sesión; se evita que dos
+            // llamadas se crucen.
+            if (initEnCurso) return;
+            initEnCurso = true;
+            try {
+                await cargarDatos();
+            } finally {
+                initEnCurso = false;
+            }
+        }
+
+        async function cargarDatos() {
             try {
                 const token = localStorage.getItem('token') || (window.parent && window.parent.localStorage ? window.parent.localStorage.getItem('token') : null);
                 const res = await fetch('/api/garantias', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 const dbGarantias = await res.json();
-                
+
                 if (!Array.isArray(dbGarantias)) {
                     console.error('Error cargando datos de garantías:', dbGarantias);
+                    // Si ya había datos en pantalla, un refresco fallido no
+                    // deja el tablero en blanco: se conservan los anteriores.
+                    if (firmaDatos !== null) return;
                     rawData = [];
                 } else {
+                    const firma = JSON.stringify(dbGarantias);
+                    if (firma === firmaDatos) return; // sin cambios: no se toca nada
+                    firmaDatos = firma;
                     rawData = dbGarantias.map(g => {
                         const fechaRep = g.fecha_reporte || '2026-01-01';
                         const anio = extractYear(fechaRep);
@@ -315,6 +358,7 @@
                 }
             } catch (e) {
                 console.error('Error cargando datos del servidor:', e);
+                if (firmaDatos !== null) return;
                 rawData = [];
             }
 
@@ -426,9 +470,58 @@
             });
         }
 
+        // ===== Filtros cruzados entre gráficas =====
+        // Cada gráfica se calcula con TODOS los filtros activos MENOS el suyo
+        // propio: así, al hacer clic en "Marzo", la gráfica de meses sigue
+        // mostrando los 12 meses (con Marzo resaltado) y se puede cambiar de
+        // mes o quitar el filtro con otro clic. Los KPI sí usan todos los
+        // filtros. Antes cada gráfica se filtraba a sí misma y quedaba con
+        // una sola barra.
+        const NOMBRES_MESES = {
+            '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
+            '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
+            '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+        };
+
+        function todosTipoCirSeleccionados() {
+            return allTipoCirs.every(tc => selectedTipoCirs.has(tc));
+        }
+
+        // omitir: 'Mes' | 'TipoCir' | 'Problema' | 'Solicitud' | null
+        function aplicarFiltros(omitir) {
+            const anioVal = document.getElementById('filterAnio') ? document.getElementById('filterAnio').value : '';
+            // Con todos los circuitos marcados no se filtra por circuito (así
+            // también entran los registros sin tipo o "No especificado", igual
+            // que antes). Con "Ninguno" ya no se muestra todo: no se muestra nada.
+            const todosTc = todosTipoCirSeleccionados();
+
+            return rawData.filter(item => {
+                const itemAnio = item.Mes ? item.Mes.substring(0, 4) : '';
+                const itemMes = item.Mes ? item.Mes.substring(5, 7) : '';
+
+                // El año pertenece a la gráfica de meses: se respeta siempre,
+                // porque la gráfica de meses se dibuja para el año elegido.
+                const matchAnio = !anioVal || itemAnio === anioVal;
+                const matchMes = omitir === 'Mes' || !selectedMes || itemMes === selectedMes;
+                const matchTipoCir = omitir === 'TipoCir' || todosTc || selectedTipoCirs.has(item.TipoCir);
+                const matchProblema = omitir === 'Problema' || !selectedProblema || item.Problema === selectedProblema || (selectedProblema.endsWith('...') && item.Problema.startsWith(selectedProblema.slice(0, -3)));
+                const matchSolicitud = omitir === 'Solicitud' || !selectedTipoSolicitud || item.Tipo_Solicitud === selectedTipoSolicitud;
+
+                return matchAnio && matchMes && matchTipoCir && matchProblema && matchSolicitud;
+            });
+        }
+
         function clearSpecificFilter(type) {
             if (type === 'Anio') document.getElementById('filterAnio').value = '';
-            if (type === 'TipoCir') selectAllTipoCir(true);
+            if (type === 'Mes') {
+                selectedMes = null;
+                const anioSelect = document.getElementById('filterAnio');
+                if (anioSelect) anioSelect.value = '';
+            }
+            if (type === 'SoloMes') selectedMes = null;
+            if (type === 'Problema') selectedProblema = null;
+            if (type === 'Solicitud') selectedTipoSolicitud = null;
+            if (type === 'TipoCir') { selectAllTipoCir(true); return; }
             filterData();
         }
 
@@ -439,27 +532,43 @@
             selectedProblema = null;
             selectedTipoSolicitud = null;
             selectAllTipoCir(true);
-            filterData();
         }
 
         function filterData() {
+            updateKPIs(aplicarFiltros(null));
+            updateCharts();
+            renderFiltrosActivos();
+        }
+
+        function renderFiltrosActivos() {
+            const cont = document.getElementById('filtrosActivos');
+            if (!cont) return;
             const anioVal = document.getElementById('filterAnio') ? document.getElementById('filterAnio').value : '';
+            const chips = [];
 
-            const filtered = rawData.filter(item => {
-                const itemAnio = item.Mes ? item.Mes.substring(0, 4) : '';
-                const itemMes = item.Mes ? item.Mes.substring(5, 7) : '';
+            if (anioVal) chips.push({ texto: `Año: ${anioVal}`, tipo: 'Anio' });
+            if (selectedMes) chips.push({ texto: `Mes: ${NOMBRES_MESES[selectedMes] || selectedMes}${anioVal ? '' : ' (todos los años)'}`, tipo: 'SoloMes' });
+            if (selectedTipoSolicitud) chips.push({ texto: `Solicitud: ${selectedTipoSolicitud}`, tipo: 'Solicitud' });
+            if (selectedProblema) chips.push({ texto: `Problema: ${selectedProblema}`, tipo: 'Problema' });
+            if (!todosTipoCirSeleccionados()) {
+                const n = selectedTipoCirs.size;
+                let texto;
+                if (n === 0) texto = 'Circuito: ninguno';
+                else if (n === 1) texto = `Circuito: ${[...selectedTipoCirs][0]}`;
+                else texto = `Circuito: ${n} de ${allTipoCirs.length}`;
+                chips.push({ texto, tipo: 'TipoCir' });
+            }
 
-                const matchAnio = !anioVal || itemAnio === anioVal;
-                const matchMes = !selectedMes || itemMes === selectedMes;
-                const matchTipoCir = selectedTipoCirs.size === 0 || selectedTipoCirs.has(item.TipoCir);
-                const matchProblema = !selectedProblema || item.Problema === selectedProblema || (selectedProblema.endsWith('...') && item.Problema.startsWith(selectedProblema.slice(0, -3)));
-                const matchSolicitud = !selectedTipoSolicitud || item.Tipo_Solicitud === selectedTipoSolicitud;
+            if (chips.length === 0) {
+                cont.innerHTML = '<span class="fa-label"><i class="fa-solid fa-filter me-1"></i>Filtros</span><span class="filtros-vacio">Sin filtros activos. Haz clic en una barra o sector para filtrar.</span>';
+                return;
+            }
 
-                return matchAnio && matchMes && matchTipoCir && matchProblema && matchSolicitud;
-            });
-
-            updateKPIs(filtered);
-            updateCharts(filtered);
+            cont.innerHTML = '<span class="fa-label"><i class="fa-solid fa-filter me-1"></i>Filtros</span>' + chips.map(c => `
+                <span class="filtro-chip">
+                    <span class="chip-texto" title="${escapeHtml(c.texto)}">${escapeHtml(c.texto)}</span>
+                    <button type="button" onclick="clearSpecificFilter('${c.tipo}')" title="Quitar este filtro" aria-label="Quitar este filtro"><i class="fa-solid fa-xmark"></i></button>
+                </span>`).join('');
         }
 
         function updateKPIs(data) {
@@ -480,43 +589,66 @@
             if (rowCountEl) rowCountEl.textContent = data.length.toLocaleString();
         }
 
-        function updateCharts(data) {
-            // 1. Chart Mes
+        // Colores por barra: si hay algo seleccionado en esa gráfica, lo
+        // seleccionado queda en color pleno y el resto se atenúa.
+        function coloresBarra(claves, rgb, estaSeleccionada) {
+            const haySeleccion = claves.some(estaSeleccionada);
+            return {
+                fondo: claves.map(k => `rgba(${rgb}, ${!haySeleccion || estaSeleccionada(k) ? 0.8 : 0.25})`),
+                borde: claves.map(k => `rgba(${rgb}, ${!haySeleccion || estaSeleccionada(k) ? 1 : 0.35})`)
+            };
+        }
+
+        // Crea la gráfica la primera vez y después solo le cambia los datos
+        // (antes se destruía y se volvía a crear en cada filtro y en cada
+        // refresco de 15 s, lo que se veía como un "reinicio" y podía romper
+        // el clic, porque la gráfica se destruía dentro de su propio evento).
+        // Las claves reales de cada barra se guardan en chart.$claves para que
+        // el onClick siempre lea las actuales.
+        function dibujarGrafica(instancia, canvasId, config, claves) {
+            if (instancia) {
+                instancia.data.labels = config.data.labels;
+                instancia.data.datasets.forEach((ds, i) => Object.assign(ds, config.data.datasets[i]));
+                instancia.$claves = claves;
+                instancia.update();
+                return instancia;
+            }
+            const nueva = new Chart(document.getElementById(canvasId).getContext('2d'), config);
+            nueva.$claves = claves;
+            return nueva;
+        }
+
+        function claveClic(chart, elements) {
+            if (!elements || elements.length === 0 || !chart.$claves) return undefined;
+            return chart.$claves[elements[0].index];
+        }
+
+        function updateCharts() {
             const anioVal = document.getElementById('filterAnio') ? document.getElementById('filterAnio').value : '';
             const mesesLabelsFull = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-            const nombresMeses = {
-                '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
-                '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
-                '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
-            };
 
+            // 1. Chart Mes (todos los filtros menos el de mes)
             const mesMap = {};
-            data.forEach(item => {
+            aplicarFiltros('Mes').forEach(item => {
                 const mesKey = item.Mes || '2026-01';
                 const itemAnio = mesKey.substring(0, 4);
                 const itemMes = mesKey.substring(5, 7);
-
                 if (!anioVal || itemAnio === anioVal) {
-                    if (itemMes) {
-                        mesMap[itemMes] = (mesMap[itemMes] || 0) + item.Cantidad;
-                    }
+                    if (itemMes) mesMap[itemMes] = (mesMap[itemMes] || 0) + item.Cantidad;
                 }
             });
-
-            const mesesDisplayLabels = mesesLabelsFull.map(m => nombresMeses[m]);
             const mesesValues = mesesLabelsFull.map(m => mesMap[m] || 0);
+            const colMes = coloresBarra(mesesLabelsFull, '44, 67, 162', m => m === selectedMes);
 
-            if (chartMesInstance) chartMesInstance.destroy();
-            const ctxMes = document.getElementById('chartMes').getContext('2d');
-            chartMesInstance = new Chart(ctxMes, {
+            chartMesInstance = dibujarGrafica(chartMesInstance, 'chartMes', {
                 type: 'bar',
                 data: {
-                    labels: mesesDisplayLabels,
+                    labels: mesesLabelsFull.map(m => NOMBRES_MESES[m]),
                     datasets: [{
                         label: 'Cantidad',
                         data: mesesValues,
-                        backgroundColor: 'rgba(44, 67, 162, 0.75)',
-                        borderColor: 'rgba(44, 67, 162, 1)',
+                        backgroundColor: colMes.fondo,
+                        borderColor: colMes.borde,
                         borderWidth: 1,
                         borderRadius: 4
                     }]
@@ -525,36 +657,36 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            selectedMes = mesesLabelsFull[index];
-                            filterData();
-                        }
+                    onClick: (event, elements, chart) => {
+                        const clave = claveClic(chart, elements);
+                        if (clave === undefined) return;
+                        // Otro clic en el mismo mes quita el filtro.
+                        selectedMes = selectedMes === clave ? null : clave;
+                        filterData();
                     }
                 }
-            });
+            }, mesesLabelsFull);
 
-            // 3. Chart Referencias (Top 10 TipoCir)
+            // 3. Chart Referencias (Top 10 TipoCir) — todos los filtros menos el de circuito
             const refMap = {};
-            data.forEach(item => {
-                let tc = item.TipoCir || 'Sin TipoCir';
+            aplicarFiltros('TipoCir').forEach(item => {
+                const tc = item.TipoCir || 'Sin TipoCir';
                 refMap[tc] = (refMap[tc] || 0) + item.Cantidad;
             });
-            const sortedRefs = Object.keys(refMap).sort((a,b) => refMap[b] - refMap[a]).slice(0, 10);
+            const sortedRefs = Object.keys(refMap).sort((a, b) => refMap[b] - refMap[a]).slice(0, 10);
             const refValues = sortedRefs.map(r => refMap[r]);
+            const todosTc = todosTipoCirSeleccionados();
+            const colRef = coloresBarra(sortedRefs, '0, 113, 188', r => !todosTc && selectedTipoCirs.has(r));
 
-            if (chartReferenciasInstance) chartReferenciasInstance.destroy();
-            const ctxRef = document.getElementById('chartReferencias').getContext('2d');
-            chartReferenciasInstance = new Chart(ctxRef, {
+            chartReferenciasInstance = dibujarGrafica(chartReferenciasInstance, 'chartReferencias', {
                 type: 'bar',
                 data: {
                     labels: sortedRefs,
                     datasets: [{
                         label: 'Cantidad',
                         data: refValues,
-                        backgroundColor: 'rgba(0, 113, 188, 0.75)',
-                        borderColor: 'rgba(0, 113, 188, 1)',
+                        backgroundColor: colRef.fondo,
+                        borderColor: colRef.borde,
                         borderWidth: 1,
                         borderRadius: 4
                     }]
@@ -564,38 +696,42 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            selectedTipoCirs.clear();
-                            selectedTipoCirs.add(sortedRefs[index]);
-                            buildSlicerTipoCir();
-                            filterData();
+                    onClick: (event, elements, chart) => {
+                        const clave = claveClic(chart, elements);
+                        if (clave === undefined) return;
+                        // Si ese circuito ya era el único seleccionado, otro
+                        // clic vuelve a marcar todos; si no, queda solo ese.
+                        if (selectedTipoCirs.size === 1 && selectedTipoCirs.has(clave)) {
+                            selectAllTipoCir(true);
+                            return;
                         }
+                        selectedTipoCirs.clear();
+                        selectedTipoCirs.add(clave);
+                        buildSlicerTipoCir();
+                        filterData();
                     }
                 }
-            });
+            }, sortedRefs);
 
-            // 4. Chart Problemas (Top 8)
+            // 4. Chart Problemas (Top 8) — todos los filtros menos el de problema
             const probMap = {};
-            data.forEach(item => {
+            aplicarFiltros('Problema').forEach(item => {
                 const prob = item.Problema.length > 30 ? item.Problema.substring(0, 30) + '...' : item.Problema;
                 probMap[prob] = (probMap[prob] || 0) + item.Cantidad;
             });
-            const sortedProbs = Object.keys(probMap).sort((a,b) => probMap[b] - probMap[a]).slice(0, 8);
+            const sortedProbs = Object.keys(probMap).sort((a, b) => probMap[b] - probMap[a]).slice(0, 8);
             const probValues = sortedProbs.map(p => probMap[p]);
+            const colProb = coloresBarra(sortedProbs, '247, 147, 30', p => p === selectedProblema);
 
-            if (chartProblemasInstance) chartProblemasInstance.destroy();
-            const ctxProb = document.getElementById('chartProblemas').getContext('2d');
-            chartProblemasInstance = new Chart(ctxProb, {
+            chartProblemasInstance = dibujarGrafica(chartProblemasInstance, 'chartProblemas', {
                 type: 'bar',
                 data: {
                     labels: sortedProbs,
                     datasets: [{
                         label: 'Cantidad',
                         data: probValues,
-                        backgroundColor: 'rgba(247, 147, 30, 0.75)',
-                        borderColor: 'rgba(247, 147, 30, 1)',
+                        backgroundColor: colProb.fondo,
+                        borderColor: colProb.borde,
                         borderWidth: 1,
                         borderRadius: 4
                     }]
@@ -605,34 +741,39 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            selectedProblema = sortedProbs[index];
-                            filterData();
-                        }
+                    onClick: (event, elements, chart) => {
+                        const clave = claveClic(chart, elements);
+                        if (clave === undefined) return;
+                        selectedProblema = selectedProblema === clave ? null : clave;
+                        filterData();
                     }
                 }
-            });
+            }, sortedProbs);
 
-            // 5. Chart Tipo Solicitud
+            // 5. Chart Tipo Solicitud — todos los filtros menos el de solicitud
             const solMap = {};
-            data.forEach(item => {
+            aplicarFiltros('Solicitud').forEach(item => {
                 solMap[item.Tipo_Solicitud] = (solMap[item.Tipo_Solicitud] || 0) + item.Cantidad;
             });
             const solLabels = Object.keys(solMap);
             const totalSol = Object.values(solMap).reduce((a, b) => a + b, 0);
             const solPercentages = solLabels.map(s => totalSol > 0 ? ((solMap[s] / totalSol) * 100).toFixed(1) : 0);
+            const paletaSol = ['#2C43A2', '#FF0000', '#009245', '#F7931E', '#0071BC'];
+            const haySelSol = !!selectedTipoSolicitud && solLabels.includes(selectedTipoSolicitud);
+            // Si hay un tipo seleccionado, los demás se atenúan (sufijo de
+            // opacidad hex sobre el mismo color de la paleta).
+            const coloresSol = solLabels.map((s, idx) => {
+                const base = paletaSol[idx % paletaSol.length];
+                return !haySelSol || s === selectedTipoSolicitud ? base : base + '40';
+            });
 
-            if (chartSolicitudInstance) chartSolicitudInstance.destroy();
-            const ctxSol = document.getElementById('chartSolicitud').getContext('2d');
-            chartSolicitudInstance = new Chart(ctxSol, {
+            chartSolicitudInstance = dibujarGrafica(chartSolicitudInstance, 'chartSolicitud', {
                 type: 'pie',
                 data: {
                     labels: solLabels.map((l, idx) => `${l} (${solPercentages[idx]}%)`),
                     datasets: [{
                         data: solPercentages,
-                        backgroundColor: ['#2C43A2', '#FF0000', '#009245', '#F7931E', '#0071BC']
+                        backgroundColor: coloresSol
                     }]
                 },
                 options: {
@@ -647,15 +788,14 @@
                             }
                         }
                     },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const index = elements[0].index;
-                            selectedTipoSolicitud = solLabels[index];
-                            filterData();
-                        }
+                    onClick: (event, elements, chart) => {
+                        const clave = claveClic(chart, elements);
+                        if (clave === undefined) return;
+                        selectedTipoSolicitud = selectedTipoSolicitud === clave ? null : clave;
+                        filterData();
                     }
                 }
-            });
+            }, solLabels);
         }
 
         window.onload = () => {

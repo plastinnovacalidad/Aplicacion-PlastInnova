@@ -53,7 +53,7 @@ const { GoogleGenAI, FunctionCallingConfigMode, Type, ApiError } = require('@goo
 const { GEMINI_API_KEY, MODELO_IA_MODO_CONSULTA } = require('./settings/paths');
 
 const {
-  AREAS, TIMEZONE,
+  TIMEZONE,
   IGNORE_OLD_MESSAGES_SECONDS, RECORDATORIOS,
   RESUMEN_HORA, RESUMEN_MINUTO, MENSAJES_SALIDA,
   RESUMEN_CALIDAD_HORA, RESUMEN_CALIDAD_MINUTO,
@@ -73,6 +73,7 @@ let readyTime = null;
 let enviadosHoy = new Set();
 let flagResumenEnviadoHoy = false;
 let reconectando = false;
+let reconexionPausaHasta = null;
 
 // ======================== NÚMEROS AUTORIZADOS (en memoria) ========================
 // Antes esto salía de ALLOWED_NUMBERS/NOMBRES/ADMIN_NUMERO (config_whatsapp.js,
@@ -928,9 +929,27 @@ function duracion(inicio, fin) {
   return `${s}s`;
 }
 
-function msgBienvenida() {
+// Unificación de áreas (Fase 4, 09/09, pedido por Julio): el registro de
+// entrada/salida por WhatsApp ya no usa una lista fija de 8 áreas genéricas
+// (Producción, Almacén, Calidad...) separada del resto del sistema -- ahora
+// usa las mismas zonas reales del catálogo `iso_areas` que ya administra el
+// módulo de Muestreos ISO 2859 (Almacén 1/2/3/4/8, Fábrica 1-4, Inyección
+// 1-3, etc.), para que "en qué área está cada quien" sea una sola fuente de
+// verdad en todo el sistema. Solo se ofrecen las áreas 'Activo' (mismo
+// criterio que ya usa el resto del catálogo). Los registros viejos
+// (`whatsapp_registros`/`whatsapp_sesiones_activas` con area_id 1-8, de
+// antes de este cambio) se dejan tal como quedaron -- no hay forma segura
+// de saber a cuál de las zonas nuevas correspondía cada uno, así que
+// quedan como historial con su área_nombre de esa época.
+async function obtenerAreasActivas() {
+  const todas = await isoData.listarAreasCatalogo();
+  return todas.filter(a => a.estado === 'Activo');
+}
+
+async function msgBienvenida() {
+  const areas = await obtenerAreasActivas();
   let t = '📋 *Sistema de Registro de Áreas*\n\nSelecciona un área para registrar tu *ENTRADA*:\n\n';
-  AREAS.forEach(a => t += `  ${a.id}. ${a.nombre}\n`);
+  areas.forEach(a => t += `  ${a.id}. ${a.nombre}\n`);
   t += '\n💡 Escribe el *número* del área.';
   return t;
 }
@@ -1740,10 +1759,10 @@ const LINEAS_COMANDOS = [
 // ejemplo, escribiendo "reportes" para el menú de reportes). "areas",
 // "menu" e "inicio" no cambiaron: siguen mostrando también los comandos,
 // como ya se comportaban desde antes.
-function construirMenuPara(telefono, incluirComandos = true) {
+async function construirMenuPara(telefono, incluirComandos = true) {
   const partes = [];
   const tieneRegistro = tienePermisoBot(telefono, 'registro_entrada');
-  if (tieneRegistro) partes.push(msgBienvenida());
+  if (tieneRegistro) partes.push(await msgBienvenida());
 
   const lineasPermitidas = LINEAS_COMANDOS.filter(c => tienePermisoBot(telefono, c.permiso)).map(c => c.linea);
   if (incluirComandos && lineasPermitidas.length > 0) {
@@ -1772,7 +1791,10 @@ async function cerrarSesionPorAdmin(telefono, msgAdmin = null) {
     return { success: false, error: 'Sesión no encontrada' };
   }
   const ahora = new Date(), h = horaStr(ahora);
-  const area = AREAS.find(a => a.id === s.area_id) || { nombre: s.area_nombre };
+  // area_nombre ya quedó guardado tal como se llamaba el área al momento de
+  // la entrada (ver Fase 4, 09/09) -- no hace falta volver a buscarla en el
+  // catálogo, y así un registro viejo sigue mostrando su nombre de esa
+  // época aunque el área ya no exista o haya cambiado de nombre.
   const dur = duracion(new Date(s.entrada_raw), ahora);
 
   await dbInstance.run(`
@@ -1783,11 +1805,11 @@ async function cerrarSesionPorAdmin(telefono, msgAdmin = null) {
   await dbInstance.run('DELETE FROM whatsapp_sesiones_activas WHERE telefono = ?', [telefono]);
 
   if (msgAdmin) {
-    await msgAdmin.reply(`✅ Sesión de *${nombreDe(telefono)}* cerrada.\n📍 ${area.nombre || s.area_nombre}\n⏱️ ${dur}`);
+    await msgAdmin.reply(`✅ Sesión de *${nombreDe(telefono)}* cerrada.\n📍 ${s.area_nombre}\n⏱️ ${dur}`);
   }
   try {
     if (client) {
-      await client.sendMessage(telefono, `🔴 Tu sesión en *${area.nombre || s.area_nombre}* fue cerrada por el administrador.\n🕐 Entrada: ${s.entrada}\n🕐 Salida: ${h}\n⏱️ ${dur}`);
+      await client.sendMessage(telefono, `🔴 Tu sesión en *${s.area_nombre}* fue cerrada por el administrador.\n🕐 Entrada: ${s.entrada}\n🕐 Salida: ${h}\n⏱️ ${dur}`);
     }
   } catch {}
   return { success: true };
@@ -1823,6 +1845,9 @@ async function reconectarBot() {
     }
   }
   console.error(`❌ No se pudo reconectar WhatsApp tras ${maxIntentos} intentos. Revisa la conexión a internet o reinicia el servidor para volver a intentarlo.`);
+  // Pausa de 1 hora tras agotar los 10 intentos para evitar loops por eventos "disconnected" en cascada
+  reconexionPausaHasta = Date.now() + 60 * 60 * 1000;
+  console.log('⏸️  Reconexión pausada por 1 hora. Próximo intento permitido a partir de:', new Date(reconexionPausaHasta).toLocaleString('es-CO'));
   reconectando = false;
 }
 
@@ -1888,6 +1913,11 @@ async function iniciarBotWhatsApp(db) {
 
     client.on('ready', () => {
       readyTime = Date.now();
+      // Limpiar pausa de reconexión si existía (recuperación exitosa)
+      if (reconexionPausaHasta) {
+        console.log('✅ Reconexión de WhatsApp recuperada. Pausa de reconexión eliminada.');
+        reconexionPausaHasta = null;
+      }
       console.log('\n✅ Bot de WhatsApp listo y conectado!');
       // Se muestran los nombres (para confirmar de un vistazo que la
       // configuración es la esperada) pero nunca los números de teléfono,
@@ -1900,6 +1930,11 @@ async function iniciarBotWhatsApp(db) {
 
     client.on('disconnected', reason => {
       console.log('\n⚠️ WhatsApp desconectado:', reason);
+      if (reconexionPausaHasta && Date.now() < reconexionPausaHasta) {
+        const restanteMin = Math.ceil((reconexionPausaHasta - Date.now()) / 60000);
+        console.log(`⏸️  Reconexión pausada. Tiempo restante aprox.: ${restanteMin} min. No se inicia nueva ronda.`);
+        return;
+      }
       reconectarBot();
     });
 
@@ -2059,7 +2094,7 @@ async function iniciarBotWhatsApp(db) {
         // "hola"/"ayuda": solo las áreas, sin "Comandos disponibles" (pedido
         // explícito de Julio). El resto de sinónimos no cambia.
         const incluirComandos = !['hola', 'ayuda'].includes(txt);
-        await msg.reply(construirMenuPara(tel, incluirComandos));
+        await msg.reply(await construirMenuPara(tel, incluirComandos));
         return;
       }
 
@@ -2084,7 +2119,9 @@ async function iniciarBotWhatsApp(db) {
           await msg.reply('⚠️ No tienes sesión activa.\nEscribe *"areas"*.');
           return;
         }
-        const area = AREAS.find(a => a.id === s.area_id) || { nombre: s.area_nombre };
+        // area_nombre ya quedó guardado desde la entrada -- ver el mismo
+        // comentario en cerrarSesionPorAdmin (Fase 4, 09/09).
+        const area = { nombre: s.area_nombre };
         const dur = duracion(new Date(s.entrada_raw), ahora);
 
         await dbInstance.run(`
@@ -2100,7 +2137,8 @@ async function iniciarBotWhatsApp(db) {
 
       const areaId = parseInt(txt);
       if (!isNaN(areaId)) {
-        const area = AREAS.find(a => a.id === areaId);
+        const areasActivas = await obtenerAreasActivas();
+        const area = areasActivas.find(a => a.id === areaId);
         if (!area) {
           await msg.reply('❌ Área no válida. Escribe *"areas"*.');
           return;
@@ -2246,4 +2284,5 @@ module.exports = {
   esAdmin,
   enviarReporteInspeccionMetrologia,
   enviarResumenReporteRapido,
+  client,
 };

@@ -12,7 +12,10 @@ const path = require('path');
 // del proyecto, exactamente como antes.
 const RAIZ_PROYECTO = path.join(__dirname, '..');
 
-const SESSIONS_FILE = path.join(RAIZ_PROYECTO, 'sesiones.json');
+// ARCHIVO_SESIONES (opcional): permite que la copia de prueba con SQL Server
+// (iniciar_prueba_sqlserver.cmd) guarde sus sesiones en otro archivo, para no
+// cerrar las sesiones de la app normal que corre al mismo tiempo.
+const SESSIONS_FILE = path.join(RAIZ_PROYECTO, process.env.ARCHIVO_SESIONES || 'sesiones.json');
 // La base de datos vivía suelta en la raíz del proyecto; ahora vive junto con
 // db/connection.js y db/init.js, todo lo relacionado con SQLite en un mismo
 // lugar. SQLite crea automáticamente base_datos.db-wal y base_datos.db-shm

@@ -103,6 +103,14 @@ router.delete('/usuarios/:id', validarToken, requerirPermiso('usuarios.gestionar
   if (id === req.usuario.id) return res.status(403).json({ error: 'No puedes eliminarte a ti mismo' });
 
   const usuarioAEliminar = await usuariosData.buscarUsuarioPorId(id);
+
+  const actividad = await usuariosData.contarActividadDeUsuario(id);
+  if (actividad.total > 0) {
+    return res.status(409).json({
+      error: `No se puede eliminar: este usuario tiene ${actividad.total} registro(s) a su nombre en el sistema (${actividad.detalle.map(d => d.tabla).join(', ')}). Quítale el rol o cámbiale la contraseña para bloquearle el acceso, en vez de eliminarlo, para no perder esa relación en el historial.`
+    });
+  }
+
   const result = await usuariosData.eliminarUsuario(id);
   if (result.changes === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
   await registrarCambio({

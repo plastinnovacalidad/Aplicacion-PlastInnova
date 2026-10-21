@@ -60,3 +60,19 @@ uploads/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Migración a SQL Server: sesiones de la copia de prueba y reporte de la carga
+sesiones_prueba_sqlserver.json
+db/sqlserver/reporte_migracion.txt
+
+# ===================================================================
+# Archivos de trabajo que no son código (agregado 21/10/2026):
+# - Excel de revisión con NITs de clientes y el mapa de relaciones de la
+#   base: son datos o documentos de apoyo, no van en el repositorio.
+# - "Claude outputs/": PDFs y borradores generados durante el trabajo.
+# - "qss": salida de un "git diff" que quedó guardada por accidente.
+# ===================================================================
+garantias_nits_por_revisar.xlsx
+mapa_relaciones_base_datos.xlsx
+Claude outputs/
+/qss
