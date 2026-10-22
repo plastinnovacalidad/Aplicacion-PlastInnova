@@ -192,6 +192,48 @@
     let filtrosAuditoria = [];
     const adminCodes = ['roles.gestionar', 'usuarios.gestionar', 'configuracion.logo', 'gestion.ver', 'portal.volver', 'catalogos.gestionar', 'auditoria.ver'];
 
+    // Grupos de permisos por módulo, en el mismo orden en que se muestran al
+    // crear/editar un rol y en las etiquetas de la tabla de roles. Antes
+    // "Circuitos SMD" recogía todo lo que no fuera de otro módulo (Reportes,
+    // Problemas, Valores y Cableado, Producción...), así que esa caja quedaba
+    // mezclada. Cada permiso cae en el primer grupo que lo reconoce; si
+    // aparece un permiso nuevo que ningún grupo reconoce, va a "Otros" para
+    // que nunca quede escondido.
+    const GRUPOS_PERMISOS = [
+      { id: 'Smd', titulo: 'Circuitos SMD', corto: 'SMD', icono: 'fa-bolt', color: '#2b6cb0', fondo: '#ebf8ff',
+        incluye: c => c.startsWith('referencias.') || c.startsWith('versiones.') || c.startsWith('observaciones.') || c.startsWith('recomendaciones.'),
+        prioridad: ['referencias.ver', 'versiones.crear'] },
+      { id: 'ValoresCableado', titulo: 'Valores y Cableado', corto: 'Valores y Cableado', icono: 'fa-plug', color: '#6b46c1', fondo: '#faf5ff',
+        incluye: c => c.startsWith('valores_cableado.'),
+        prioridad: ['valores_cableado.ver'] },
+      { id: 'Garantias', titulo: 'Garantías', corto: 'Garantías', icono: 'fa-clipboard-list', color: '#dd6b20', fondo: '#fffaf0',
+        incluye: c => c.startsWith('garantias.'),
+        prioridad: ['garantias.ver', 'garantias.crear'] },
+      { id: 'Calidad', titulo: 'Calidad General', corto: 'Calidad', icono: 'fa-award', color: '#b7791f', fondo: '#fffaf0',
+        incluye: c => c.startsWith('calidad.'),
+        prioridad: ['calidad.ver'] },
+      { id: 'Reportes', titulo: 'Reportes, Problemas y Seguimiento de Producción', corto: 'Reportes', icono: 'fa-triangle-exclamation', color: '#c53030', fondo: '#fff5f5',
+        incluye: c => c.startsWith('reportes.') || c.startsWith('problemas.') || c.startsWith('produccion.'),
+        prioridad: ['problemas.ver', 'problemas.crear', 'reportes.ver', 'reportes.crear'] },
+      { id: 'Metrologia', titulo: 'Metrología y Planos de Molde', corto: 'Metrología', icono: 'fa-ruler-combined', color: '#3182ce', fondo: '#ebf8ff',
+        incluye: c => c.startsWith('metrologia.'),
+        prioridad: ['metrologia.ver', 'metrologia.versiones'] },
+      { id: 'Iso2859', titulo: 'Muestreos ISO 2859-1', corto: 'Muestreos ISO', icono: 'fa-flask', color: '#2c7a7b', fondo: '#e6fffa',
+        incluye: c => c.startsWith('iso2859.'),
+        prioridad: ['iso2859.ver', 'iso2859.muestrear'] },
+      { id: 'Whatsapp', titulo: 'WhatsApp Bot', corto: 'WhatsApp', icono: 'fa-comment-dots', color: '#38a169', fondo: '#f0fff4',
+        incluye: c => c.startsWith('whatsapp.'),
+        prioridad: ['whatsapp.bot.ver', 'whatsapp.bot.gestionar'] },
+      { id: 'Admin', titulo: 'Administración y Sistema', corto: 'Admin', icono: 'fa-gear', color: '#7b341e', fondo: '#fff5f5',
+        incluye: c => adminCodes.includes(c),
+        prioridad: ['gestion.ver', 'usuarios.gestionar'] },
+    ];
+    const GRUPO_OTROS = { id: 'Otros', titulo: 'Otros permisos', corto: 'Otros', icono: 'fa-layer-group', color: '#4a5568', fondo: '#edf2f7', incluye: () => true, prioridad: [] };
+
+    function grupoDePermiso(codigo) {
+      return GRUPOS_PERMISOS.find(g => g.incluye(codigo)) || GRUPO_OTROS;
+    }
+
     async function initApp() {
       try {
         const me = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
@@ -285,26 +327,23 @@
         let html = '<button class="btn-create" onclick="abrirModalRol()">+ Crear nuevo rol</button>';
         html += '<table class="admin-table"><thead><tr><th>Rol</th><th>Descripción</th><th>Permisos</th><th>Acciones</th></tr></thead><tbody>';
         rolesCache.forEach(rol => {
-          const smd = rol.permisos ? rol.permisos.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !p.codigo.startsWith('iso2859.') && !p.codigo.startsWith('calidad.') && !adminCodes.includes(p.codigo)).length : 0;
-          const garantias = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('garantias.')).length : 0;
-          const whatsapp = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('whatsapp.bot.')).length : 0;
-          const metrologia = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('metrologia.')).length : 0;
-          const iso2859 = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('iso2859.')).length : 0;
-          const calidad = rol.permisos ? rol.permisos.filter(p => p.codigo.startsWith('calidad.')).length : 0;
-          const admin = rol.permisos ? rol.permisos.filter(p => adminCodes.includes(p.codigo)).length : 0;
+          // Cuántos permisos tiene el rol en cada módulo (etiquetas de colores)
+          const conteo = {};
+          (rol.permisos || []).forEach(p => {
+            const g = grupoDePermiso(p.codigo);
+            conteo[g.id] = (conteo[g.id] || 0) + 1;
+          });
+          const etiquetas = [...GRUPOS_PERMISOS, GRUPO_OTROS]
+            .filter(g => conteo[g.id] > 0)
+            .map(g => `<span style="background:${g.fondo}; color:${g.color}; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid ${g.icono}"></i> ${g.corto} (${conteo[g.id]})</span>`)
+            .join('');
           const esSistema = rol.es_sistema === 1 ? ' <span style="color:#999;font-size:11px;">(sistema)</span>' : '';
           html += `<tr>
             <td><strong>${escapeHtml(rol.nombre)}</strong>${esSistema}</td>
             <td>${escapeHtml(rol.descripcion || '')}</td>
             <td>
               <div style="display:flex; flex-wrap:wrap; gap:4px; font-size:11px;">
-                ${smd > 0 ? `<span style="background:#ebf8ff; color:#2b6cb0; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-bolt"></i> SMD (${smd})</span>` : ''}
-                ${garantias > 0 ? `<span style="background:#fffaf0; color:#dd6b20; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-clipboard-list"></i> Garantías (${garantias})</span>` : ''}
-                ${whatsapp > 0 ? `<span style="background:#f0fff4; color:#38a169; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-comment-dots"></i> WhatsApp (${whatsapp})</span>` : ''}
-                ${metrologia > 0 ? `<span style="background:#ebf8ff; color:#3182ce; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-ruler-combined"></i> Metrología (${metrologia})</span>` : ''}
-                ${iso2859 > 0 ? `<span style="background:#e6fffa; color:#2c7a7b; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-flask"></i> Muestreos ISO (${iso2859})</span>` : ''}
-                ${calidad > 0 ? `<span style="background:#fffaf0; color:#b7791f; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-award"></i> Calidad (${calidad})</span>` : ''}
-                ${admin > 0 ? `<span style="background:#fff5f5; color:#7b341e; padding:3px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-gear"></i> Admin (${admin})</span>` : ''}
+                ${etiquetas}
               </div>
             </td>
             <td>
@@ -389,34 +428,16 @@
         return [...primeros, ...resto];
       }
 
-      const smdPerms = priorizarPermisos(
-        permisosDisponibles.filter(p => !p.codigo.startsWith('garantias.') && !p.codigo.startsWith('whatsapp.bot.') && !p.codigo.startsWith('metrologia.') && !p.codigo.startsWith('iso2859.') && !p.codigo.startsWith('calidad.') && !adminCodes.includes(p.codigo)),
-        ['referencias.ver', 'versiones.crear']
-      );
-      const garantiasPerms = priorizarPermisos(
-        permisosDisponibles.filter(p => p.codigo.startsWith('garantias.')),
-        ['garantias.ver', 'garantias.crear']
-      );
-      const whatsappPerms = priorizarPermisos(
-        permisosDisponibles.filter(p => p.codigo.startsWith('whatsapp.bot.')),
-        ['whatsapp.bot.ver', 'whatsapp.bot.gestionar']
-      );
-      const metrologiaPerms = priorizarPermisos(
-        permisosDisponibles.filter(p => p.codigo.startsWith('metrologia.')),
-        ['metrologia.ver', 'metrologia.versiones']
-      );
-      const iso2859Perms = priorizarPermisos(
-        permisosDisponibles.filter(p => p.codigo.startsWith('iso2859.')),
-        ['iso2859.ver', 'iso2859.muestrear']
-      );
-      const calidadPerms = priorizarPermisos(
-        permisosDisponibles.filter(p => p.codigo.startsWith('calidad.')),
-        ['calidad.ver']
-      );
-      const adminPerms = priorizarPermisos(
-        permisosDisponibles.filter(p => adminCodes.includes(p.codigo)),
-        ['gestion.ver', 'usuarios.gestionar']
-      );
+      // Reparte los permisos en su módulo (ver GRUPOS_PERMISOS arriba).
+      const porGrupo = new Map();
+      permisosDisponibles.forEach(p => {
+        const g = grupoDePermiso(p.codigo);
+        if (!porGrupo.has(g)) porGrupo.set(g, []);
+        porGrupo.get(g).push(p);
+      });
+      const gruposVisibles = [...GRUPOS_PERMISOS, GRUPO_OTROS]
+        .filter(g => porGrupo.has(g))
+        .map(g => ({ ...g, perms: priorizarPermisos(porGrupo.get(g), g.prioridad) }));
 
       // Encabezado reutilizable de cada caja de módulo, con su casilla
       // "Seleccionar todo" para marcar o desmarcar de una sola vez todos los
@@ -435,52 +456,18 @@
 
       grid.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 15px;">
+          ${gruposVisibles.map(g => `
           <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('<i class="fa-solid fa-bolt"></i> Circuitos SMD', '#2b6cb0', 'selAllSmd')}
-            <div id="boxSmd" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
-          </div>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('<i class="fa-solid fa-clipboard-list"></i> Garantías', '#dd6b20', 'selAllGarantias')}
-            <div id="boxGarantias" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
-          </div>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('<i class="fa-solid fa-comment-dots"></i> WhatsApp Bot', '#38a169', 'selAllWhatsapp')}
-            <div id="boxWhatsapp" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
-          </div>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('<i class="fa-solid fa-ruler-combined"></i> Metrología y Planos de Molde', '#3182ce', 'selAllMetrologia')}
-            <div id="boxMetrologia" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
-          </div>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('<i class="fa-solid fa-flask"></i> Muestreos ISO 2859-1', '#2c7a7b', 'selAllIso2859')}
-            <div id="boxIso2859" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
-          </div>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('<i class="fa-solid fa-award"></i> Calidad General', '#b7791f', 'selAllCalidad')}
-            <div id="boxCalidad" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
-          </div>
-          <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            ${boxHeader('<i class="fa-solid fa-gear"></i> Administración y Sistema', '#7b341e', 'selAllAdmin')}
-            <div id="boxAdmin" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
-          </div>
+            ${boxHeader(`<i class="fa-solid ${g.icono}"></i> ${g.titulo}`, g.color, 'selAll' + g.id)}
+            <div id="box${g.id}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;"></div>
+          </div>`).join('')}
         </div>
       `;
 
-      renderPermisosBox('boxSmd', smdPerms, permisosSeleccionados);
-      renderPermisosBox('boxGarantias', garantiasPerms, permisosSeleccionados);
-      renderPermisosBox('boxWhatsapp', whatsappPerms, permisosSeleccionados);
-      renderPermisosBox('boxMetrologia', metrologiaPerms, permisosSeleccionados);
-      renderPermisosBox('boxIso2859', iso2859Perms, permisosSeleccionados);
-      renderPermisosBox('boxCalidad', calidadPerms, permisosSeleccionados);
-      renderPermisosBox('boxAdmin', adminPerms, permisosSeleccionados);
-
-      wireSelectAll('selAllSmd', 'boxSmd');
-      wireSelectAll('selAllGarantias', 'boxGarantias');
-      wireSelectAll('selAllWhatsapp', 'boxWhatsapp');
-      wireSelectAll('selAllMetrologia', 'boxMetrologia');
-      wireSelectAll('selAllIso2859', 'boxIso2859');
-      wireSelectAll('selAllCalidad', 'boxCalidad');
-      wireSelectAll('selAllAdmin', 'boxAdmin');
+      gruposVisibles.forEach(g => {
+        renderPermisosBox('box' + g.id, g.perms, permisosSeleccionados);
+        wireSelectAll('selAll' + g.id, 'box' + g.id);
+      });
 
        document.getElementById('modalConfirm').onclick = () => guardarRol(rolId);
        document.getElementById('modalOverlay').classList.add('active');
@@ -490,7 +477,11 @@
       const nombre = document.getElementById('rolNombre').value.trim();
       const descripcion = document.getElementById('rolDesc').value.trim();
       const checks = document.querySelectorAll('#permisosGrid input:checked');
-      const permisos = Array.from(checks).map(c => parseInt(c.value));
+      // Solo las casillas de permisos reales (value = id numérico). Las de
+      // "Seleccionar todo" de cada módulo también quedan marcadas cuando se
+      // eligen todos sus permisos, pero no son un permiso: antes se
+      // mandaban como un id vacío y el rol no se podía guardar.
+      const permisos = Array.from(checks).map(c => parseInt(c.value, 10)).filter(id => !isNaN(id));
       if (!nombre) return alert('El nombre del rol es obligatorio');
       const url = rolId ? '/api/roles/' + rolId : '/api/roles';
       const method = rolId ? 'PUT' : 'POST';

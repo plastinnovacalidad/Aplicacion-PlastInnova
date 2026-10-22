@@ -469,7 +469,10 @@
         usuarioActual = me;
       } catch (e) {}
       await cargarMisPermisos();
-      if (!tienePermiso('gestion.ver')) {
+      // Entra quien pueda crear o editar referencias (los mismos permisos
+      // que exige el servidor para guardar). Antes pedía 'gestion.ver', que
+      // es de Administración y no tiene que ver con este módulo.
+      if (!tienePermiso('referencias.crear') && !tienePermiso('referencias.editar')) {
         alert('No tienes permiso para acceder a administración de referencias.');
         location.href = 'index.html';
         return;

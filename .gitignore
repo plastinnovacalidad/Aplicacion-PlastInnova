@@ -76,3 +76,6 @@ garantias_nits_por_revisar.xlsx
 mapa_relaciones_base_datos.xlsx
 Claude outputs/
 /qss
+
+# Copias de respaldo que hacen los scripts de carga antes de cambiar la base
+db/respaldos/

@@ -209,8 +209,9 @@
         </div>
       </section>
 
-      <!-- Sección Reportes: Tablero y Gestión de Garantías. Sin gating
-           (igual que hoy), la sección siempre se muestra. -->
+      <!-- Sección Reportes: Tablero de Garantías y Producción por Fábrica.
+           Cada tarjeta tiene su propio permiso; si a alguien no le queda
+           ninguna, la sección completa se oculta (actualizarSeccionesVisibles). -->
       <section class="portal-section" data-section="reportes">
         <div class="section-title">
           <span class="section-icon"><i class="fa-solid fa-chart-column"></i></span>
@@ -221,7 +222,10 @@
           <span class="section-count"></span>
         </div>
         <div class="cards-grid">
-          <a href="garantias.html" class="portal-card">
+          <!-- Tablero de Garantías: antes se mostraba siempre, a todos, aunque
+               garantias.html exige 'garantias.dashboard' (quien no lo tenía
+               veía la tarjeta y al entrar le salía "No tienes permiso"). -->
+          <a href="garantias.html" class="portal-card" id="cardTableroGarantias" style="display: none;">
             <div class="card-banner garantias"><i class="fa-solid fa-clipboard-list"></i></div>
             <div class="card-body">
               <h3>Tablero de Garantías</h3>
@@ -392,12 +396,19 @@
             cardValoresCableado.style.display = tienePermiso('valores_cableado.ver') ? 'flex' : 'none';
           }
 
-          // Mismo permiso que ya exigía referencias.html por su cuenta
-          // ('gestion.ver') — antes solo se llegaba ahí por un botón dentro
-          // de Circuitos SMD, ahora es su propio módulo del portal.
+          // Mismo permiso que exige garantias.html por su cuenta.
+          const cardTableroGarantias = document.getElementById('cardTableroGarantias');
+          if (cardTableroGarantias) {
+            cardTableroGarantias.style.display = tienePermiso('garantias.dashboard') ? 'flex' : 'none';
+          }
+
+          // Crear Referencia: con poder crear o editar referencias de
+          // Circuitos SMD (los mismos permisos que exige el servidor para
+          // guardar). Antes pedía 'gestion.ver', que es de Administración,
+          // así que un rol solo de Electrónica nunca veía esta tarjeta.
           const cardCrearReferencia = document.getElementById('cardCrearReferencia');
           if (cardCrearReferencia) {
-            cardCrearReferencia.style.display = tienePermiso('gestion.ver') ? 'flex' : 'none';
+            cardCrearReferencia.style.display = (tienePermiso('referencias.crear') || tienePermiso('referencias.editar')) ? 'flex' : 'none';
           }
 
           const cardWA = document.getElementById('cardWhatsApp');
@@ -457,7 +468,7 @@
           // ISO 2859 también terminaba saltándose el portal sin querer —
           // se completa la lista para que cualquier módulo aparte de SMD
           // mantenga a la persona en el portal.
-          const tieneOtroModulo = ['garantias.ver', 'gestion.ver', 'whatsapp.bot.ver', 'metrologia.ver', 'metrologia.gestion', 'metrologia.crear_referencia', 'metrologia.versiones', 'iso2859.ver', 'iso2859.gestion', 'calidad.ver', 'valores_cableado.ver', 'produccion.trazabilidad.ver', 'produccion.trazabilidad.gestionar', 'reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar', 'problemas.ver', 'problemas.crear', 'problemas.gestionar', 'problemas.eliminar']
+          const tieneOtroModulo = ['garantias.ver', 'garantias.dashboard', 'referencias.crear', 'referencias.editar', 'gestion.ver', 'whatsapp.bot.ver', 'metrologia.ver', 'metrologia.gestion', 'metrologia.crear_referencia', 'metrologia.versiones', 'iso2859.ver', 'iso2859.gestion', 'calidad.ver', 'valores_cableado.ver', 'produccion.trazabilidad.ver', 'produccion.trazabilidad.gestionar', 'reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar', 'problemas.ver', 'problemas.crear', 'problemas.gestionar', 'problemas.eliminar']
             .some(p => tienePermiso(p));
           if (!tieneOtroModulo) {
             location.href = 'smd.html';
