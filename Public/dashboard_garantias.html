@@ -290,26 +290,38 @@
         // solo redibuja si los datos cambiaron de verdad.
         let firmaDatos = null;
         let initEnCurso = false;
+        let intervaloRefresco = null;
 
-        async function init() {
+        // automatica = true solo en el refresco de cada 15 s (ver window.onload):
+        // ese refresco no cuenta como actividad para la sesión.
+        async function init(automatica = false) {
             // init() lo llama el propio tablero (al cargar y cada 15 s) y
             // también garantias.html al validar la sesión; se evita que dos
             // llamadas se crucen.
             if (initEnCurso) return;
             initEnCurso = true;
             try {
-                await cargarDatos();
+                await cargarDatos(automatica);
             } finally {
                 initEnCurso = false;
             }
         }
 
-        async function cargarDatos() {
+        async function cargarDatos(automatica = false) {
             try {
                 const token = localStorage.getItem('token') || (window.parent && window.parent.localStorage ? window.parent.localStorage.getItem('token') : null);
-                const res = await fetch('/api/garantias', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
+                const headers = { 'Authorization': 'Bearer ' + token };
+                if (automatica) headers['X-Actualizacion-Automatica'] = '1';
+                const res = await fetch('/api/garantias', { headers });
+                if (res.status === 401) {
+                    // La sesión se cerró por inactividad: se dejan de pedir
+                    // datos y se muestra el inicio de sesión de garantias.html.
+                    if (intervaloRefresco) { clearInterval(intervaloRefresco); intervaloRefresco = null; }
+                    try {
+                        if (window.parent !== window && typeof window.parent.mostrarLogin === 'function') window.parent.mostrarLogin();
+                    } catch (e) { /* sin acceso a la ventana principal */ }
+                    return;
+                }
                 const dbGarantias = await res.json();
 
                 if (!Array.isArray(dbGarantias)) {
@@ -800,7 +812,7 @@
 
         window.onload = () => {
             init();
-            setInterval(init, 15000);
+            intervaloRefresco = setInterval(() => init(true), 15000);
         };
     </script>
 </body>

@@ -65,7 +65,11 @@ function generarToken() {
 // Busca la sesión de un token, la invalida si lleva más de SESSION_INACTIVITY_MS
 // sin uso, y si sigue viva le renueva la marca de actividad. Devuelve null si el
 // token no existe o si la sesión ya expiró por inactividad.
-function obtenerSesionActiva(token) {
+// renovar = false: se revisa que la sesión siga viva pero NO se cuenta como
+// actividad (lo usan las actualizaciones automáticas de pantallas como el
+// Tablero de Garantías, que piden datos solas cada pocos segundos: si
+// contaran, la sesión no se cerraría nunca aunque la persona se haya ido).
+function obtenerSesionActiva(token, renovar = true) {
   const sesiones = cargarSesiones();
   const sesion = sesiones[token];
   if (!sesion) return null;
@@ -77,6 +81,7 @@ function obtenerSesionActiva(token) {
     return null;
   }
 
+  if (!renovar) return sesion;
   sesion.ultimaActividad = ahora;
   sesiones[token] = sesion;
   guardarSesiones(sesiones);
@@ -86,7 +91,11 @@ function obtenerSesionActiva(token) {
 function validarToken(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Token requerido' });
-  const sesion = obtenerSesionActiva(token);
+  // Las pantallas mandan este encabezado en sus actualizaciones automáticas
+  // (ver obtenerSesionActiva). Solo puede acortar la sesión de quien lo
+  // manda, nunca alargarla ni saltarse la validación.
+  const esAutomatica = req.headers['x-actualizacion-automatica'] === '1';
+  const sesion = obtenerSesionActiva(token, !esAutomatica);
   if (!sesion) return res.status(401).json({ error: 'Token inválido o sesión expirada' });
 
   req.usuario = sesion;

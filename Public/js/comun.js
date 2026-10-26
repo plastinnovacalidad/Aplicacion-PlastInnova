@@ -127,3 +127,32 @@ async function cargarPermisosConUsuarioActual() {
     return null;
   }
 }
+
+// ========================================================================
+// Mantener viva la sesión mientras la persona usa la pantalla.
+// El servidor cierra la sesión tras 1 hora sin actividad (SESSION_INACTIVITY_MS
+// en settings/paths.js), y antes solo contaba como actividad lo que llegaba al
+// servidor (abrir, buscar, guardar...). Quien pasaba mucho rato llenando un
+// formulario sin guardar perdía la sesión al final. Ahora, si hubo mouse,
+// teclado, scroll o toques en la pantalla, cada 5 minutos se le avisa al
+// servidor (GET /api/me, que ya renueva la sesión). Sin movimiento no se
+// avisa nada, así que la sesión de quien se va se sigue cerrando a la hora.
+// ========================================================================
+(function mantenerSesionConActividad() {
+  if (window.__seguimientoActividadSesion) return;
+  window.__seguimientoActividadSesion = true;
+  const CADA_MS = 5 * 60 * 1000;
+  let huboActividad = false;
+  const marcar = () => { huboActividad = true; };
+  ['mousemove', 'mousedown', 'keydown', 'input', 'wheel', 'scroll', 'touchstart'].forEach((evento) => {
+    window.addEventListener(evento, marcar, { passive: true, capture: true });
+  });
+  setInterval(() => {
+    if (!huboActividad) return;
+    huboActividad = false;
+    let tokenActual = null;
+    try { tokenActual = localStorage.getItem('token'); } catch (e) { /* sin acceso a localStorage */ }
+    if (!tokenActual) return;
+    fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + tokenActual }, cache: 'no-store' }).catch(() => {});
+  }, CADA_MS);
+})();
