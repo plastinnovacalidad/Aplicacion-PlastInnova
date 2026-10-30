@@ -83,8 +83,12 @@
 
     /* Login Overlay: diseño propio de esta página (tiene un subtítulo extra
        que las demás no tienen), pero el color ya usa la misma variable
-       --header-bg institucional de css/comun.css. */
-    .login-overlay { position: fixed; inset: 0; background: var(--header-bg, linear-gradient(135deg, #1046B1 0%, #2C43A2 100%)); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+       --header-bg institucional de css/comun.css.
+       Arranca oculto (display: none, igual que en css/comun.css): antes
+       arrancaba visible y, al volver desde un módulo, el login se veía un
+       momento mientras se confirmaba la sesión con /api/me. checkSession()
+       lo muestra solo si de verdad no hay sesión. */
+    .login-overlay { position: fixed; inset: 0; background: var(--header-bg, linear-gradient(135deg, #1046B1 0%, #2C43A2 100%)); display: none; align-items: center; justify-content: center; z-index: 2000; }
     .login-box { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 24px 56px rgba(17,27,67,.22); width: 380px; }
     .login-box h2 { text-align: center; margin-bottom: 8px; color: #12151A; font-size: 24px; font-weight: 700; }
     .login-box p { text-align: center; color: #6E7787; font-size: 13px; margin-bottom: 25px; }
@@ -125,7 +129,10 @@
     </div>
   </div>
 
-  <div class="main-portal">
+  <!-- Oculto hasta confirmar la sesión y aplicar los permisos (ver
+       checkSession): así no se ven por un instante tarjetas de módulos que
+       la persona no tiene, mientras responde /api/me. -->
+  <div class="main-portal" id="mainPortal" style="visibility: hidden;">
     <div class="portal-title">
       <h2>Seleccione un Módulo de Trabajo</h2>
       <p>Solo se muestran los módulos habilitados para su rol</p>
@@ -459,6 +466,7 @@
           // también el título de la sección — si no, queda un encabezado
           // "Piezas Plásticas" flotando sin nada debajo.
           actualizarSeccionesVisibles();
+          document.getElementById('mainPortal').style.visibility = '';
 
           // Si la persona no tiene acceso a ningún módulo aparte de SMD (por
           // ejemplo, Operario), se la manda directo a smd.html en vez de
