@@ -114,7 +114,7 @@
        Grid explícito de 3 columnas iguales (no "auto-fit"): siempre las 3
        parejas, nunca una sola descuadrada. */
     .valores-etapas-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
-    @media (max-width: 1000px) { .valores-etapas-row { grid-template-columns: 1fr; } }
+    @media (max-width: 1280px) { .valores-etapas-row { grid-template-columns: 1fr; } }
 
     .valores-etapa { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #fff; }
     .valores-etapa-header { color: #fff; font-size: 12px; font-weight: 700; padding: 8px 14px; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -133,6 +133,34 @@
     .valores-etapa-columna-label { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
 
     .valores-check-row { display: flex; gap: 20px; margin-bottom: 12px; }
+
+    /* Tipo de circuito + tabla de pruebas por cables (MIGRACIÓN #51). Cada
+       renglón: puntos de los cables que se conectan | corriente desde |
+       corriente hasta (mA) | potencia (W). */
+    .vp-tipo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 8px; font-size: 13px; }
+    .vp-tipo-lbl { font-weight: 700; color: #444; margin-right: 4px; }
+    .vp-tipo label { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; min-height: 40px; box-sizing: border-box; }
+    .vp-tipo label:has(input:checked) { border-color: var(--brand-primary); background: #f0f3ff; font-weight: 600; }
+    .vp-leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: #666; margin-bottom: 12px; }
+    .vp-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .vp-cables { display: inline-flex; gap: 2px; flex-shrink: 0; }
+    .vp-cable { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #9ca3af; display: inline-block; }
+    .vp-cable-blanco { background: #fff; }
+    .vp-cable-azul { background: #2563eb; }
+    .vp-cable-rojo { background: #dc2626; }
+    .vp-cable-amarillo { background: #facc15; }
+    .vp-cable-negro { background: #111; }
+    .vp-tabla { border-top: 1px dashed #e2e2e2; padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .vp-cab, .vp-ln { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+    .vp-cab { font-size: 10px; font-weight: 700; color: #999; letter-spacing: 0.02em; }
+    .vp-cab span:not(:first-child) { text-align: center; }
+    .vp-grupo-lbl { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; }
+    .vp-tag { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; font-weight: 600; color: #555; }
+    .vp-nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vp-ln input { width: 100%; min-width: 0; padding: 7px 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; text-align: right; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; outline: none; background: #fff; box-sizing: border-box; }
+    .vp-ln input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
+    .vp-ln input:disabled { background: #f3f4f6; color: #aaa; cursor: not-allowed; }
+    .vp-nota { font-size: 11px; color: #999; margin-top: 4px; }
 
     /* Casilla "No maneja Medias (Bajas)" — va antes de los 4 fieldsets,
        porque afecta campos de dos de ellos (Revisión y Prueba Mínimo). */
@@ -564,10 +592,10 @@
       ['posicion_punto', 'Posición punto', null],
       ['referencia_cable', 'Referencia cable', null],
     ];
+    // Corriente y potencia ya no van aquí: se leen/escriben con la tabla de
+    // pruebas por tipo de circuito (ver VC_VARIANTES_FORM más abajo).
     const CAMPOS_VALORES_TODOS = [
-      'voltaje_revision', 'amperaje_medias', 'potencia_medias', 'amperaje_altas', 'potencia_altas',
-      'voltaje_min', 'amperaje_min_medias', 'potencia_min_medias', 'amperaje_min_altas', 'potencia_min_altas',
-      'voltaje_max', 'amperaje_max', 'potencia_max',
+      'voltaje_revision', 'voltaje_min', 'voltaje_max',
       ...CAMPOS_CABLEADO_TEXTO.map(c => c[0]),
     ];
     // 'forma_cableado' no va en CAMPOS_VALORES_TODOS porque ya no es un
@@ -763,37 +791,140 @@
       }
     }
 
-    // Cada fieldset se arma en columnas: el voltaje aparte, y cada
-    // amperaje con su potencia correspondiente apilados en la misma
-    // columna (medias y altas por separado) — así potencia siempre queda
-    // justo debajo de su amperaje, en vez de acomodarse donde alcance en
-    // un grid genérico.
     // Algunas referencias no manejan valores de "Medias (Bajas)" por
     // diseño (solo Altas) — Julio pidió una forma de marcar eso a mano
-    // por versión, para que la alerta de "FALTAN VALORES" no los cuente
-    // como faltantes cuando en realidad no aplican. Estos 4 campos son
-    // los únicos que dependen de "Medias (Bajas)"; el voltaje se comparte
-    // con Altas, así que no se ve afectado.
-    const CAMPOS_MEDIAS_BAJAS = ['amperaje_medias', 'potencia_medias', 'amperaje_min_medias', 'potencia_min_medias'];
+    // por versión (ver onToggleNoAplicaMedias), para que la alerta de
+    // "FALTAN VALORES" no los cuente como faltantes.
 
-    // Al marcar/desmarcar la casilla, deshabilita (y limpia) o vuelve a
-    // habilitar esos 4 campos — así no queda un valor viejo guardado por
-    // error en un campo que se acaba de marcar como "no aplica".
-    function onToggleNoAplicaMedias(prefix) {
+    // ===== Tipo de circuito y pruebas por cable (MIGRACIÓN #51) =====
+    // Cada prueba es una combinación de cables: Bajas = blanco + azul,
+    // Altas = se le suma el rojo, y cada variante agrega sus cables:
+    //   Normal (3 cables):  solo la principal.
+    //   Bicolor (4 cables): Color 1 (principal) y Color 2 (+ amarillo).
+    //   Stop (5 cables):    Principal, Stop (+ negro) y Direccional (+ negro + amarillo).
+    // La principal usa los nombres de campo de siempre (amperaje_medias,
+    // amperaje_max, ...); las demás "<variante>_<prueba>_<funcion>_<medida>".
+    // La corriente se escribe en dos casillas (desde / hasta) y se guarda
+    // como "desde-hasta", igual que antes se escribía a mano.
+    const VC_TIPOS_FORM = [
+      { k: 'normal', n: 'Normal (3 cables)' },
+      { k: 'bicolor', n: 'Bicolor (4 cables)' },
+      { k: 'stop', n: 'Stop (5 cables)' },
+    ];
+    const VC_VARIANTES_FORM = [
+      { k: 'p', extra: [], tipos: ['normal', 'bicolor', 'stop'] },
+      { k: 'color2', n: 'Color 2', extra: ['amarillo'], tipos: ['bicolor'] },
+      { k: 'stop', n: 'Stop', extra: ['negro'], tipos: ['stop'] },
+      { k: 'direccional', n: 'Direccional', extra: ['negro', 'amarillo'], tipos: ['stop'] },
+    ];
+    const VC_CAMPO_PRINCIPAL = {
+      rev_bajas_amperaje: 'amperaje_medias', rev_bajas_potencia: 'potencia_medias',
+      rev_altas_amperaje: 'amperaje_altas', rev_altas_potencia: 'potencia_altas',
+      min_bajas_amperaje: 'amperaje_min_medias', min_bajas_potencia: 'potencia_min_medias',
+      min_altas_amperaje: 'amperaje_min_altas', min_altas_potencia: 'potencia_min_altas',
+      max_altas_amperaje: 'amperaje_max', max_altas_potencia: 'potencia_max',
+    };
+    const VC_NOMBRE_CABLE = { blanco: 'Blanco', azul: 'Azul', rojo: 'Rojo', amarillo: 'Amarillo', negro: 'Negro' };
+    // Máximo solo se prueba en Altas.
+    const vcFuncionesDe = (prueba) => (prueba === 'max' ? ['altas'] : ['bajas', 'altas']);
+    const vcClave = (variante, prueba, funcion, medida) => {
+      const k = `${prueba}_${funcion}_${medida}`;
+      return variante === 'p' ? VC_CAMPO_PRINCIPAL[k] : `${variante}_${k}`;
+    };
+    const vcNombrePrincipal = (tipo) => (tipo === 'bicolor' ? 'Color 1' : 'Principal');
+    const vcPuntos = (funcion, va) => {
+      const cables = ['blanco', 'azul', ...(funcion === 'altas' ? ['rojo'] : []), ...va.extra];
+      return `<span class="vp-cables" title="${cables.map(c => VC_NOMBRE_CABLE[c]).join(' + ')}">${cables.map(c => `<i class="vp-cable vp-cable-${c}"></i>`).join('')}</span>`;
+    };
+    // "725-765" -> ["725", "765"]; cualquier otra cosa (un solo número, o
+    // un valor viejo con dos rangos) va completa en "desde" para no perderla.
+    function vcPartirRango(v) {
+      const txt = (v === null || v === undefined) ? '' : String(v).trim();
+      const m = txt.match(/^(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)$/);
+      return m ? [m[1], m[2]] : [txt, ''];
+    }
+    function vcUnirRango(desde, hasta) {
+      const d = (desde || '').trim(), h = (hasta || '').trim();
+      return d && h ? `${d}-${h}` : (d || h);
+    }
+    function vcTipoActual(prefix) {
+      const sel = document.querySelector(`input[name="${prefix}_tipo_circuito"]:checked`);
+      return sel ? sel.value : 'normal';
+    }
+
+    // Muestra solo las pruebas del tipo elegido. Las de otros tipos se
+    // esconden pero no se borran (si alguien cambia el tipo por error y lo
+    // devuelve, no pierde lo que había escrito), y no se envían al guardar.
+    function onCambioTipoCircuito(prefix) {
+      const tipo = vcTipoActual(prefix);
+      document.querySelectorAll(`[data-vp-prefix="${prefix}"][data-variante]`).forEach(el => {
+        const va = VC_VARIANTES_FORM.find(v => v.k === el.dataset.variante);
+        el.style.display = va && va.tipos.includes(tipo) ? '' : 'none';
+      });
+      document.querySelectorAll(`[data-vp-prefix="${prefix}"] .vp-nombre-p`).forEach(el => { el.textContent = vcNombrePrincipal(tipo); });
+    }
+
+    // Al marcar "no maneja medias", deshabilita (y limpia) todas las
+    // casillas de Bajas, de todas las variantes — así no queda un valor
+    // viejo guardado por error en un campo que no aplica.
+    // Julio pidió confirmar antes de borrar: si la persona marca la casilla
+    // (desdeUsuario = true) y hay valores de Bajas escritos, se pregunta
+    // primero; si cancela, la casilla se desmarca y no se borra nada. Cuando
+    // se llama al cargar una ficha (llenarCamposValores) no se pregunta.
+    function onToggleNoAplicaMedias(prefix, desdeUsuario = false) {
       const chk = document.getElementById(`${prefix}_no_aplica_medias`);
       const marcado = !!(chk && chk.checked);
-      CAMPOS_MEDIAS_BAJAS.forEach(n => {
-        const el = document.getElementById(`${prefix}_${n}`);
-        if (!el) return;
+      const camposBajas = document.querySelectorAll(`[data-vp-prefix="${prefix}"][data-funcion="bajas"] input`);
+      if (marcado && desdeUsuario) {
+        const conValor = Array.from(camposBajas).filter(el => el.value.trim() !== '').length;
+        if (conValor > 0) {
+          const ok = confirm(`Hay ${conValor} casilla${conValor === 1 ? '' : 's'} de "Medias (Bajas)" con valores.\n\nSi marcas que esta versión no maneja Medias, esos valores se borran (se pierden al guardar).\n\n¿Seguro que quieres borrarlos?`);
+          if (!ok) {
+            chk.checked = false;
+            return;
+          }
+        }
+      }
+      camposBajas.forEach(el => {
         el.disabled = marcado;
         if (marcado) el.value = '';
       });
     }
 
+    function renderTablaPruebas(prefix, prueba) {
+      const grupos = vcFuncionesDe(prueba).map(funcion => `
+              <div class="vp-grupo-lbl">${funcion === 'bajas' ? 'Bajas' : 'Altas'}</div>
+              ${VC_VARIANTES_FORM.map(va => `
+              <div class="vp-ln" data-vp-prefix="${prefix}" data-variante="${va.k}" data-funcion="${funcion}">
+                <span class="vp-tag" title="${funcion === 'bajas' ? 'Bajas' : 'Altas'} · ${va.k === 'p' ? 'Principal' : va.n}">${vcPuntos(funcion, va)}<span class="vp-nombre${va.k === 'p' ? ' vp-nombre-p' : ''}">${va.k === 'p' ? 'Principal' : va.n}</span></span>
+                <input type="text" inputmode="decimal" id="${prefix}__${vcClave(va.k, prueba, funcion, 'amperaje')}__desde" aria-label="Corriente desde (mA)">
+                <input type="text" inputmode="decimal" id="${prefix}__${vcClave(va.k, prueba, funcion, 'amperaje')}__hasta" aria-label="Corriente hasta (mA)">
+                <input type="text" inputmode="decimal" id="${prefix}__${vcClave(va.k, prueba, funcion, 'potencia')}" aria-label="Potencia (W)">
+              </div>`).join('')}`).join('');
+      return `
+            <div class="vp-tabla">
+              <div class="vp-cab"><span>Prueba</span><span>Desde (mA)</span><span>Hasta (mA)</span><span>Potencia (W)</span></div>
+              ${grupos}
+              ${prueba === 'max' ? '<div class="vp-nota">Máximo solo se prueba en Altas.</div>' : ''}
+            </div>`;
+    }
+
     function renderCamposValores(prefix) {
       return `
+        <div class="vp-tipo">
+          <span class="vp-tipo-lbl">Tipo de circuito</span>
+          ${VC_TIPOS_FORM.map((t, i) => `
+          <label><input type="radio" name="${prefix}_tipo_circuito" value="${t.k}"${i === 0 ? ' checked' : ''} onchange="onCambioTipoCircuito('${prefix}')"> ${t.n}</label>`).join('')}
+        </div>
+        <div class="vp-leyenda">
+          <span><i class="vp-cable vp-cable-blanco"></i> Blanco: tierra</span>
+          <span><i class="vp-cable vp-cable-azul"></i> Azul: bajas</span>
+          <span><i class="vp-cable vp-cable-rojo"></i> Rojo: altas</span>
+          <span><i class="vp-cable vp-cable-amarillo"></i> Amarillo: color 2 / direccional</span>
+          <span><i class="vp-cable vp-cable-negro"></i> Negro: stop</span>
+        </div>
         <label class="valores-no-aplica-medias">
-          <input type="checkbox" id="${prefix}_no_aplica_medias" onchange="onToggleNoAplicaMedias('${prefix}')">
+          <input type="checkbox" id="${prefix}_no_aplica_medias" onchange="onToggleNoAplicaMedias('${prefix}', true)">
           Esta versión no maneja valores de "Medias (Bajas)" (solo Altas)
         </label>
         <div class="valores-etapas-row">
@@ -801,44 +932,21 @@
             <div class="valores-etapa-header"><i class="fa-solid fa-wrench"></i> Revisión (14V)</div>
             <div class="valores-etapa-body">
               ${campoValorHtml(prefix, 'voltaje_revision', 'Voltaje')}
-              <div class="valores-etapa-medias-altas">
-                <div class="valores-etapa-columna">
-                  <div class="valores-etapa-columna-label">Medias (bajas)</div>
-                  ${campoValorHtml(prefix, 'amperaje_medias', 'Current')}
-                  ${campoValorHtml(prefix, 'potencia_medias', 'Power')}
-                </div>
-                <div class="valores-etapa-columna">
-                  <div class="valores-etapa-columna-label">Altas</div>
-                  ${campoValorHtml(prefix, 'amperaje_altas', 'Current')}
-                  ${campoValorHtml(prefix, 'potencia_altas', 'Power')}
-                </div>
-              </div>
+              ${renderTablaPruebas(prefix, 'rev')}
             </div>
           </div>
           <div class="valores-etapa valores-etapa-azul">
             <div class="valores-etapa-header"><i class="fa-solid fa-arrow-down"></i> Prueba Mínimo</div>
             <div class="valores-etapa-body">
               ${campoValorHtml(prefix, 'voltaje_min', 'Voltaje')}
-              <div class="valores-etapa-medias-altas">
-                <div class="valores-etapa-columna">
-                  <div class="valores-etapa-columna-label">Medias (bajas)</div>
-                  ${campoValorHtml(prefix, 'amperaje_min_medias', 'Current')}
-                  ${campoValorHtml(prefix, 'potencia_min_medias', 'Power')}
-                </div>
-                <div class="valores-etapa-columna">
-                  <div class="valores-etapa-columna-label">Altas</div>
-                  ${campoValorHtml(prefix, 'amperaje_min_altas', 'Current')}
-                  ${campoValorHtml(prefix, 'potencia_min_altas', 'Power')}
-                </div>
-              </div>
+              ${renderTablaPruebas(prefix, 'min')}
             </div>
           </div>
           <div class="valores-etapa valores-etapa-naranja">
             <div class="valores-etapa-header"><i class="fa-solid fa-arrow-up"></i> Prueba Máximo</div>
             <div class="valores-etapa-body">
               ${campoValorHtml(prefix, 'voltaje_max', 'Voltaje')}
-              ${campoValorHtml(prefix, 'amperaje_max', 'Current')}
-              ${campoValorHtml(prefix, 'potencia_max', 'Power')}
+              ${renderTablaPruebas(prefix, 'max')}
             </div>
           </div>
         </div>
@@ -869,6 +977,20 @@
       payload.empujar_cables = ec && ec.checked ? 1 : 0;
       payload.no_aplica_medias = nam && nam.checked ? 1 : 0;
       payload.forma_cableado = obtenerFormaCableadoActual(prefix);
+      // Corriente y potencia de cada prueba. Solo se mandan las variantes
+      // del tipo elegido (la principal siempre); las demás se conservan en
+      // la base tal como estaban.
+      const tipo = vcTipoActual(prefix);
+      payload.tipo_circuito = tipo;
+      const valor = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+      VC_VARIANTES_FORM.filter(va => va.tipos.includes(tipo)).forEach(va => {
+        ['rev', 'min', 'max'].forEach(prueba => vcFuncionesDe(prueba).forEach(funcion => {
+          const kAmp = vcClave(va.k, prueba, funcion, 'amperaje');
+          const kPot = vcClave(va.k, prueba, funcion, 'potencia');
+          payload[kAmp] = vcUnirRango(valor(`${prefix}__${kAmp}__desde`), valor(`${prefix}__${kAmp}__hasta`));
+          payload[kPot] = valor(`${prefix}__${kPot}`);
+        }));
+      });
       return payload;
     }
 
@@ -883,6 +1005,24 @@
       if (cp) cp.checked = (data.cortar_puntas === 1 || data.cortar_puntas === true || data.cortar_puntas === '1');
       if (ec) ec.checked = (data.empujar_cables === 1 || data.empujar_cables === true || data.empujar_cables === '1');
       if (nam) nam.checked = (data.no_aplica_medias === 1 || data.no_aplica_medias === true || data.no_aplica_medias === '1');
+
+      // Tipo de circuito y corriente/potencia de todas las pruebas (también
+      // las de variantes que el tipo actual no usa, por si se cambia).
+      const tipo = VC_TIPOS_FORM.some(t => t.k === data.tipo_circuito) ? data.tipo_circuito : 'normal';
+      const radio = document.querySelector(`input[name="${prefix}_tipo_circuito"][value="${tipo}"]`);
+      if (radio) radio.checked = true;
+      const poner = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      VC_VARIANTES_FORM.forEach(va => {
+        ['rev', 'min', 'max'].forEach(prueba => vcFuncionesDe(prueba).forEach(funcion => {
+          const kAmp = vcClave(va.k, prueba, funcion, 'amperaje');
+          const kPot = vcClave(va.k, prueba, funcion, 'potencia');
+          const [desde, hasta] = vcPartirRango(data[kAmp]);
+          poner(`${prefix}__${kAmp}__desde`, desde);
+          poner(`${prefix}__${kAmp}__hasta`, hasta);
+          poner(`${prefix}__${kPot}`, (data[kPot] === null || data[kPot] === undefined) ? '' : data[kPot]);
+        }));
+      });
+      onCambioTipoCircuito(prefix);
       onToggleNoAplicaMedias(prefix);
 
       // Forma de cableado: si el valor guardado no está en la lista de
