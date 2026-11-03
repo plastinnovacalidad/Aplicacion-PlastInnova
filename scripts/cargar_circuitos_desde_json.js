@@ -35,7 +35,7 @@ const { DB_PATH, PORT } = require('../settings/paths');
 const TABLAS = [
   ['Referencias', ['id', 'codigo_base', 'creado_por', 'created_at', 'activa']],
   ['Versiones', ['id', 'referencia_id', 'version', 'imagen_ruta', 'estado', 'creado_por', 'created_at', 'necesita_prueba']],
-  ['elec_fotos_cableado', ['id', 'forma_cableado', 'url_foto']],
+  ['elec_fotos_cableado', ['id', 'forma_cableado']], // url_foto (links de Drive) se quitó en la MIGRACIÓN #52
   ['elec_mediciones', ['id', 'version_id', 'voltaje_revision', 'amperaje_medias', 'amperaje_altas', 'potencia_medias', 'potencia_altas']],
   ['elec_rangos_revision', ['id', 'version_id', 'voltaje_min', 'voltaje_max', 'amperaje_min_bajas', 'amperaje_min_altas', 'amperaje_max', 'potencia_min_bajas', 'potencia_min_altas', 'potencia_max']],
   ['elec_config_cableado', ['id', 'version_id', 'cortar_puntas', 'posicion_punto', 'empujar_cables', 'forma_cableado', 'referencia_cable', 'no_aplica_medias']],

@@ -1285,8 +1285,7 @@ async function inicializarBaseDatos() {
       );
       CREATE TABLE IF NOT EXISTS elec_fotos_cableado (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        forma_cableado TEXT NOT NULL UNIQUE,
-        url_foto TEXT NOT NULL
+        forma_cableado TEXT NOT NULL UNIQUE
       );
       CREATE INDEX IF NOT EXISTS idx_elec_config_forma ON elec_config_cableado(forma_cableado);
     `);
@@ -2505,6 +2504,29 @@ async function inicializarBaseDatos() {
     `);
   } catch (e) {
     console.error('⚠️ Error preparando tipo de circuito en Valores y Cableado (MIGRACIÓN #51):', e.message);
+  }
+
+  // MIGRACIÓN #52 (03/11/2026, pedido por Julio): elec_fotos_cableado.url_foto
+  // era el link de Google Drive de la app anterior. Las fotos de forma de
+  // cableado ahora son archivos en CARPETA_FOTOS_CABLEADO (se buscan por el
+  // nombre de la forma) y los 93 links ya se vaciaron con
+  // scripts/revisar_fotos_cableado.js --vaciar-links, así que la columna se
+  // quita. La tabla se queda: es el catálogo de formas (elec_config_cableado
+  // apunta a ella). Por seguridad solo se quita si ya no le queda ningún
+  // link con datos; si queda alguno, se avisa y no se toca.
+  try {
+    const colsFotos = (await db.all('PRAGMA table_info(elec_fotos_cableado)')).map(c => c.name);
+    if (colsFotos.includes('url_foto')) {
+      const { n } = await db.get("SELECT COUNT(*) AS n FROM elec_fotos_cableado WHERE url_foto IS NOT NULL AND TRIM(url_foto) <> ''");
+      if (n > 0) {
+        console.warn(`⚠️ elec_fotos_cableado.url_foto todavía tiene ${n} link(s) de Drive: no se quita la columna (correr scripts/revisar_fotos_cableado.js --vaciar-links).`);
+      } else {
+        await db.run('ALTER TABLE elec_fotos_cableado DROP COLUMN url_foto');
+        console.log('➖ Columna url_foto (links de Google Drive) quitada de elec_fotos_cableado.');
+      }
+    }
+  } catch (e) {
+    console.error('⚠️ Error quitando url_foto de elec_fotos_cableado (MIGRACIÓN #52):', e.message);
   }
 
   // Usuarios por defecto si está vacío

@@ -128,8 +128,10 @@ async function main() {
   let fotosNuevas = 0;
   for (const f of datos.fotos_cableado) {
     const resultado = await db.run(
-      'INSERT OR IGNORE INTO elec_fotos_cableado (forma_cableado, url_foto) VALUES (?, ?)',
-      [f.forma_cableado, f.url_foto]
+      // El link de Drive (f.url_foto) ya no se guarda: la columna se quitó en
+      // la MIGRACIÓN #52 y la foto sale del archivo con el nombre de la forma.
+      'INSERT OR IGNORE INTO elec_fotos_cableado (forma_cableado) VALUES (?)',
+      [f.forma_cableado]
     );
     if (resultado.changes > 0) fotosNuevas++;
   }

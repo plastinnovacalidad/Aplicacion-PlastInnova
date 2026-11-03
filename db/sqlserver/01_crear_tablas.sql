@@ -151,7 +151,6 @@ CREATE TABLE [calidad].[recomendaciones] (
 CREATE TABLE [calidad].[elec_fotos_cableado] (
     [id] INT IDENTITY(1,1) NOT NULL,
     [forma_cableado] NVARCHAR(100) NOT NULL,
-    [url_foto] NVARCHAR(500) NOT NULL,
     CONSTRAINT [PK_elec_fotos_cableado] PRIMARY KEY ([id]),
     CONSTRAINT [UQ_elec_fotos_cableado_forma_cableado] UNIQUE ([forma_cableado])
 );

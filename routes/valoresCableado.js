@@ -138,9 +138,9 @@ router.get('/valores-cableado/foto-circuito/:version_id', validarToken, puedeVer
 // Drive (elec_fotos_cableado.url_foto); ahora Julio sube el archivo real y
 // se busca por nombre exacto (ej. "1017.jpg") primero en
 // CARPETA_FOTOS_CABLEADO y, si no aparece ahí, en las demás carpetas de
-// fotos conocidas (por si el archivo quedó movido). Si tampoco hay archivo,
-// se cae al link de Drive viejo como respaldo, para no perder las fotos que
-// todavía no se han vuelto a subir como archivo.
+// fotos conocidas (por si el archivo quedó movido). El respaldo con el link
+// de Drive viejo se quitó el 03/11/2026 (MIGRACIÓN #52): las 93 formas ya
+// tienen su archivo en la carpeta de P:.
 router.get('/valores-cableado/foto-cableado/:forma_cableado', validarToken, puedeVer, asyncHandler(async (req, res) => {
   const formaCableado = decodeURIComponent(req.params.forma_cableado || '');
   if (!formaCableado) return res.status(400).json({ error: 'forma_cableado requerido' });
@@ -155,9 +155,6 @@ router.get('/valores-cableado/foto-cableado/:forma_cableado', validarToken, pued
     const mime = ext === 'jpg' ? 'jpeg' : ext;
     return res.json({ tipo: 'archivo', data: `data:image/${mime};base64,${buffer.toString('base64')}` });
   }
-
-  const urlLegacy = await valoresData.obtenerUrlFotoCableadoLegacy(formaCableado);
-  if (urlLegacy) return res.json({ tipo: 'url', url: urlLegacy });
 
   return res.status(404).json({ error: 'No hay foto de cableado para esta forma' });
 }));

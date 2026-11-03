@@ -267,7 +267,7 @@ async function guardarFichaVersion(versionId, datos = {}) {
   //    archivo en CARPETA_FOTOS_CABLEADO, no en esa tabla).
   // Ahora "" se guarda como "sin forma" (NULL), una forma ya conocida se
   // reconoce aunque cambien mayúsculas/minúsculas, y una forma nueva se
-  // registra en elec_fotos_cableado (sin enlace; su foto sale del archivo).
+  // registra en elec_fotos_cableado (su foto sale del archivo con ese nombre).
   let formaCableado = typeof datos.forma_cableado === 'string' ? datos.forma_cableado.trim() : (datos.forma_cableado ?? null);
   if (!formaCableado) formaCableado = null;
   // Tipo de circuito: si no viene (o no es uno de los 3 válidos) se deja el
@@ -276,7 +276,7 @@ async function guardarFichaVersion(versionId, datos = {}) {
   if (formaCableado) {
     const existente = await db.get('SELECT forma_cableado FROM elec_fotos_cableado WHERE LOWER(forma_cableado) = LOWER(?)', [formaCableado]);
     if (existente) formaCableado = existente.forma_cableado;
-    else await db.run("INSERT INTO elec_fotos_cableado (forma_cableado, url_foto) VALUES (?, '')", [formaCableado]);
+    else await db.run('INSERT INTO elec_fotos_cableado (forma_cableado) VALUES (?)', [formaCableado]);
   }
 
   await db.run(
@@ -343,16 +343,6 @@ async function guardarFichaVersion(versionId, datos = {}) {
   }
 }
 
-// Link de Google Drive "de siempre" para una forma de cableado — se usa
-// solo como respaldo cuando todavía no se ha subido el archivo real (ver
-// routes/valoresCableado.js). El día que ya no quede ningún link viejo sin
-// reemplazar, esta consulta deja de encontrar nada y no pasa nada raro.
-async function obtenerUrlFotoCableadoLegacy(formaCableado) {
-  const db = getDb();
-  const row = await db.get('SELECT url_foto FROM elec_fotos_cableado WHERE forma_cableado = ?', [formaCableado]);
-  return row && row.url_foto ? row.url_foto : null;
-}
-
 // Lista de valores de "forma_cableado" que ya existen en la base de datos —
 // se usa para llenar el desplegable en Crear/Editar Referencia en vez de
 // dejar ese campo como texto libre (así se reusa una forma ya conocida en
@@ -382,7 +372,6 @@ module.exports = {
   existeVersion,
   obtenerFichaVersion,
   guardarFichaVersion,
-  obtenerUrlFotoCableadoLegacy,
   CAMPOS_VARIANTES,
   VARIANTES_POR_TIPO,
 };
