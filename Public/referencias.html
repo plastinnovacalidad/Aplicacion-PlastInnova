@@ -134,13 +134,6 @@
 
     .valores-check-row { display: flex; gap: 20px; margin-bottom: 12px; }
 
-    /* Escoger la foto (ruta) en "Modificación de versión actual". */
-    .modif-foto-picker { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-    .modif-foto-picker input { padding: 9px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
-    .modif-lista-fotos { width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; padding: 4px; }
-    .modif-lista-fotos option { padding: 5px 6px; }
-    .modif-foto-picker small { color: #777; font-size: 11px; word-break: break-all; }
-
     /* Tipo de circuito + tabla de pruebas por cables (MIGRACIÓN #51). Cada
        renglón: puntos de los cables que se conectan | corriente desde |
        corriente hasta (mA) | potencia (W). */
@@ -195,7 +188,7 @@
        Valores y Cableado, y solo si la forma ya existía de antes). */
     .valores-foto-cableado { display: flex; align-items: center; gap: 14px; padding-top: 12px; border-top: 1px dashed #e2e2e2; }
     .valores-foto-preview { width: 90px; height: 70px; border-radius: 8px; border: 1px solid #ddd; background: #fafbfc; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
-    .valores-foto-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .valores-foto-preview img { width: 100%; height: 100%; object-fit: contain; }
     .valores-foto-placeholder { font-size: 10px; color: #999; text-align: center; padding: 4px; line-height: 1.3; }
     .valores-foto-info { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
     .valores-foto-info small { color: #999; font-size: 11px; }
@@ -386,19 +379,15 @@
               <div class="ref-edit-right">
                 <div class="section-box" style="margin-bottom:0;">
                   <h4><i class="fa-solid fa-pen-to-square"></i> Modificación de versión actual</h4>
-                  <p class="desc">Escoge una foto que ya está en las carpetas de fotos. La app guarda su ruta (no la sube ni la mueve) y manda la foto anterior a obsoletas.</p>
+                  <p class="desc">Sube la foto para la versión actual (no se crea una versión nueva). Si ya tenía foto, la anterior va a obsoletas; si no tenía, se le agrega.</p>
                   <div class="form-grid">
-                    <label>Foto que queda en la versión *</label>
-                    <div class="modif-foto-picker">
-                      <input type="text" id="modifBuscarFoto" placeholder="Escribe parte del nombre o de la carpeta, ej: 1034-AM" autocomplete="off" oninput="filtrarFotosModif()" onfocus="cargarRutasFotosModif()">
-                      <select id="modifRutaFoto" size="7" class="modif-lista-fotos" onchange="mostrarRutaElegidaModif()"></select>
-                      <small id="modifFotosInfo">Toca el buscador para cargar las fotos de las carpetas activas.</small>
-                    </div>
+                    <label>Nueva imagen *</label>
+                    <input type="file" id="modifImagen" accept="image/*" class="file-input">
                     <label>Motivo del cambio *</label>
                     <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza la imagen actual?"></textarea>
                   </div>
                   <div class="form-actions" style="margin-top:15px;">
-                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()"><i class="fa-solid fa-rotate"></i> Cambiar foto de la versión</button>
+                    <button class="btn-primary" id="btnModifVer" onclick="modificarVersionActual()"><i class="fa-solid fa-rotate"></i> Subir foto a la versión actual</button>
                   </div>
                   <div class="form-msg" id="modifMsg"></div>
                 </div>
@@ -1530,73 +1519,32 @@
       } catch (e) { alert('Error de conexión'); }
     }
 
-    // ===== Modificación de versión: escoger una foto que ya existe =====
-    // Julio pidió (03/11/2026) que al modificar la versión la app solo tome
-    // la ruta de la foto y no mueva ni copie archivos (en E:\ ni siquiera
-    // puede escribir). Se lista lo que hay en las carpetas activas
-    // (GET /api/rutas-fotos) y se filtra mientras se escribe.
-    let rutasFotosModif = null;
-    async function cargarRutasFotosModif(forzar = false) {
-      const buscar = document.getElementById('modifBuscarFoto');
-      // Si está vacío, se arranca con la base de la referencia (ej. "1034").
-      if (buscar && !buscar.value && datosEditando && datosEditando.codigo_base) {
-        const partes = String(datosEditando.codigo_base).split('/');
-        buscar.value = partes.length > 2 ? partes[1] : '';
-      }
-      if (rutasFotosModif && !forzar) { filtrarFotosModif(); return; }
-      const info = document.getElementById('modifFotosInfo');
-      info.textContent = 'Cargando fotos de las carpetas activas…';
-      try {
-        const res = await fetch('/api/rutas-fotos', { headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        rutasFotosModif = (res.ok && Array.isArray(data.rutas)) ? data.rutas : [];
-      } catch (e) { rutasFotosModif = []; }
-      filtrarFotosModif();
-    }
-    function filtrarFotosModif() {
-      const sel = document.getElementById('modifRutaFoto');
-      const info = document.getElementById('modifFotosInfo');
-      if (!rutasFotosModif) { cargarRutasFotosModif(); return; }
-      const palabras = document.getElementById('modifBuscarFoto').value.toLowerCase().split(/\s+/).filter(Boolean);
-      const coinciden = rutasFotosModif.filter(r => { const t = r.toLowerCase(); return palabras.every(p => t.includes(p)); });
-      const MAX = 200;
-      sel.innerHTML = coinciden.slice(0, MAX).map(r => `<option value="${escapeHtml(r)}" title="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
-      info.textContent = coinciden.length === 0
-        ? 'Ninguna foto coincide. Revisa el nombre o que la foto esté en una carpeta activa.'
-        : `${coinciden.length} foto(s) coinciden${coinciden.length > MAX ? ` (se muestran ${MAX}; escribe más para afinar)` : ''}. Toca la que va a quedar.`;
-    }
-    function mostrarRutaElegidaModif() {
-      const sel = document.getElementById('modifRutaFoto');
-      const info = document.getElementById('modifFotosInfo');
-      if (sel.value) info.textContent = `Foto elegida: ${sel.value}`;
-    }
-
     async function modificarVersionActual() {
       if (!datosEditando || !datosEditando.codigo_base) return;
-      const ruta = document.getElementById('modifRutaFoto').value;
+      const fileInput = document.getElementById('modifImagen');
       const motivo = document.getElementById('modifMotivo').value.trim();
       const msg = document.getElementById('modifMsg');
       msg.style.display = 'none';
-      if (!ruta) { alert('Escoge la foto que va a quedar en la versión'); return; }
+      if (fileInput.files.length === 0) { alert('Seleccione la nueva imagen'); return; }
       if (!motivo) { alert('Ingrese el motivo del cambio'); return; }
+
+      const fd = new FormData();
+      fd.append('imagen', fileInput.files[0]);
+      fd.append('motivo', motivo);
 
       try {
         const res = await fetch(`/api/referencias/${encodeURIComponent(datosEditando.codigo_base)}/modificar-version`, {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imagen_ruta: ruta, motivo })
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
         });
         const data = await res.json();
         if (res.ok) {
           msg.className = 'form-msg success'; msg.style.display = 'block';
           const fa = data.foto_anterior || {};
-          msg.textContent = 'Versión modificada: quedó con la foto elegida.' + (
+          msg.textContent = 'Foto guardada en la versión actual.' + (
             fa.movida ? ' La foto anterior se movió a obsoletas.'
             : fa.destino ? ' Quedó una copia de la foto anterior en obsoletas (no se pudo quitar de su carpeta).'
-            : fa.motivo ? ` La foto anterior no se movió: ${fa.motivo}.` : '');
-          document.getElementById('modifBuscarFoto').value = '';
-          document.getElementById('modifRutaFoto').innerHTML = '';
-          document.getElementById('modifFotosInfo').textContent = 'Toca el buscador para escoger otra foto.';
+            : fa.motivo ? ` (${fa.motivo}).` : '');
+          document.getElementById('modifImagen').value = '';
           document.getElementById('modifMotivo').value = '';
           await cargarDatosEdicion(referenciaEditando, true);
         } else {
