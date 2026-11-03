@@ -165,6 +165,16 @@ inicializarBaseDatos().then(() => {
   // el siguiente ciclo, sin tumbar el servidor (ver scripts/sincronizar_produccion.js).
   // esAutomatico=true: este ciclo SÍ cuenta para el contador de fallos consecutivos
   // y puede disparar alertas de WhatsApp.
+  //
+  // 03/11/2026 (pedido por Julio): por ahora no se está usando, y leer esas
+  // hojas de Excel al arrancar hacía que el servidor tardara en responder.
+  // Queda APAGADA salvo que el .env tenga SINCRONIZAR_EXCEL_AUTOMATICO=1.
+  // El botón de "refrescar" de Producción (POST /api/produccion/refrescar)
+  // sigue funcionando para sincronizar a mano cuando haga falta.
+  if (process.env.SINCRONIZAR_EXCEL_AUTOMATICO !== '1') {
+    console.log('⏸️  Sincronización automática con Excel (Calidad/Lotes/Producción) apagada. Para activarla: SINCRONIZAR_EXCEL_AUTOMATICO=1 en el .env.');
+    return;
+  }
   const ejecutarSincronizacionProduccion = async () => {
     try {
       await sincronizarProduccion(false, true);
