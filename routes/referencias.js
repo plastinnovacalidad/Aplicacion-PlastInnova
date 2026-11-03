@@ -10,7 +10,7 @@ const { aplicarMarcaDeAgua } = require('../utils/logo');
 const { validarOBorrar } = require('../utils/validarArchivo');
 const { siguienteVersionAutomatica } = require('../utils/versiones');
 const { asyncHandler } = require('../middleware/errores');
-const { enTransaccion } = require('../db/connection');
+const { enTransaccion, getDb } = require('../db/connection');
 const refData = require('../data/referencias');
 const valoresData = require('../data/valoresCableado');
 
@@ -28,15 +28,49 @@ const router = express.Router();
 async function retirarOtrasVersionesActivasConArchivos(referenciaId, idQueQuedaActiva) {
   const strays = await refData.listarOtrasVersionesActivas(referenciaId, idQueQuedaActiva);
   for (const stray of strays) {
-    if (stray.imagen_ruta && fs.existsSync(stray.imagen_ruta)) {
-      const fechaSufijo = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const ext = path.extname(stray.imagen_ruta);
-      const nombreBase = path.basename(stray.imagen_ruta, ext);
-      const destinoObsoleto = path.join(OBSOLETAS_DIR, nombreBase + '_' + fechaSufijo + '_huerfana' + ext);
-      moverArchivo(stray.imagen_ruta, destinoObsoleto);
-      await refData.marcarVersionObsoletaConRuta(destinoObsoleto, stray.id);
-    } else {
-      await refData.marcarVersionObsoleta(stray.id);
+    const r = await enviarFotoAObsoletas(stray.imagen_ruta, '_huerfana', stray.id);
+    if (r.destino) await refData.marcarVersionObsoletaConRuta(r.destino, stray.id);
+    else await refData.marcarVersionObsoleta(stray.id);
+  }
+}
+
+// Manda la foto que deja de usarse a uploads/obsoletas (03/11/2026, pedido
+// por Julio: al cambiar la foto, ya sea modificando la versión o con una
+// versión nueva, la anterior va a obsoletas). Cuidados:
+//  - Si otra versión ACTIVA usa la misma foto (ej. las fotos "Todos" que
+//    comparten varios colores), no se mueve: se le quitaría la foto a esa
+//    otra versión.
+//  - Si la foto está en una carpeta donde la app no puede borrar (E:\ da
+//    "EPERM"), se deja una copia en obsoletas y la original se queda donde
+//    está, en vez de fallar todo el cambio.
+// Devuelve { destino, movida, motivo }: destino = ruta en obsoletas (o null
+// si no se mandó nada), movida = si la original se quitó de su carpeta.
+async function enviarFotoAObsoletas(ruta, sufijo, idVersion, rutaNueva = null) {
+  if (!ruta || !fs.existsSync(ruta)) return { destino: null, movida: false, motivo: 'no existe en disco' };
+  if (rutaNueva && path.resolve(ruta).toLowerCase() === path.resolve(rutaNueva).toLowerCase()) {
+    return { destino: null, movida: false, motivo: 'es la misma foto nueva' };
+  }
+  const { n } = await getDb().get(
+    "SELECT COUNT(*) AS n FROM versiones WHERE estado = 'activa' AND id <> ? AND LOWER(imagen_ruta) = LOWER(?)",
+    [idVersion, ruta]
+  );
+  if (n > 0) return { destino: null, movida: false, motivo: `la usan otras ${n} versión(es) activa(s)` };
+
+  const fechaSufijo = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const ext = path.extname(ruta);
+  const destino = path.join(OBSOLETAS_DIR, path.basename(ruta, ext) + '_' + fechaSufijo + sufijo + ext);
+  try {
+    moverArchivo(ruta, destino);
+    return { destino, movida: true, motivo: null };
+  } catch (e) {
+    // moverArchivo copia y luego borra: si la copia quedó y lo que falló fue
+    // borrar la original (sin permiso), se acepta la copia.
+    if (fs.existsSync(destino)) return { destino, movida: false, motivo: `no se pudo quitar de su carpeta (${e.code || e.message}); quedó una copia en obsoletas` };
+    try {
+      fs.copyFileSync(ruta, destino);
+      return { destino, movida: false, motivo: `no se pudo quitar de su carpeta (${e.code || e.message}); quedó una copia en obsoletas` };
+    } catch (e2) {
+      throw new Error(`No se pudo mandar la foto anterior a obsoletas: ${e2.message}`);
     }
   }
 }
@@ -166,18 +200,14 @@ router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerir
       // hay un archivo en disco que mover.
       let rutaObsoleta = null;
       if (versionActiva) {
-        const rutaAnterior = versionActiva.imagen_ruta;
-        if (rutaAnterior && fs.existsSync(rutaAnterior)) {
-          const fechaSufijo = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-          const ext = path.extname(rutaAnterior);
-          const nombreBase = path.basename(rutaAnterior, ext);
-          const destinoObsoleto = path.join(OBSOLETAS_DIR, nombreBase + '_' + fechaSufijo + ext);
-          moverArchivo(rutaAnterior, destinoObsoleto);
-          rutaObsoleta = destinoObsoleto;
-          await refData.marcarVersionObsoletaConRuta(destinoObsoleto, versionActiva.id);
+        const r = await enviarFotoAObsoletas(versionActiva.imagen_ruta, '', versionActiva.id);
+        if (r.destino) {
+          rutaObsoleta = r.destino;
+          await refData.marcarVersionObsoletaConRuta(r.destino, versionActiva.id);
         } else {
           await refData.marcarVersionObsoleta(versionActiva.id);
         }
+        if (r.motivo && versionActiva.imagen_ruta) console.log(`📁 Foto anterior de ${codigoBase} (${versionActiva.imagen_ruta}): ${r.motivo}`);
       }
 
       const ext = path.extname(req.file.originalname);
@@ -231,26 +261,52 @@ router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerir
 });
 
 // Modificar versión actual (reemplaza imagen, misma versión, mueve anterior a obsoletas)
+// Modificación de la versión actual: SOLO cambia la ruta de la foto.
+// 03/11/2026 (pedido por Julio): antes se subía una imagen y la app la
+// copiaba a la carpeta de la foto anterior (y mandaba la anterior a
+// uploads/obsoletas). Eso fallaba con "EPERM" en E:\, donde la app no puede
+// escribir, y además Julio no quiere que la app mueva ni copie esas fotos.
+// Ahora se escoge una foto que YA está en alguna de las carpetas activas
+// (CARPETAS_FOTOS del .env) y se guarda su ruta: la foto nueva no se sube,
+// no se copia ni se mueve. La foto ANTERIOR sí se manda a uploads/obsoletas
+// (ver enviarFotoAObsoletas: no se mueve si otra versión activa la usa, y
+// si no se puede borrar de su carpeta queda una copia en obsoletas).
+// "Crear referencia" y "Nueva versión" siguen funcionando como antes.
+function rutaDentroDeCarpetasFotos(ruta) {
+  const r = path.resolve(ruta).toLowerCase();
+  return CARPETAS_FOTOS.some(c => {
+    const base = path.resolve(c).toLowerCase();
+    const conSep = base.endsWith(path.sep) ? base : base + path.sep;
+    return r.startsWith(conSep);
+  });
+}
+const EXTENSIONES_FOTO = /\.(jpg|jpeg|png|gif|bmp|webp|tiff)$/i;
+
 router.post('/referencias/:codigo_base/modificar-version', validarToken, requerirPermiso('referencias.editar'), upload.single('imagen'), async (req, res) => {
   // Mismo motivo que en /referencias-codigo/.../versiones más arriba:
   // Express ya decodifica este parámetro, un decode extra acá era
   // redundante y podía lanzar "URI malformed".
   const codigoBase = req.params.codigo_base || '';
-  const { motivo } = req.body;
+  const motivo = (req.body.motivo || '').trim();
+  const imagenRuta = (req.body.imagen_ruta || '').trim();
   const usuarioId = req.usuario.id;
 
-  if (!codigoBase) { if (req.file) fs.unlinkSync(req.file.path); return res.status(400).json({ error: 'codigo_base requerido' }); }
-  if (!req.file) return res.status(400).json({ error: 'Debe subir una imagen para reemplazar la versión actual' });
-  // Misma exigencia que ya tiene "Nueva versión" (línea ~82) — antes esta
-  // ruta aceptaba modificar la versión activa sin ningún motivo, mientras
-  // que crear una versión sí lo exigía; quedaba una referencia con menos
-  // trazabilidad para el caso que en la práctica es el más delicado
-  // (reemplazar la imagen que ya está en producción).
-  if (!motivo || !motivo.trim()) { if (req.file) fs.unlinkSync(req.file.path); return res.status(400).json({ error: 'El motivo del cambio es obligatorio' }); }
-  if (!(await validarOBorrar(req, res, req.file.path))) return;
+  // Si llega un archivo (pantalla vieja en caché), no se usa: se borra el
+  // temporal y se pide escoger la ruta.
+  if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+  if (!codigoBase) return res.status(400).json({ error: 'codigo_base requerido' });
+  if (!imagenRuta) return res.status(400).json({ error: 'Escoge la foto (ruta) que va a quedar en la versión actual. Si ves este mensaje después de una actualización, recarga la página con Ctrl + F5.' });
+  // Misma exigencia que ya tiene "Nueva versión": el motivo es obligatorio.
+  if (!motivo) return res.status(400).json({ error: 'El motivo del cambio es obligatorio' });
+  if (!EXTENSIONES_FOTO.test(imagenRuta)) return res.status(400).json({ error: 'La ruta no es de una imagen' });
+  // Solo se aceptan rutas dentro de las carpetas de fotos configuradas, para
+  // que nadie pueda apuntar la versión a otro archivo del servidor.
+  if (!rutaDentroDeCarpetasFotos(imagenRuta)) return res.status(400).json({ error: 'La foto debe estar dentro de una de las carpetas de fotos activas' });
+  if (!fs.existsSync(imagenRuta)) return res.status(400).json({ error: 'No se encontró esa foto en la carpeta' });
 
   try {
-    const { versionActiva, destinoFinal } = await enTransaccion(async () => {
+    const { versionActiva, rutaAnterior, obsoleta } = await enTransaccion(async () => {
       const ref = await refData.buscarReferenciaPorCodigo(codigoBase);
       if (!ref) {
         const error = new Error('Referencia no encontrada');
@@ -270,46 +326,32 @@ router.post('/referencias/:codigo_base/modificar-version', validarToken, requeri
         throw error;
       }
 
-      let rutaObsoleta = null;
       const rutaAnterior = versionActiva.imagen_ruta;
-      if (rutaAnterior && fs.existsSync(rutaAnterior)) {
-        const fechaSufijo = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const ext = path.extname(rutaAnterior);
-        const nombreBase = path.basename(rutaAnterior, ext);
-        const destinoObsoleto = path.join(OBSOLETAS_DIR, nombreBase + '_' + fechaSufijo + '_mod' + ext);
-        moverArchivo(rutaAnterior, destinoObsoleto);
-        rutaObsoleta = destinoObsoleto;
-      }
-
-      const extNueva = path.extname(req.file.originalname);
-      const nombreArchivo = sanitizeFilename(nombreBaseParaArchivo(ref.codigo_base)) + '_' + versionActiva.version + extNueva;
-      const carpetaDestino = rutaAnterior ? path.dirname(rutaAnterior) : (CARPETAS_FOTOS[1] || CARPETAS_FOTOS[0]);
-      const destinoFinal = path.join(carpetaDestino, nombreArchivo);
-      moverArchivo(req.file.path, destinoFinal);
-
-      await refData.actualizarImagenVersion(destinoFinal, versionActiva.id);
+      const obsoleta = await enviarFotoAObsoletas(rutaAnterior, '_mod', versionActiva.id, imagenRuta);
+      await refData.actualizarImagenVersion(imagenRuta, versionActiva.id);
       await refData.marcarNecesitaPrueba(versionActiva.id, 1);
-      // Misma red de seguridad que en "nueva versión": si esta referencia
-      // tenía otra fila también marcada 'activa' por error, se retira aquí.
-      await retirarOtrasVersionesActivasConArchivos(ref.id, versionActiva.id);
+      // Si por error esta referencia tenía otra versión también 'activa', se
+      // marca obsoleta como en "nueva versión", pero SIN mover su foto.
+      const otras = await refData.listarOtrasVersionesActivas(ref.id, versionActiva.id);
+      for (const otra of otras) await refData.marcarVersionObsoleta(otra.id);
 
       await refData.insertarSeguimientoCambios(
         ref.id, 'modificacion',
         {
-          accion: 'Modificación de versión actual',
+          accion: 'Modificación de versión actual (foto escogida de la carpeta)',
           version: versionActiva.version,
-          imagen_ruta: { antes: rutaAnterior, despues: destinoFinal },
-          ruta_obsoleta: rutaObsoleta
+          imagen_ruta: { antes: rutaAnterior, despues: imagenRuta },
+          ruta_obsoleta: obsoleta.destino,
+          foto_anterior: obsoleta.motivo || (obsoleta.movida ? 'movida a obsoletas' : null),
         },
-        usuarioId, motivo || null
+        usuarioId, motivo
       );
 
-      return { versionActiva, destinoFinal };
+      return { versionActiva, rutaAnterior, obsoleta };
     });
 
-    res.json({ success: true, message: `Versión ${versionActiva.version} modificada correctamente`, imagen_ruta: destinoFinal });
+    res.json({ success: true, message: `Versión ${versionActiva.version} modificada correctamente`, imagen_ruta: imagenRuta, imagen_ruta_anterior: rutaAnterior, foto_anterior: obsoleta });
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(error.status || 500).json({ error: error.message });
   }
 });
