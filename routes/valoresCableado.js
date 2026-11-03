@@ -36,7 +36,16 @@ const ETIQUETAS_CAMPOS_FICHA = {
   cortar_puntas: 'Cortar puntas',
   empujar_cables: 'Empujar cables',
   no_aplica_medias: 'No aplica Medias (Bajas)',
+  tipo_circuito: 'Tipo de circuito',
 };
+// Campos de las variantes extra (Color 2, Stop, Direccional — ver
+// data/valoresCableado.js), ej. "Stop · Revisión · Altas · corriente".
+const NOMBRES_VARIANTE = { color2: 'Color 2', stop: 'Stop', direccional: 'Direccional' };
+const NOMBRES_PRUEBA = { revision: 'Revisión', minimo: 'Mínimo', maximo: 'Máximo' };
+for (const c of valoresData.CAMPOS_VARIANTES) {
+  ETIQUETAS_CAMPOS_FICHA[c.clave] = `${NOMBRES_VARIANTE[c.variante]} · ${NOMBRES_PRUEBA[c.prueba]} · ${c.funcion === 'bajas' ? 'Bajas' : 'Altas'} · ${c.medida === 'amperaje' ? 'corriente' : 'potencia'}`;
+}
+const CAMPOS_VARIANTES_FICHA = new Set(valoresData.CAMPOS_VARIANTES.map(c => c.clave));
 const CAMPOS_BOOLEANOS_FICHA = new Set(['cortar_puntas', 'empujar_cables', 'no_aplica_medias']);
 
 // Compara la ficha que ya estaba guardada contra la que se acaba de mandar
@@ -52,6 +61,9 @@ function compararFichaValores(anterior, nueva) {
       if (esBooleano) return (v === 1 || v === true || v === '1') ? 'Sí' : 'No';
       return (v === null || v === undefined || v === '') ? '(vacío)' : String(v);
     };
+    // Las variantes y el tipo que no vienen en la petición no se tocan al
+    // guardar (ver guardarFichaVersion), así que tampoco cuentan como cambio.
+    if ((CAMPOS_VARIANTES_FICHA.has(campo) || campo === 'tipo_circuito') && (!nueva || nueva[campo] === undefined)) continue;
     const valorAntes = anterior ? anterior[campo] : null;
     const valorDespues = nueva ? nueva[campo] : null;
     const antesTxt = formatear(valorAntes);

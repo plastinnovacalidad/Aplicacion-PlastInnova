@@ -146,6 +146,33 @@ const ValoresCableadoApp = (() => {
   // izquierda (el punto rojo, ver construirSidebar). Los 4 campos de
   // "Medias (Bajas)" no cuentan si la versión tiene marcado que no aplican.
   const CAMPOS_MEDIAS_BAJAS = ['amperaje_medias', 'potencia_medias', 'amperaje_min_medias', 'potencia_min_medias'];
+
+  // ========== TIPO DE CIRCUITO (ver MIGRACIÓN #51 en db/init.js) ==========
+  // Cada prueba es una combinación de cables: Bajas = blanco + azul, Altas =
+  // se le suma el rojo, y cada variante agrega sus propios cables (amarillo
+  // = cambio de color en bicolor / direccional en stop, negro = stop). La
+  // variante principal ('p') usa los campos de siempre; las demás vienen
+  // como "<variante>_<prueba>_<funcion>_<medida>" (ver data/valoresCableado.js).
+  const VARIANTES_POR_TIPO_VC = {
+    normal: [{ k: 'p', n: 'Principal', extra: [] }],
+    bicolor: [{ k: 'p', n: 'Color 1', extra: [] }, { k: 'color2', n: 'Color 2', extra: ['amarillo'] }],
+    stop: [{ k: 'p', n: 'Principal', extra: [] }, { k: 'stop', n: 'Stop', extra: ['negro'] }, { k: 'direccional', n: 'Direccional', extra: ['negro', 'amarillo'] }],
+  };
+  const CAMPO_PRINCIPAL_VC = {
+    rev_bajas_amperaje: 'amperaje_medias', rev_bajas_potencia: 'potencia_medias',
+    rev_altas_amperaje: 'amperaje_altas', rev_altas_potencia: 'potencia_altas',
+    min_bajas_amperaje: 'amperaje_min_medias', min_bajas_potencia: 'potencia_min_medias',
+    min_altas_amperaje: 'amperaje_min_altas', min_altas_potencia: 'potencia_min_altas',
+    max_altas_amperaje: 'amperaje_max', max_altas_potencia: 'potencia_max',
+  };
+  const NOMBRES_CABLE_VC = { blanco: 'Blanco', azul: 'Azul', rojo: 'Rojo', amarillo: 'Amarillo', negro: 'Negro' };
+  const variantesDe = (p) => VARIANTES_POR_TIPO_VC[p.tipo_circuito] || VARIANTES_POR_TIPO_VC.normal;
+  const valorPrueba = (p, variante, prueba, funcion, medida) => {
+    const k = `${prueba}_${funcion}_${medida}`;
+    return variante === 'p' ? p[CAMPO_PRINCIPAL_VC[k]] : p[`${variante}_${k}`];
+  };
+  const cablesDePrueba = (funcion, va) => ['blanco', 'azul', ...(funcion === 'altas' ? ['rojo'] : []), ...va.extra];
+
   function contarCamposFaltantes(p) {
     const noAplicaMedias = (p.no_aplica_medias === 1 || p.no_aplica_medias === true || p.no_aplica_medias === '1');
     const campos = [
@@ -155,7 +182,23 @@ const ValoresCableadoApp = (() => {
       'cortar_puntas', 'posicion_punto', 'empujar_cables', 'forma_cableado', 'referencia_cable',
       ...(noAplicaMedias ? [] : CAMPOS_MEDIAS_BAJAS),
     ];
-    return campos.filter(c => p[c] === null || p[c] === undefined || p[c] === '').length;
+    const vacio = (v) => v === null || v === undefined || v === '';
+    let faltan = campos.filter(c => vacio(p[c])).length;
+    // Variantes extra del tipo de circuito (Color 2, Stop, Direccional):
+    // cuentan igual que las de la principal (Máximo solo Altas; Bajas no
+    // cuenta si la versión no maneja medias).
+    for (const va of variantesDe(p)) {
+      if (va.k === 'p') continue;
+      for (const prueba of ['rev', 'min', 'max']) {
+        for (const funcion of ['bajas', 'altas']) {
+          if (funcion === 'bajas' && (prueba === 'max' || noAplicaMedias)) continue;
+          for (const medida of ['amperaje', 'potencia']) {
+            if (vacio(valorPrueba(p, va.k, prueba, funcion, medida))) faltan++;
+          }
+        }
+      }
+    }
+    return faltan;
   }
 
   // ========== FICHA ==========
@@ -238,14 +281,57 @@ const ValoresCableadoApp = (() => {
       if (v === 1 || v === true || v === '1' || v === 'true') return `<span class="vc-val-yes">SÍ ✓</span>`;
       return `<span class="vc-val-no">NO <span class="vc-x-red">✗</span></span>`;
     };
-    // Para las 4 líneas de "Medias (Bajas)" en los displays de abajo: si la
-    // versión tiene marcado que no aplica, se muestra "N/A" en vez del
-    // valor (que en ese caso siempre va a estar vacío) — así no se ve como
-    // un dato que falta, sino como un campo que a propósito no corresponde
-    // a esta referencia.
-    const valMedias = (v, unidad) => noAplicaMedias
-      ? `<span class="vc-val vc-na">N/A</span>`
-      : `<span class="vc-val">${fmtNum(v)}</span><span class="vc-unit">${unidad}</span>`;
+    // ==================== CUADROS NEGROS (Revisión / Mínimo / Máximo) ====================
+    // Julio escogió la "idea A" de la maqueta: los 3 cuadros de siempre, cada
+    // uno con una tabla adentro — un renglón por prueba (variante + Bajas/
+    // Altas) con los puntos de colores de los cables que hay que conectar.
+    // Todo va en columnas fijas (nombre | corriente | potencia) para que los
+    // números siempre queden en el mismo lugar, y los renglones salen en el
+    // mismo orden en los 3 cuadros para compararlos en horizontal. Lo que no
+    // aplica o no tiene valores queda en negro (oculto) pero conserva su
+    // espacio, para que lo demás no se mueva:
+    //  - Bajas no se muestra si la versión "no maneja medias".
+    //  - Prueba Máximo solo se hace en Altas.
+    //  - Un renglón sin corriente ni potencia queda en negro.
+    const tieneValor = (v) => v !== null && v !== undefined && String(v).trim() !== '';
+    const variantes = variantesDe(p);
+    const variasVariantes = variantes.length > 1;
+    const puntosCables = (cables) => `<span class="vc-cables">${cables.map(c => `<i class="vc-cable vc-cable-${c}" title="${NOMBRES_CABLE_VC[c]}"></i>`).join('')}</span>`;
+    // Si un campo viejo trae dos rangos juntos (ej. "85-125 95-135"), cada
+    // uno va en su propia línea en vez de partirse donde caiga.
+    const valorCelda = (v) => {
+      if (!tieneValor(v)) return '<span class="vc-val">—</span>';
+      const partes = String(v).trim().split(/\s+/);
+      if (partes.length === 1) return `<span class="vc-val">${fmtNum(partes[0])}</span>`;
+      return `<span class="vc-val vc-val-varios">${partes.map(x => `<span>${fmtNum(x)}</span>`).join('')}</span>`;
+    };
+    const renglonPrueba = (prueba, funcion, va) => {
+      const amp = valorPrueba(p, va.k, prueba, funcion, 'amperaje');
+      const pot = valorPrueba(p, va.k, prueba, funcion, 'potencia');
+      const oculto = (funcion === 'bajas' && (prueba === 'max' || noAplicaMedias)) || (!tieneValor(amp) && !tieneValor(pot));
+      const nombre = variasVariantes ? va.n : (funcion === 'bajas' ? 'Bajas' : 'Altas');
+      return `
+                <div class="vc-prueba-ln"${oculto ? ' style="visibility:hidden" aria-hidden="true"' : ''}>
+                  <span class="vc-prueba-tag">${puntosCables(cablesDePrueba(funcion, va))}<span class="vc-prueba-nombre">${escapeHtml(nombre)}</span></span>
+                  ${valorCelda(amp)}
+                  ${valorCelda(pot)}
+                </div>`;
+    };
+    const cuadroDisplay = (clase, titulo, prueba, voltaje) => `
+            <div class="vc-display-box ${clase}">
+              <div class="vc-display-title">${titulo}</div>
+              <div class="vc-display-volt"${tieneValor(voltaje) ? '' : ' style="visibility:hidden" aria-hidden="true"'}>
+                <span class="vc-lbl">Voltage</span><span class="vc-val">${fmtNum(voltaje)}</span><span class="vc-unit">V</span>
+              </div>
+              <div class="vc-display-section">
+                <div class="vc-prueba-cab"><span>Prueba</span><span>Current (mA)</span><span>Power (W)</span></div>
+                ${['bajas', 'altas'].map(funcion => `
+                <div class="vc-prueba-grupo">
+                  ${variasVariantes ? `<div class="vc-display-section-label"${funcion === 'bajas' && (prueba === 'max' || noAplicaMedias) ? ' style="visibility:hidden"' : ''}>═══ ${funcion === 'bajas' ? 'Bajas' : 'Altas'} ═══</div>` : ''}
+                  ${variantes.map(va => renglonPrueba(prueba, funcion, va)).join('')}
+                </div>`).join('')}
+              </div>
+            </div>`;
 
     // ==================== OBSERVACIONES / RECOMENDACIONES ====================
     // Julio pidió lo mismo que ya existe en Circuitos SMD: una nota general
@@ -325,6 +411,19 @@ const ValoresCableadoApp = (() => {
         </div>
 
         <div class="vc-ficha-scroll">
+          <!-- Orden pedido por Julio: primero las especificaciones de
+               cableado, luego las fotos, luego los valores y al final
+               observaciones/recomendaciones. -->
+          <div class="vc-specs-card">
+            <div class="vc-specs-header">⚙️ Especificaciones de Cableado</div>
+            <div class="vc-specs-grid">
+              <div class="vc-cell"><label>Cortar Puntas</label><div class="vc-val">${boolVal(p.cortar_puntas)}</div></div>
+              <div class="vc-cell"><label>Referencia Cable</label><div class="vc-val">${fmt(p.referencia_cable)}</div></div>
+              <div class="vc-cell"><label>Posición Punto</label><div class="vc-val">${fmt(p.posicion_punto)}</div></div>
+              <div class="vc-cell"><label>Empujar Cables</label><div class="vc-val">${boolVal(p.empujar_cables)}</div></div>
+            </div>
+          </div>
+
           <div class="vc-fotos-row">
             <div class="vc-foto-box" id="vc-foto-circuito">
               <div class="vc-foto-content" id="vc-foto-circuito-content">
@@ -339,63 +438,9 @@ const ValoresCableadoApp = (() => {
           </div>
 
           <div class="vc-displays-row">
-            <div class="vc-display-box green">
-              <div class="vc-display-title">🔧 Revisión (14V)</div>
-              <div class="vc-display-section">
-                <div class="vc-display-section-label">═══ Medias (Bajas) ═══</div>
-                <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_revision)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span>${valMedias(p.amperaje_medias, 'A')}</span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span>${valMedias(p.potencia_medias, 'W')}</span></div>
-              </div>
-              <div class="vc-display-section">
-                <div class="vc-display-section-label">═══ Altas ═══</div>
-                <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_revision)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_altas)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_altas)}</span><span class="vc-unit">W</span></span></div>
-              </div>
-            </div>
-
-            <div class="vc-display-box blue">
-              <div class="vc-display-title">🔽 Prueba Mínimo</div>
-              <div class="vc-display-section">
-                <div class="vc-display-section-label">═══ Medias (Bajas) ═══</div>
-                <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_min)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span>${valMedias(p.amperaje_min_medias, 'A')}</span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span>${valMedias(p.potencia_min_medias, 'W')}</span></div>
-              </div>
-              <div class="vc-display-section">
-                <div class="vc-display-section-label">═══ Altas ═══</div>
-                <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_min)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_min_altas)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_min_altas)}</span><span class="vc-unit">W</span></span></div>
-              </div>
-            </div>
-
-            <div class="vc-display-box orange">
-              <div class="vc-display-title">🔼 Prueba Máximo</div>
-              <div class="vc-display-section">
-                <div class="vc-display-section-label">═══ Medias (Bajas) ═══</div>
-                <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_max)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_max)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_max)}</span><span class="vc-unit">W</span></span></div>
-              </div>
-              <div class="vc-display-section">
-                <div class="vc-display-section-label">═══ Altas ═══</div>
-                <div class="vc-display-line"><span class="vc-lbl">Voltage</span><span><span class="vc-val">${fmtNum(p.voltaje_max)}</span><span class="vc-unit">V</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Current</span><span><span class="vc-val">${fmtNum(p.amperaje_max)}</span><span class="vc-unit">A</span></span></div>
-                <div class="vc-display-line"><span class="vc-lbl">Power</span><span><span class="vc-val">${fmtNum(p.potencia_max)}</span><span class="vc-unit">W</span></span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="vc-specs-card">
-            <div class="vc-specs-header">⚙️ Especificaciones de Cableado</div>
-            <div class="vc-specs-grid">
-              <div class="vc-cell"><label>Cortar Puntas</label><div class="vc-val">${boolVal(p.cortar_puntas)}</div></div>
-              <div class="vc-cell"><label>Referencia Cable</label><div class="vc-val">${fmt(p.referencia_cable)}</div></div>
-              <div class="vc-cell"><label>Posición Punto</label><div class="vc-val">${fmt(p.posicion_punto)}</div></div>
-              <div class="vc-cell"><label>Empujar Cables</label><div class="vc-val">${boolVal(p.empujar_cables)}</div></div>
-            </div>
+            ${cuadroDisplay('green', '🔧 Revisión (14V)', 'rev', p.voltaje_revision)}
+            ${cuadroDisplay('blue', '🔽 Prueba Mínimo', 'min', p.voltaje_min)}
+            ${cuadroDisplay('orange', '🔼 Prueba Máximo', 'max', p.voltaje_max)}
           </div>
 
           ${obsRecHtml}

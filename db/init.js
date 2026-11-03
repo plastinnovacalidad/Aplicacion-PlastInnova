@@ -2471,6 +2471,42 @@ async function inicializarBaseDatos() {
     console.error('⚠️ Error agregando columna aviso_rapido_origen a problemas (MIGRACIÓN #48):', e.message);
   }
 
+  // MIGRACIÓN #51 (27/10, pedido por Julio): Valores y Cableado por tipo de
+  // circuito. Hay 3 tipos de circuito según los cables que trae la lámpara
+  // (blanco = tierra, azul = bajas, rojo = altas, amarillo = cambio de color
+  // o direccional, negro = stop):
+  //   - normal  (3 cables): Bajas y Altas, como siempre.
+  //   - bicolor (4 cables): Color 1 (como siempre) y Color 2 (+ amarillo).
+  //   - stop    (5 cables): Principal (como siempre), Stop (+ negro) y
+  //                         Direccional (+ negro + amarillo).
+  // La variante principal / Color 1 sigue guardándose en elec_mediciones y
+  // elec_rangos_revision (no se mueve nada de lo que ya existe). Las
+  // variantes extra van en la tabla nueva elec_valores_variante: una fila
+  // por versión + variante + prueba (revision/minimo/maximo) + función
+  // (bajas/altas). El voltaje sigue siendo uno por prueba.
+  try {
+    const colsConfig = await db.all('PRAGMA table_info(elec_config_cableado)');
+    if (!colsConfig.map(c => c.name).includes('tipo_circuito')) {
+      await db.run("ALTER TABLE elec_config_cableado ADD COLUMN tipo_circuito TEXT DEFAULT 'normal'");
+      console.log('➕ Columna tipo_circuito agregada a elec_config_cableado');
+    }
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS elec_valores_variante (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        version_id INTEGER NOT NULL,
+        variante TEXT NOT NULL CHECK (variante IN ('color2', 'stop', 'direccional')),
+        prueba TEXT NOT NULL CHECK (prueba IN ('revision', 'minimo', 'maximo')),
+        funcion TEXT NOT NULL CHECK (funcion IN ('bajas', 'altas')),
+        amperaje TEXT,
+        potencia TEXT,
+        UNIQUE (version_id, variante, prueba, funcion),
+        FOREIGN KEY (version_id) REFERENCES versiones(id) ON DELETE CASCADE
+      );
+    `);
+  } catch (e) {
+    console.error('⚠️ Error preparando tipo de circuito en Valores y Cableado (MIGRACIÓN #51):', e.message);
+  }
+
   // Usuarios por defecto si está vacío
   const count = await db.get('SELECT COUNT(*) as total FROM usuarios');
   if (count.total === 0) {

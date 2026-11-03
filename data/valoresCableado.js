@@ -1,5 +1,57 @@
 const { getDb } = require('../db/connection');
 
+// ==================== TIPO DE CIRCUITO Y VARIANTES ====================
+// Ver MIGRACIÓN #51 en db/init.js. Cada versión tiene un tipo de circuito:
+//   normal  -> solo la variante principal (como siempre)
+//   bicolor -> principal (= Color 1) + 'color2' (se le suma el cable amarillo)
+//   stop    -> principal + 'stop' (+ negro) + 'direccional' (+ negro + amarillo)
+// La variante principal sigue en elec_mediciones/elec_rangos_revision con
+// sus nombres de campo de siempre (amperaje_medias, amperaje_max, etc.).
+// Las variantes extra viajan como campos planos con este formato:
+//   <variante>_<prueba>_<funcion>_<medida>, ej. "stop_rev_altas_amperaje"
+// (prueba: rev/min/max; funcion: bajas/altas; medida: amperaje/potencia).
+// Prueba Máximo solo se hace en Altas, por eso no existe "..._max_bajas_...".
+const TIPOS_CIRCUITO = ['normal', 'bicolor', 'stop'];
+const VARIANTES_POR_TIPO = { normal: [], bicolor: ['color2'], stop: ['stop', 'direccional'] };
+const PRUEBAS_VARIANTE = { rev: 'revision', min: 'minimo', max: 'maximo' };
+const CAMPOS_VARIANTES = [];
+for (const variante of ['color2', 'stop', 'direccional']) {
+  for (const [corta, prueba] of Object.entries(PRUEBAS_VARIANTE)) {
+    for (const funcion of ['bajas', 'altas']) {
+      if (corta === 'max' && funcion === 'bajas') continue;
+      for (const medida of ['amperaje', 'potencia']) {
+        CAMPOS_VARIANTES.push({ clave: `${variante}_${corta}_${funcion}_${medida}`, variante, prueba, corta, funcion, medida });
+      }
+    }
+  }
+}
+const normalizarTipoCircuito = (t) => (TIPOS_CIRCUITO.includes(t) ? t : null);
+
+// Valores de las variantes extra agrupados por versión, como campos planos
+// (ver arriba). Con versionId trae solo esa versión; sin él, todas.
+async function leerValoresVariantes(versionId) {
+  const db = getDb();
+  const filas = versionId == null
+    ? await db.all('SELECT version_id, variante, prueba, funcion, amperaje, potencia FROM elec_valores_variante')
+    : await db.all('SELECT version_id, variante, prueba, funcion, amperaje, potencia FROM elec_valores_variante WHERE version_id = ?', [versionId]);
+  const cortaDe = Object.fromEntries(Object.entries(PRUEBAS_VARIANTE).map(([c, p]) => [p, c]));
+  const porVersion = new Map();
+  for (const f of filas) {
+    if (!porVersion.has(f.version_id)) porVersion.set(f.version_id, {});
+    const o = porVersion.get(f.version_id);
+    const base = `${f.variante}_${cortaDe[f.prueba]}_${f.funcion}`;
+    o[`${base}_amperaje`] = f.amperaje;
+    o[`${base}_potencia`] = f.potencia;
+  }
+  return porVersion;
+}
+
+// Todos los campos de variantes en null, para que la ficha siempre traiga
+// las mismas llaves aunque la versión no tenga variantes guardadas.
+function camposVariantesVacios() {
+  return Object.fromEntries(CAMPOS_VARIANTES.map(c => [c.clave, null]));
+}
+
 // Divide un codigo_base de Circuitos SMD (formato PREFIJO/BASE/COLOR/SUFIJO,
 // ej. "SUP/1002/AH/MUL") en sus partes. Devuelve null si no tiene el
 // formato esperado — algunas referencias viejas de prueba en la base de
@@ -47,7 +99,7 @@ async function listarProductos() {
       rr.amperaje_min_bajas, rr.amperaje_min_altas, rr.amperaje_max,
       rr.potencia_min_bajas, rr.potencia_min_altas, rr.potencia_max,
       cc.cortar_puntas, cc.posicion_punto, cc.empujar_cables, cc.forma_cableado, cc.referencia_cable,
-      cc.no_aplica_medias
+      cc.no_aplica_medias, cc.tipo_circuito
     FROM versiones v
     JOIN referencias r ON r.id = v.referencia_id
     LEFT JOIN elec_mediciones m ON m.version_id = v.id
@@ -58,6 +110,7 @@ async function listarProductos() {
     )
     ORDER BY r.codigo_base, v.version
   `);
+  const variantesPorVersion = await leerValoresVariantes(null);
 
   return rows.map(row => {
     const partes = parseCodigoBase(row.codigo_base);
@@ -97,6 +150,9 @@ async function listarProductos() {
       forma_cableado: row.forma_cableado,
       referencia_cable: row.referencia_cable,
       no_aplica_medias: row.no_aplica_medias,
+      tipo_circuito: row.tipo_circuito || 'normal',
+      ...camposVariantesVacios(),
+      ...(variantesPorVersion.get(row.version_id) || {}),
       imagenes,
     };
   });
@@ -147,7 +203,7 @@ async function obtenerFichaVersion(versionId) {
       rr.amperaje_min_bajas, rr.amperaje_min_altas, rr.amperaje_max,
       rr.potencia_min_bajas, rr.potencia_min_altas, rr.potencia_max,
       cc.cortar_puntas, cc.posicion_punto, cc.empujar_cables, cc.forma_cableado, cc.referencia_cable,
-      cc.no_aplica_medias
+      cc.no_aplica_medias, cc.tipo_circuito
     FROM versiones v
     JOIN referencias r ON r.id = v.referencia_id
     LEFT JOIN elec_mediciones m ON m.version_id = v.id
@@ -156,6 +212,7 @@ async function obtenerFichaVersion(versionId) {
     WHERE v.id = ?
   `, [versionId]);
   if (!row) return null;
+  const variantes = (await leerValoresVariantes(versionId)).get(row.version_id) || {};
 
   return {
     version_id: row.version_id,
@@ -180,6 +237,9 @@ async function obtenerFichaVersion(versionId) {
     forma_cableado: row.forma_cableado,
     referencia_cable: row.referencia_cable,
     no_aplica_medias: row.no_aplica_medias,
+    tipo_circuito: row.tipo_circuito || 'normal',
+    ...camposVariantesVacios(),
+    ...variantes,
   };
 }
 
@@ -196,6 +256,28 @@ async function obtenerFichaVersion(versionId) {
 // fondo con los datos reales) al agregar esta pantalla nueva.
 async function guardarFichaVersion(versionId, datos = {}) {
   const db = getDb();
+
+  // Forma de cableado: elec_config_cableado.forma_cableado tiene que existir
+  // en elec_fotos_cableado (llave foránea). Antes:
+  //  - si la versión no tenía forma, la pantalla mandaba "" (texto vacío) y
+  //    se intentaba guardar "", que no existe en elec_fotos_cableado ->
+  //    "SQLITE_CONSTRAINT: FOREIGN KEY constraint failed" (pasó con 1037);
+  //  - una forma nueva escrita con "+ Nueva forma..." fallaba igual, porque
+  //    nadie la agregaba a elec_fotos_cableado (la foto se guarda como
+  //    archivo en CARPETA_FOTOS_CABLEADO, no en esa tabla).
+  // Ahora "" se guarda como "sin forma" (NULL), una forma ya conocida se
+  // reconoce aunque cambien mayúsculas/minúsculas, y una forma nueva se
+  // registra en elec_fotos_cableado (sin enlace; su foto sale del archivo).
+  let formaCableado = typeof datos.forma_cableado === 'string' ? datos.forma_cableado.trim() : (datos.forma_cableado ?? null);
+  if (!formaCableado) formaCableado = null;
+  // Tipo de circuito: si no viene (o no es uno de los 3 válidos) se deja el
+  // que ya tenía la versión, o 'normal' si es nueva.
+  const tipoCircuito = normalizarTipoCircuito(datos.tipo_circuito);
+  if (formaCableado) {
+    const existente = await db.get('SELECT forma_cableado FROM elec_fotos_cableado WHERE LOWER(forma_cableado) = LOWER(?)', [formaCableado]);
+    if (existente) formaCableado = existente.forma_cableado;
+    else await db.run("INSERT INTO elec_fotos_cableado (forma_cableado, url_foto) VALUES (?, '')", [formaCableado]);
+  }
 
   await db.run(
     `INSERT INTO elec_mediciones (version_id, voltaje_revision, amperaje_medias, amperaje_altas, potencia_medias, potencia_altas)
@@ -217,14 +299,48 @@ async function guardarFichaVersion(versionId, datos = {}) {
   );
 
   await db.run(
-    `INSERT INTO elec_config_cableado (version_id, cortar_puntas, posicion_punto, empujar_cables, forma_cableado, referencia_cable, no_aplica_medias)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO elec_config_cableado (version_id, cortar_puntas, posicion_punto, empujar_cables, forma_cableado, referencia_cable, no_aplica_medias, tipo_circuito)
+     VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'normal'))
      ON CONFLICT(version_id) DO UPDATE SET
        cortar_puntas=excluded.cortar_puntas, posicion_punto=excluded.posicion_punto,
        empujar_cables=excluded.empujar_cables, forma_cableado=excluded.forma_cableado, referencia_cable=excluded.referencia_cable,
-       no_aplica_medias=excluded.no_aplica_medias`,
-    [versionId, datos.cortar_puntas ? 1 : 0, datos.posicion_punto ?? null, datos.empujar_cables ? 1 : 0, datos.forma_cableado ?? null, datos.referencia_cable ?? null, datos.no_aplica_medias ? 1 : 0]
+       no_aplica_medias=excluded.no_aplica_medias,
+       tipo_circuito=COALESCE(?, elec_config_cableado.tipo_circuito)`,
+    [versionId, datos.cortar_puntas ? 1 : 0, datos.posicion_punto ?? null, datos.empujar_cables ? 1 : 0, formaCableado, datos.referencia_cable ?? null, datos.no_aplica_medias ? 1 : 0, tipoCircuito, tipoCircuito]
   );
+
+  // Variantes extra (Color 2, Stop, Direccional). Solo se tocan las que
+  // vienen en la petición: si el formulario no manda una variante (porque
+  // el tipo elegido no la usa), sus valores se conservan tal cual en vez de
+  // borrarse — así, si alguien cambia el tipo por error y lo devuelve, no
+  // pierde lo que ya estaba escrito. Si una prueba viene con corriente y
+  // potencia vacías, su fila se borra.
+  const vacioANull = (v) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim());
+  const grupos = new Map();
+  for (const c of CAMPOS_VARIANTES) {
+    const k = `${c.variante}|${c.prueba}|${c.funcion}`;
+    if (!grupos.has(k)) grupos.set(k, { variante: c.variante, prueba: c.prueba, funcion: c.funcion, claves: {} });
+    grupos.get(k).claves[c.medida] = c.clave;
+  }
+  for (const g of grupos.values()) {
+    const vieneAmp = Object.prototype.hasOwnProperty.call(datos, g.claves.amperaje);
+    const vienePot = Object.prototype.hasOwnProperty.call(datos, g.claves.potencia);
+    if (!vieneAmp && !vienePot) continue;
+    const amperaje = vacioANull(datos[g.claves.amperaje]);
+    const potencia = vacioANull(datos[g.claves.potencia]);
+    if (amperaje === null && potencia === null) {
+      await db.run('DELETE FROM elec_valores_variante WHERE version_id = ? AND variante = ? AND prueba = ? AND funcion = ?',
+        [versionId, g.variante, g.prueba, g.funcion]);
+    } else {
+      await db.run(
+        `INSERT INTO elec_valores_variante (version_id, variante, prueba, funcion, amperaje, potencia)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(version_id, variante, prueba, funcion) DO UPDATE SET
+           amperaje=excluded.amperaje, potencia=excluded.potencia`,
+        [versionId, g.variante, g.prueba, g.funcion, amperaje, potencia]
+      );
+    }
+  }
 }
 
 // Link de Google Drive "de siempre" para una forma de cableado — se usa
@@ -245,8 +361,14 @@ async function obtenerUrlFotoCableadoLegacy(formaCableado) {
 // el desplegable del front-end).
 async function listarFormasCableadoConocidas() {
   const db = getDb();
+  // Incluye también las formas de elec_fotos_cableado aunque ninguna versión
+  // las use todavía (por ejemplo después de una recarga de datos), para que
+  // se puedan elegir del desplegable en vez de tener que escribirlas.
   const rows = await db.all(
-    `SELECT DISTINCT forma_cableado FROM elec_config_cableado WHERE forma_cableado IS NOT NULL AND forma_cableado <> '' ORDER BY forma_cableado`
+    `SELECT forma_cableado FROM elec_config_cableado WHERE forma_cableado IS NOT NULL AND forma_cableado <> ''
+     UNION
+     SELECT forma_cableado FROM elec_fotos_cableado WHERE forma_cableado IS NOT NULL AND forma_cableado <> ''
+     ORDER BY forma_cableado`
   );
   return rows.map(r => r.forma_cableado);
 }
@@ -261,4 +383,6 @@ module.exports = {
   obtenerFichaVersion,
   guardarFichaVersion,
   obtenerUrlFotoCableadoLegacy,
+  CAMPOS_VARIANTES,
+  VARIANTES_POR_TIPO,
 };

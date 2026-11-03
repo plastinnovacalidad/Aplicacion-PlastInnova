@@ -56,8 +56,9 @@
    bordes de la pantalla (sin radio ni sombra), por eso se veía como una
    ventana aparte en vez de una tarjeta igual a la de SMD. */
 .vc-sidebar {
-    width: 300px;
-    min-width: 300px;
+    /* Antes 300px: Julio pidió achicar la lista para dar más espacio a la ficha. */
+    width: 230px;
+    min-width: 230px;
     background: #ffffff;
     border-radius: 16px;
     box-shadow: 0 2px 8px rgba(17,27,67,0.08);
@@ -71,7 +72,7 @@
 .vc-sidebar-header {
     background: var(--vc-accent-gradient);
     color: #fff;
-    padding: 15px 20px;
+    padding: 12px 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -90,7 +91,7 @@
 }
 
 .vc-search-box {
-    padding: 12px 15px;
+    padding: 10px 12px;
     border-bottom: 1px solid #eee;
     flex-shrink: 0;
 }
@@ -115,7 +116,7 @@
 .vc-ref-list {
     flex: 1;
     overflow-y: auto;
-    padding: 10px;
+    padding: 8px;
     scrollbar-width: thin;
     scrollbar-color: #ccc transparent;
 }
@@ -127,8 +128,8 @@
    Circuitos SMD, donde el color ya va incluido en el propio código), sin
    el árbol referencia→color que tenía antes. */
 .vc-ref-item {
-    padding: 12px 15px;
-    margin-bottom: 6px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 13px;
@@ -278,6 +279,52 @@
    una vez que es "no corresponde" y no un valor real apagado. */
 .vc-display-line .vc-val.vc-na { font-family: var(--vc-font-ui); font-size: 0.8rem; font-style: italic; font-weight: 600; color: #777; text-shadow: none; }
 
+/* Cuadros por tipo de circuito (idea A): voltaje arriba y una tabla de
+   pruebas con columnas fijas (nombre | corriente | potencia), para que los
+   números siempre queden en el mismo lugar en los 3 cuadros. */
+.vc-display-volt {
+    display: grid; grid-template-columns: 5.5em 1fr 2.4em; align-items: center; column-gap: 0.4rem;
+    padding: 0.6rem 1rem; background: #0a0a0a; border-bottom: 1px solid #262626; min-height: 3rem;
+}
+.vc-prueba-cab, .vc-prueba-ln {
+    /* rem (no em): el encabezado usa letra más pequeña y con em sus columnas
+       quedarían de otro ancho que las de los renglones. */
+    display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 4.4rem; column-gap: 0.5rem; align-items: center;
+}
+.vc-prueba-cab {
+    font-size: 0.66rem; color: #777; letter-spacing: 0.02em;
+    font-family: 'Courier New', Courier, monospace; padding-bottom: 0.3rem; border-bottom: 1px solid #1f1f1f; margin-bottom: 0.25rem;
+}
+.vc-prueba-cab span:not(:first-child) { text-align: right; }
+.vc-prueba-grupo + .vc-prueba-grupo { border-top: 1px dashed #2a2a2a; margin-top: 0.35rem; padding-top: 0.35rem; }
+.vc-prueba-grupo .vc-display-section-label { margin: 0.15rem 0 0.2rem; }
+.vc-prueba-ln { min-height: 1.95rem; }
+.vc-prueba-tag {
+    display: flex; align-items: center; gap: 0.4rem; min-width: 0;
+    font-size: 0.76rem; color: #bbb; font-family: 'Courier New', Courier, monospace;
+}
+.vc-prueba-nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vc-display-volt .vc-lbl { font-size: 0.82rem; color: #aaa; font-family: 'Courier New', Courier, monospace; }
+.vc-display-volt .vc-unit { font-size: 0.75rem; color: #999; font-family: 'Courier New', Courier, monospace; }
+.vc-display-volt .vc-val, .vc-prueba-ln .vc-val {
+    text-align: right; white-space: nowrap; font-weight: 700; color: #fff;
+    font-family: 'DSEG7', 'Courier New', Courier, monospace; letter-spacing: 0.03em;
+    text-shadow: 0 0 2px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.65), 0 0 18px rgba(255,255,255,0.4);
+}
+.vc-display-volt .vc-val { font-size: 1.35rem; }
+.vc-prueba-ln .vc-val { font-size: 1rem; }
+/* Campo viejo con dos rangos juntos: uno debajo del otro, un poco más pequeño. */
+.vc-prueba-ln .vc-val.vc-val-varios { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.85rem; line-height: 1.35; padding: 0.15rem 0; }
+
+/* Puntos con el color de cada cable que se conecta en la prueba. */
+.vc-cables { display: inline-flex; gap: 2px; flex-shrink: 0; }
+.vc-cable { width: 0.55rem; height: 0.55rem; border-radius: 50%; border: 1px solid #666; display: inline-block; }
+.vc-cable-blanco { background: #fff; }
+.vc-cable-azul { background: #2563eb; }
+.vc-cable-rojo { background: #dc2626; }
+.vc-cable-amarillo { background: #facc15; }
+.vc-cable-negro { background: #111; border-color: #9ca3af; }
+
 /* ========== ESPECIFICACIONES DE CABLEADO ========== */
 .vc-specs-card { background: var(--vc-bg-card); border: 1px solid var(--vc-border); border-radius: 1rem; overflow: hidden; box-shadow: 0 2px 8px rgba(17,27,67,0.06); flex-shrink: 0; }
 .vc-specs-header { background: var(--vc-accent-gradient); color: #fff; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -292,7 +339,7 @@
 
 @media (max-width: 768px) {
     .vc-specs-grid { grid-template-columns: repeat(2, 1fr); }
-    .vc-sidebar { width: 240px; min-width: 240px; }
+    .vc-sidebar { width: 200px; min-width: 200px; }
 }
 
 /* ========== MODAL IMAGEN (visor de foto ampliada — fondo oscuro a
