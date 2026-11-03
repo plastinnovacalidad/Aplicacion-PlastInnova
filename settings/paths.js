@@ -44,8 +44,11 @@ const CARPETAS_FOTOS = process.env.CARPETAS_FOTOS
 // tenía en el catálogo — ej. "1017.jpg"). Configurable en .env
 // (CARPETA_FOTOS_CABLEADO); si no existe, se usa esta ruta real como
 // respaldo, igual que las demás carpetas de arriba.
+// 03/11/2026: las fotos se pasaron a la carpeta de la red (P:) para que no
+// dependan del escritorio de este equipo (antes:
+// C:\Users\produ\OneDrive\Escritorio\FOTOS Formas de cablear).
 const CARPETA_FOTOS_CABLEADO = process.env.CARPETA_FOTOS_CABLEADO
-  || 'C:\\Users\\produ\\OneDrive\\Escritorio\\FOTOS Formas de cablear';
+  || 'P:\\1. Equipo Produccion\\15.3 Calidad\\Proyectos aplicaciones\\Forma de cablear';
 
 // Rutas de los CSV de importación inicial de metrología (configurables en .env)
 const RUTAS_CSV_PATH = process.env.RUTAS_CSV_PATH || 'C:\\Users\\produ\\OneDrive\\Escritorio\\Rutas.csv';
