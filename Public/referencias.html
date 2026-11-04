@@ -38,11 +38,37 @@
     .form-msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
     .form-msg.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
 
-    .edit-search { display: flex; gap: 10px; margin-bottom: 20px; max-width: 600px; }
-    .edit-search input { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    /* Editar Referencia: lista de referencias a la izquierda (mismo estilo
+       que el panel de Valores y Cableado) y el formulario a la derecha. */
+    .editar-layout { display: flex; gap: 20px; align-items: flex-start; }
+    .editar-sidebar {
+      width: 240px; flex-shrink: 0; position: sticky; top: 0;
+      height: calc(100vh - 210px); min-height: 320px;
+      display: flex; flex-direction: column; overflow: hidden;
+      background: #fff; border: 1px solid #e6e9f0; border-radius: 14px; box-shadow: 0 2px 8px rgba(17,27,67,0.06);
+    }
+    .editar-sidebar-header {
+      background: var(--brand-primary-gradient); color: #fff; padding: 12px 15px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+    .editar-ref-count { background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+    .editar-main { flex: 1; min-width: 0; }
+    .editar-vacio { padding: 40px 20px; text-align: center; color: #999; font-size: 14px; border: 1px dashed #dde2ea; border-radius: 12px; }
+    .editar-vacio i { margin-right: 6px; }
+    .editar-main:has(#editFormContainer[style*="block"]) .editar-vacio { display: none; }
+    #papeleraToggle { padding: 8px 12px; border-top: 1px solid #eee; flex-shrink: 0; }
+    #papeleraToggle a { font-size: 12px; color: #888; text-decoration: none; }
+    @media (max-width: 900px) {
+      .editar-layout { flex-direction: column; align-items: stretch; }
+      .editar-sidebar { width: auto; position: static; height: 300px; }
+    }
+
+    .edit-search { display: flex; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+    .edit-search input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; }
     .edit-search input:focus { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(44,67,162,0.1); }
-    .edit-ref-list { margin-bottom: 20px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 6px; }
-    .edit-ref-item { padding: 10px 14px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; border: 1px solid transparent; transition: all 0.15s; }
+    .edit-ref-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; }
+    .edit-ref-item { padding: 8px 12px; margin-bottom: 4px; word-break: break-all; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; border: 1px solid transparent; transition: all 0.15s; }
     .edit-ref-item:hover { background: #f0f3ff; border-color: #d0d8ff; }
     .edit-ref-item.active { background: var(--brand-primary-gradient); color: white; border-color: transparent; }
 
@@ -133,6 +159,13 @@
     .valores-etapa-columna-label { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
 
     .valores-check-row { display: flex; gap: 20px; margin-bottom: 12px; }
+
+    /* "La foto ya está en el disco": enlazar sin subir (Modificación de versión). */
+    .modif-solo-enlazar { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 500; color: #444; cursor: pointer; text-align: left; }
+    .form-grid .modif-solo-enlazar, .form-grid .modif-solo-enlazar span { text-align: left; justify-content: flex-start; font-weight: 500; }
+    .modif-solo-enlazar input { margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0; }
+    .modif-solo-enlazar-box { display: flex; flex-direction: column; gap: 6px; }
+    .modif-solo-enlazar-ayuda { color: #777; font-size: 12px; line-height: 1.4; }
 
     /* Tipo de circuito + tabla de pruebas por cables (MIGRACIÓN #51). Cada
        renglón: puntos de los cables que se conectan | corriente desde |
@@ -298,25 +331,39 @@
       </div>
 
       <div id="secEditar" style="display:none;">
-        <div class="content-title"><i class="fa-solid fa-box-archive"></i> Editar Referencia</div>
-        <div class="edit-search">
-          <input type="text" id="editSearchRef" placeholder="Buscar referencia..." oninput="filtrarRefsEditar()">
-        </div>
-        <div class="edit-ref-list" id="editRefList"></div>
+        <!-- 04/11/2026 (Julio): la lista de referencias va a la izquierda,
+             igual que en Valores y Cableado, en vez de arriba. La lista se
+             queda fija mientras el formulario de la derecha baja. -->
+        <div class="editar-layout">
+          <aside class="editar-sidebar">
+            <div class="editar-sidebar-header">
+              <span><i class="fa-solid fa-list"></i> Referencias</span>
+              <span class="editar-ref-count" id="editRefCount">0</span>
+            </div>
+            <div class="edit-search">
+              <input type="text" id="editSearchRef" placeholder="Buscar referencia..." oninput="filtrarRefsEditar()" autocomplete="off">
+            </div>
+            <div class="edit-ref-list" id="editRefList"></div>
 
-        <!-- Papelera de referencias eliminadas (borrado suave): oculto por
-             defecto, solo lo ve quien tiene 'referencias.eliminar' (ver
-             checkSession). No se mezcla con la lista normal de arriba para
-             no confundir el buscador del día a día con referencias que ya
-             no deberían aparecer ahí. -->
-        <div id="papeleraToggle" style="display:none; margin: 10px 0 15px;">
-          <a href="javascript:void(0)" onclick="togglePapelera()" id="papeleraToggleLink" style="font-size:13px;color:#888;text-decoration:none;">
-            <i class="fa-solid fa-trash-can"></i> Ver referencias eliminadas
-          </a>
-        </div>
+            <!-- Papelera de referencias eliminadas (borrado suave): oculto por
+                 defecto, solo lo ve quien tiene 'referencias.eliminar' (ver
+                 checkSession). No se mezcla con la lista normal para no
+                 confundir el buscador del día a día con referencias que ya
+                 no deberían aparecer ahí. -->
+            <div id="papeleraToggle" style="display:none;">
+              <a href="javascript:void(0)" onclick="togglePapelera()" id="papeleraToggleLink">
+                <i class="fa-solid fa-trash-can"></i> Ver referencias eliminadas
+              </a>
+            </div>
+          </aside>
+
+          <div class="editar-main">
+        <div class="content-title"><i class="fa-solid fa-box-archive"></i> Editar Referencia</div>
         <div id="papeleraBox" style="display:none; margin-bottom:15px; padding:10px; background:#fff5f5; border:1px solid #ffc9c9; border-radius:8px;">
           <div id="papeleraLista"></div>
         </div>
+
+        <div class="editar-vacio" id="editVacio"><i class="fa-solid fa-hand-pointer"></i> Escoge una referencia de la lista de la izquierda.</div>
 
         <div id="editFormContainer" style="display:none;">
           <div class="edit-tabs-header">
@@ -383,6 +430,14 @@
                   <div class="form-grid">
                     <label>Nueva imagen *</label>
                     <input type="file" id="modifImagen" accept="image/*" class="file-input">
+                    <label></label>
+                    <div class="modif-solo-enlazar-box">
+                    <label class="modif-solo-enlazar">
+                      <input type="checkbox" id="modifSoloEnlazar" onchange="onCambioSoloEnlazar()">
+                      <span>La foto ya está en el disco (E:\ o la carpeta de circuitos): <strong>no subirla</strong>, solo enlazarla</span>
+                    </label>
+                    <small class="modif-solo-enlazar-ayuda" id="modifSoloEnlazarAyuda" style="display:none;">Escoge arriba la foto directamente desde su carpeta (por ejemplo E:\1034-1034H). La app no la copia ni la mueve: solo guarda dónde está. De la foto anterior solo se deja una copia en obsoletas.</small>
+                    </div>
                     <label>Motivo del cambio *</label>
                     <textarea id="modifMotivo" placeholder="¿Por qué se reemplaza la imagen actual?"></textarea>
                   </div>
@@ -471,6 +526,8 @@
           </div>
 
         </div>
+          </div><!-- /.editar-main -->
+        </div><!-- /.editar-layout -->
       </div>
     </div>
   </div>
@@ -1207,6 +1264,8 @@
       const list = document.getElementById('editRefList');
       list.innerHTML = '';
       const filtradas = referencias.filter(r => r.toLowerCase().includes(q));
+      const contador = document.getElementById('editRefCount');
+      if (contador) contador.textContent = filtradas.length;
       if (filtradas.length === 0) {
         list.innerHTML = '<div class="rec-empty" style="padding:10px;">No se encontraron referencias</div>';
         return;
@@ -1224,7 +1283,21 @@
       referenciaEditando = codigoBase;
       document.querySelectorAll('.edit-ref-item').forEach(el => el.classList.remove('active'));
       if (e && e.target) e.target.classList.add('active');
-      await cargarDatosEdicion(codigoBase);
+      // Julio pidió poder ir revisando referencia por referencia sin que
+      // cada clic lo devuelva a "Información": si ya había una referencia
+      // abierta, se conserva la pestaña en la que estaba. La primera vez
+      // (formulario todavía oculto) arranca en "Información" como siempre.
+      const yaHabiaUnaAbierta = document.getElementById('editFormContainer').style.display === 'block';
+      // Lo que se haya dejado a medias en otra referencia (archivo escogido,
+      // motivo, mensajes) se limpia para no aplicarlo por error a esta.
+      ['modifImagen', 'modifMotivo', 'nuevaVerImagen', 'nuevaVerMotivo', 'nuevaVerNumero'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      const chkEnlazar = document.getElementById('modifSoloEnlazar');
+      if (chkEnlazar && chkEnlazar.checked) { chkEnlazar.checked = false; onCambioSoloEnlazar(); }
+      ['modifMsg', 'nuevaVerMsg'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+      await cargarDatosEdicion(codigoBase, yaHabiaUnaAbierta);
     }
 
     // Foto actual de la versión activa, en la pestaña "Modificación de
@@ -1232,7 +1305,14 @@
     // con marca de agua que usa Circuitos SMD (/api/fotos-version/:id), para
     // que Julio vea la foto que se va a reemplazar mientras corrige los
     // valores/cableado de esa misma versión, sin tener que ir a otra pantalla.
+    // Al cambiar de referencia se cancela la foto que todavía se estaba
+    // cargando (04/11/2026): así el servidor no la sigue preparando y la
+    // foto de la referencia nueva no tiene que esperar turno.
+    let fotoActualAbort = null;
     async function cargarFotoActualEdicion(versionId, codigoBaseEnCurso) {
+      if (fotoActualAbort) fotoActualAbort.abort();
+      fotoActualAbort = new AbortController();
+      const signal = fotoActualAbort.signal;
       const viewer = document.getElementById('fotoActualViewer');
       if (!versionId) {
         viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
@@ -1240,7 +1320,7 @@
       }
       viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Cargando…</div>';
       try {
-        const res = await fetch(`/api/fotos-version/${versionId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await fetch(`/api/fotos-version/${versionId}`, { headers: { 'Authorization': 'Bearer ' + token }, signal });
         // Misma protección que el resto de cargarDatosEdicion: si el usuario
         // ya seleccionó otra referencia mientras esperábamos esta respuesta,
         // no pisar la foto que sí corresponde a la selección actual.
@@ -1258,6 +1338,7 @@
           viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Sin foto cargada</div>';
         }
       } catch (e) {
+        if (e && e.name === 'AbortError') return; // se cambió de referencia
         if (referenciaEditando !== codigoBaseEnCurso) return;
         viewer.innerHTML = '<div class="rec-empty" style="padding:20px;text-align:center;">Error al cargar la foto</div>';
       }
@@ -1305,22 +1386,26 @@
         if (btnNuevaVersionEl) btnNuevaVersionEl.disabled = !refActiva;
 
         document.getElementById('fotoActualVersionLabel').textContent = datosEditando.version_actual || 'Sin versión';
-        await cargarFotoActualEdicion(datosEditando.version_id, codigoBase);
-        if (referenciaEditando !== codigoBase) return;
+        // La foto se pide sin esperarla (04/11/2026): antes los valores, el
+        // cableado y la auditoría no se cargaban hasta que llegara la foto,
+        // y toda la pestaña se sentía lenta. Ahora todo se pide a la vez y
+        // la foto aparece cuando esté lista (cargarFotoActualEdicion ya
+        // ignora respuestas de una referencia anterior).
+        cargarFotoActualEdicion(datosEditando.version_id, codigoBase);
 
         const modifValoresBox = document.getElementById('modifValoresBox');
+        const pendientes = [];
         if (tienePermiso('valores_cableado.gestion')) {
           modifValoresBox.style.display = 'block';
           document.getElementById('editValoresFields').innerHTML = renderCamposValores('editVal');
           document.getElementById('editValoresVersionLabel').textContent = `${datosEditando.codigo_base || codigoBase} — ${datosEditando.version_actual || 'sin versión'}`;
           document.getElementById('editValoresMsg').style.display = 'none';
-          await cargarValoresEdicion(datosEditando.version_id);
-          if (referenciaEditando !== codigoBase) return;
+          pendientes.push(cargarValoresEdicion(datosEditando.version_id));
         } else {
           modifValoresBox.style.display = 'none';
         }
-
-        await cargarAuditoriaRef(datosEditando.codigo_base || codigoBase);
+        pendientes.push(cargarAuditoriaRef(datosEditando.codigo_base || codigoBase));
+        await Promise.all(pendientes);
         if (referenciaEditando !== codigoBase) return;
 
         document.getElementById('editFormContainer').style.display = 'block';
@@ -1519,6 +1604,43 @@
       } catch (e) { alert('Error de conexión'); }
     }
 
+    function onCambioSoloEnlazar() {
+      const marcado = document.getElementById('modifSoloEnlazar').checked;
+      document.getElementById('modifSoloEnlazarAyuda').style.display = marcado ? 'block' : 'none';
+      document.getElementById('btnModifVer').innerHTML = marcado
+        ? '<i class="fa-solid fa-link"></i> Enlazar foto a la versión actual'
+        : '<i class="fa-solid fa-rotate"></i> Subir foto a la versión actual';
+    }
+
+    // "La foto ya está en el disco": no se sube el archivo. Solo se manda su
+    // nombre y tamaño; el servidor la busca en las carpetas activas y guarda
+    // su ruta (ver POST /referencias/:codigo/enlazar-foto).
+    async function enlazarFotoVersionActual(archivo, motivo, msg) {
+      try {
+        const res = await fetch(`/api/referencias/${encodeURIComponent(datosEditando.codigo_base)}/enlazar-foto`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre_archivo: archivo.name, tamano: archivo.size, motivo })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          msg.className = 'form-msg success'; msg.style.display = 'block';
+          msg.textContent = `Foto enlazada (no se subió ni se movió): ${data.imagen_ruta}.` + (data.foto_anterior ? ` Foto anterior: ${data.foto_anterior}.` : '');
+          document.getElementById('modifImagen').value = '';
+          document.getElementById('modifMotivo').value = '';
+          document.getElementById('modifSoloEnlazar').checked = false;
+          onCambioSoloEnlazar();
+          await cargarDatosEdicion(referenciaEditando, true);
+        } else {
+          msg.className = 'form-msg error'; msg.style.display = 'block';
+          msg.textContent = data.error || 'Error al enlazar la foto';
+        }
+      } catch (e) {
+        msg.className = 'form-msg error'; msg.style.display = 'block';
+        msg.textContent = 'Error de conexión';
+      }
+    }
+
     async function modificarVersionActual() {
       if (!datosEditando || !datosEditando.codigo_base) return;
       const fileInput = document.getElementById('modifImagen');
@@ -1527,6 +1649,10 @@
       msg.style.display = 'none';
       if (fileInput.files.length === 0) { alert('Seleccione la nueva imagen'); return; }
       if (!motivo) { alert('Ingrese el motivo del cambio'); return; }
+      if (document.getElementById('modifSoloEnlazar').checked) {
+        await enlazarFotoVersionActual(fileInput.files[0], motivo, msg);
+        return;
+      }
 
       const fd = new FormData();
       fd.append('imagen', fileInput.files[0]);
