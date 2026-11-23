@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liberación de producto - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <link rel="stylesheet" href="css/liberacion.css">
+</head>
+<body>
+
+  <!-- Liberación de producto (MIGRACIÓN #56, 23/11/2026, pedido por Julio):
+       formato de liberación con fotos originales y PDF en tarjetas.
+       Lógica en js/liberacion/app.js; backend en routes/liberaciones.js. -->
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-clipboard-check"></i> Liberación de producto</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1><i class="fa-solid fa-clipboard-check"></i> Liberación de producto</h1>
+        <p>Formato de liberación con fotos y PDF</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal"><i class="fa-solid fa-arrow-left"></i> Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div id="appMain" style="display:none;">
+    <div class="lb-app">
+
+      <div class="tabs lb-tabs">
+        <button type="button" class="tab-btn active" data-tab="registrar" id="lbTabRegistrar"><i class="fa-solid fa-plus"></i> Registrar</button>
+        <button type="button" class="tab-btn" data-tab="liberados" id="lbTabLiberados"><i class="fa-solid fa-table-list"></i> Liberados</button>
+      </div>
+
+      <!-- ===================== REGISTRAR ===================== -->
+      <section class="lb-panel" id="lbPanelRegistrar">
+
+        <div class="lb-editando" id="lbEditando" style="display:none;">
+          <i class="fa-solid fa-pen-to-square"></i>
+          <span>Estás editando <strong id="lbEditandoCons"></strong>. Al guardar quedará como <strong id="lbEditandoRev"></strong>.</span>
+          <button type="button" class="lb-btn lb-btn-sec" id="lbCancelarEdicion"><i class="fa-solid fa-xmark"></i> Cancelar edición</button>
+        </div>
+
+        <div class="lb-card lb-encabezado">
+          <!-- Cada documento es una liberación o un rechazo (no se mezclan):
+               el tipo se elige una vez aquí y aplica a todos sus productos. -->
+          <div class="lb-campo lb-tipo-doc">
+            <span>Tipo de documento <em>*</em> <small id="lbTipoNota"></small></span>
+            <div class="lb-segmentos lb-tipos" id="lbTipos" role="radiogroup" aria-label="Tipo de documento">
+              <button type="button" class="lb-seg" data-tipo="Liberación" role="radio" aria-checked="false"><i class="fa-solid fa-circle-check"></i> Liberación</button>
+              <button type="button" class="lb-seg" data-tipo="Rechazo" role="radio" aria-checked="false"><i class="fa-solid fa-circle-xmark"></i> Rechazo</button>
+            </div>
+          </div>
+          <div class="lb-campo lb-campo-fijo">
+            <span>Responsable</span>
+            <strong id="lbResponsable">—</strong>
+          </div>
+          <label class="lb-campo">
+            <span>Fecha <em>*</em></span>
+            <input type="date" id="lbFecha">
+          </label>
+          <div class="lb-campo">
+            <span>Turno <em>*</em></span>
+            <div class="lb-segmentos" id="lbTurnos" role="radiogroup" aria-label="Turno"></div>
+          </div>
+          <label class="lb-campo">
+            <span>Área <em>*</em></span>
+            <select id="lbArea"><option value="">Selecciona…</option></select>
+          </label>
+        </div>
+
+        <div class="lb-titulo-seccion">
+          <h2>Productos</h2>
+          <span class="lb-contador" id="lbContadorProductos">0</span>
+        </div>
+
+        <div class="lb-productos" id="lbProductos"></div>
+
+        <button type="button" class="lb-agregar" id="lbAgregar"><i class="fa-solid fa-plus"></i> Agregar producto</button>
+
+        <div class="lb-guardar">
+          <div class="lb-error" id="lbErrorGuardar"></div>
+          <button type="button" class="lb-btn lb-btn-cta" id="lbGuardar"><i class="fa-solid fa-file-pdf"></i> <span id="lbGuardarTexto">Guardar y generar PDF</span></button>
+        </div>
+      </section>
+
+      <!-- ===================== LIBERADOS ===================== -->
+      <section class="lb-panel" id="lbPanelLiberados" style="display:none;">
+        <!-- Vista (por documento o por referencia) y filtro Liberados/Rechazados -->
+        <div class="lb-barra-vista">
+          <div class="lb-segmentos lb-vistas" id="lbVistas" role="radiogroup" aria-label="Ver liberaciones">
+            <button type="button" class="lb-seg activo" data-vista="documento" role="radio" aria-checked="true"><i class="fa-regular fa-file-lines"></i> Por documento</button>
+            <button type="button" class="lb-seg" data-vista="referencia" role="radio" aria-checked="false"><i class="fa-solid fa-barcode"></i> Por referencia</button>
+          </div>
+          <div class="lb-segmentos lb-filtro-estado" id="lbFiltroEstado" role="radiogroup" aria-label="Filtrar por tipo de documento">
+            <button type="button" class="lb-seg activo" data-filtro-tipo="" role="radio" aria-checked="true">Todos</button>
+            <button type="button" class="lb-seg" data-filtro-tipo="Liberación" role="radio" aria-checked="false"><i class="fa-solid fa-circle-check"></i> Liberaciones</button>
+            <button type="button" class="lb-seg" data-filtro-tipo="Rechazo" role="radio" aria-checked="false"><i class="fa-solid fa-circle-xmark"></i> Rechazos</button>
+          </div>
+        </div>
+
+        <div class="lb-card lb-filtros">
+          <label class="lb-campo"><span>Desde</span><input type="date" id="lbDesde"></label>
+          <label class="lb-campo"><span>Hasta</span><input type="date" id="lbHasta"></label>
+          <label class="lb-campo">
+            <span>Turno</span>
+            <select id="lbFiltroTurno"><option value="">Todos</option></select>
+          </label>
+          <label class="lb-campo">
+            <span>Área</span>
+            <select id="lbFiltroArea"><option value="">Todas</option></select>
+          </label>
+          <label class="lb-campo lb-campo-ancho"><span>Buscar</span><input type="text" id="lbFiltroTexto" placeholder="Referencia, lote, consecutivo…" autocomplete="off"></label>
+          <button type="button" class="lb-btn lb-btn-pri" id="lbBtnBuscar"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+        </div>
+
+        <div class="lb-nota" id="lbNotaLista"></div>
+        <div class="lb-lista" id="lbLista"></div>
+        <div class="lb-lista" id="lbListaRef" style="display:none;"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Detalle de una liberación -->
+  <div class="lb-modal-fondo" id="lbDetalle" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="lbDetTitulo">
+    <div class="lb-modal">
+      <div class="lb-modal-cabeza">
+        <div>
+          <h2 id="lbDetTitulo">—</h2>
+          <p id="lbDetSub"></p>
+        </div>
+        <button type="button" class="lb-btn-icono" id="lbDetCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="lb-det-datos" id="lbDetDatos"></div>
+      <div class="lb-det-productos" id="lbDetProductos"></div>
+      <div class="lb-modal-pie">
+        <button type="button" class="lb-btn lb-btn-peligro" id="lbDetEliminar" style="display:none;"><i class="fa-solid fa-trash"></i> Eliminar</button>
+        <span class="lb-espacio"></span>
+        <button type="button" class="lb-btn lb-btn-sec" id="lbDetEditar" style="display:none;"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+        <button type="button" class="lb-btn lb-btn-pri" id="lbDetPdf"><i class="fa-solid fa-file-pdf"></i> Ver PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resultado al guardar -->
+  <div class="lb-modal-fondo" id="lbResultado" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="lbResTitulo">
+    <div class="lb-modal lb-modal-chico">
+      <div class="lb-res-icono" id="lbResIcono"><i class="fa-solid fa-circle-check"></i></div>
+      <h2 id="lbResTitulo">Liberación guardada</h2>
+      <p id="lbResTexto"></p>
+      <div class="lb-progreso" id="lbResProgreso"><div class="lb-progreso-barra" id="lbResBarra"></div></div>
+      <div class="lb-modal-pie lb-res-botones" id="lbResBotones" style="display:none;">
+        <button type="button" class="lb-btn lb-btn-sec" id="lbResNueva"><i class="fa-solid fa-plus"></i> Nueva liberación</button>
+        <button type="button" class="lb-btn lb-btn-pri" id="lbResPdf"><i class="fa-solid fa-file-pdf"></i> Ver PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visor de foto original -->
+  <div class="lb-visor" id="lbVisor" style="display:none;" role="dialog" aria-modal="true" aria-label="Foto en tamaño original">
+    <div class="lb-visor-barra">
+      <span id="lbVisorTitulo"></span>
+      <div class="lb-visor-botones">
+        <button type="button" class="lb-btn-visor" id="lbZoomMenos" aria-label="Alejar"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+        <button type="button" class="lb-btn-visor" id="lbZoomAjustar">Ajustar</button>
+        <button type="button" class="lb-btn-visor" id="lbZoomMas" aria-label="Acercar"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+        <button type="button" class="lb-btn-visor" id="lbVisorCerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <div class="lb-visor-area" id="lbVisorArea">
+      <img id="lbVisorImg" alt="">
+    </div>
+  </div>
+
+  <input type="file" id="lbArchivoFoto" accept="image/*" style="display:none;">
+  <div class="lb-toast" id="lbToast"></div>
+
+  <script src="js/comun.js"></script>
+  <script src="js/liberacion/app.js"></script>
+</body>
+</html>

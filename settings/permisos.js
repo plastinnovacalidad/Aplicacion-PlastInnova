@@ -155,6 +155,20 @@ const PERMISOS_DISPONIBLES = [
   { codigo: 'problemas.crear',      descripcion: 'Registrar problemas nuevos en el módulo Problemas' },
   { codigo: 'problemas.gestionar',  descripcion: 'Editar un problema, agregar/editar sus causas raíz y medidas, descartarlo o reabrirlo' },
   { codigo: 'problemas.eliminar',   descripcion: 'Eliminar causas raíz y medidas ya registradas en un problema' },
+  // Módulo "Caja roja" (MIGRACIÓN #53, 10/11, pedido por Julio): registro
+  // de piezas que van a la caja roja (referencia + lote + cantidad, por
+  // área). Tres permisos separados para poder dar a un operario solo la
+  // capacidad de registrar, sin ver lo que registraron los demás ni poder
+  // borrar nada.
+  { codigo: 'caja_roja.registrar',  descripcion: 'Registrar piezas en Caja roja (pestaña Cargar registros)' },
+  { codigo: 'caja_roja.ver',        descripcion: 'Consultar y exportar los registros de Caja roja de todas las áreas' },
+  { codigo: 'caja_roja.gestion',    descripcion: 'Eliminar registros de Caja roja y actualizar el maestro de referencias (CSV del ERP)' },
+  // Módulo "Liberación de producto" (MIGRACIÓN #56, 23/11/2026, pedido por
+  // Julio): formato con fotos y PDF. Un registro solo lo puede editar quien
+  // lo creó (con liberacion.registrar); 'gestion' solo elimina.
+  { codigo: 'liberacion.registrar', descripcion: 'Crear liberaciones de producto, ver las propias y editar las que creó' },
+  { codigo: 'liberacion.ver',       descripcion: 'Consultar las liberaciones de producto de todas las personas (sin editar)' },
+  { codigo: 'liberacion.gestion',   descripcion: 'Eliminar liberaciones de producto' },
 ];
 
 module.exports = { PERMISOS_DISPONIBLES };

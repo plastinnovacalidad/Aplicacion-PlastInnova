@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caja roja - Calidad & Circuitos SMD</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/comun.css">
+  <link rel="stylesheet" href="css/caja_roja.css">
+</head>
+<body>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <img src="/marca/logo-vertical.png" alt="Plast Innova" class="login-logo">
+      <h2><i class="fa-solid fa-box"></i> Caja roja</h2>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+      <button onclick="doLogin()">Iniciar Sesión</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div class="header" id="appHeader" style="display:none;">
+    <div class="header-brand">
+      <img src="/marca/logo-horizontal-ng.png" alt="Plast Innova" class="header-logo">
+      <div>
+        <h1><i class="fa-solid fa-box"></i> Caja roja</h1>
+        <p>Registro de piezas por referencia y lote</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="cr-conexion" id="crConexion" title="Estado de la conexión con el servidor">
+        <i class="fa-solid fa-circle"></i> <span id="crConexionTexto">En línea</span>
+      </span>
+      <span id="userNameDisplay">Usuario</span>
+      <a href="index.html" class="btn-header" id="btnVolverPortal"><i class="fa-solid fa-arrow-left"></i> Volver al Portal</a>
+      <button class="btn-logout" onclick="doLogout()">Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <div id="appMain" style="display:none;">
+    <div class="cr-app">
+
+      <!-- Aviso de envíos pendientes / sesión vencida -->
+      <div class="cr-aviso" id="crAviso" style="display:none;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="crAvisoTexto"></span>
+        <button type="button" class="cr-btn cr-btn-sec" id="crBtnEnviarAhora"><i class="fa-solid fa-rotate"></i> Enviar ahora</button>
+      </div>
+
+      <div class="tabs cr-tabs">
+        <button type="button" class="tab-btn active" data-tab="cargar" id="crTabCargar"><i class="fa-solid fa-plus"></i> Cargar registros</button>
+        <button type="button" class="tab-btn" data-tab="consultar" id="crTabConsultar"><i class="fa-solid fa-table-list"></i> Consultar</button>
+        <button type="button" class="tab-btn" data-tab="reporte" id="crTabReporte" style="display:none;"><i class="fa-solid fa-chart-column"></i> Reporte semanal</button>
+      </div>
+
+      <!-- ===================== CARGAR ===================== -->
+      <section class="cr-panel" id="crPanelCargar">
+        <div class="cr-sesion">
+          <label class="cr-campo">
+            <span>Fecha</span>
+            <input type="date" id="crFecha">
+          </label>
+          <label class="cr-campo">
+            <span>Área</span>
+            <select id="crArea">
+              <option value="">Selecciona…</option>
+              <option>Fábrica 1</option>
+              <option>Fábrica 2</option>
+              <option>Fábrica 3</option>
+              <option>Fábrica 4</option>
+            </select>
+          </label>
+          <div class="cr-campo cr-campo-fijo">
+            <span>Registra</span>
+            <strong id="crNombre">—</strong>
+          </div>
+        </div>
+
+        <div class="cr-cargar">
+          <div class="cr-col-busqueda">
+            <div class="cr-buscador">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="crBuscar" placeholder="Escribe el número, p. ej. 1060" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button type="button" class="cr-limpiar" id="crLimpiar" title="Borrar búsqueda" aria-label="Borrar búsqueda"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="cr-maestro-vacio" id="crMaestroVacio" style="display:none;">
+              <i class="fa-solid fa-circle-info"></i> Todavía no hay maestro de referencias en esta tablet. Conéctate al servidor una vez para descargarlo.
+            </div>
+
+            <div id="crPasos"></div>
+
+            <div class="cr-final" id="crFinal" style="display:none;">
+              <div class="cr-final-ref" id="crFinalRef"></div>
+              <label class="cr-campo">
+                <span>Lote <em>*</em></span>
+                <input type="text" id="crLote" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              </label>
+              <label class="cr-campo">
+                <span>Cantidad <em>*</em></span>
+                <input type="number" id="crCantidad" min="1" step="1" inputmode="numeric">
+              </label>
+              <div class="cr-error" id="crErrorRegistro"></div>
+              <button type="button" class="cr-btn cr-btn-cta" id="crBtnRegistrar"><i class="fa-solid fa-check"></i> Registrar</button>
+            </div>
+          </div>
+
+          <div class="cr-col-lista">
+            <div class="cr-lista-titulo">
+              <span>Coincidencias</span>
+              <span class="cr-contador" id="crContador">0</span>
+            </div>
+            <div class="cr-lista" id="crLista">
+              <div class="cr-lista-vacia">Escribe un número para ver las referencias.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cr-recientes">
+          <div class="cr-lista-titulo"><span>Últimos registros en esta tablet</span></div>
+          <div id="crRecientes"><div class="cr-lista-vacia">Aún no hay registros.</div></div>
+        </div>
+      </section>
+
+      <!-- ===================== CONSULTAR ===================== -->
+      <section class="cr-panel" id="crPanelConsultar" style="display:none;">
+        <div class="cr-filtros">
+          <label class="cr-campo"><span>Desde</span><input type="date" id="crDesde"></label>
+          <label class="cr-campo"><span>Hasta</span><input type="date" id="crHasta"></label>
+          <label class="cr-campo">
+            <span>Área</span>
+            <select id="crFiltroArea">
+              <option value="">Todas</option>
+              <option>Fábrica 1</option>
+              <option>Fábrica 2</option>
+              <option>Fábrica 3</option>
+              <option>Fábrica 4</option>
+            </select>
+          </label>
+          <label class="cr-campo cr-campo-ancho"><span>Filtrar</span><input type="text" id="crFiltroTexto" placeholder="Referencia, lote, nombre…" autocomplete="off"></label>
+          <div class="cr-filtros-botones">
+            <button type="button" class="cr-btn cr-btn-pri" id="crBtnConsultar"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+            <button type="button" class="cr-btn cr-btn-sec" id="crBtnExportar"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
+          </div>
+        </div>
+
+        <div class="cr-nota" id="crNotaConsulta"></div>
+
+        <div class="cr-tabla-wrap">
+          <table class="cr-tabla">
+            <thead>
+              <tr>
+                <th>#</th><th>Fecha</th><th>Hora</th><th>Área</th><th>Nombre</th><th>ID</th>
+                <th>Referencia</th><th>Descripción</th><th>Lote</th><th class="num">Cant.</th><th class="cr-col-acc"></th>
+              </tr>
+            </thead>
+            <tbody id="crTablaCuerpo"></tbody>
+            <tfoot><tr><td colspan="9" id="crTotalTexto"></td><td class="num" id="crTotalCant"></td><td class="cr-col-acc"></td></tr></tfoot>
+          </table>
+        </div>
+
+        <div class="cr-maestro" id="crMaestroGestion" style="display:none;">
+          <div>
+            <strong><i class="fa-solid fa-database"></i> Maestro de referencias</strong>
+            <span id="crMaestroInfo"></span>
+          </div>
+          <button type="button" class="cr-btn cr-btn-sec" id="crBtnMaestro"><i class="fa-solid fa-file-arrow-up"></i> Cargar maestro (CSV)</button>
+          <input type="file" id="crArchivoMaestro" accept=".csv,text/csv" style="display:none;">
+        </div>
+      </section>
+
+      <!-- ===================== REPORTE SEMANAL ===================== -->
+      <section class="cr-panel" id="crPanelReporte" style="display:none;">
+        <div class="cr-filtros cr-rep-filtros">
+          <div class="cr-semana">
+            <button type="button" class="cr-btn cr-btn-sec cr-btn-flecha" id="crSemAnterior" title="Semana anterior" aria-label="Semana anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="cr-semana-texto">
+              <strong id="crSemTitulo">Semana</strong>
+              <span id="crSemRango"></span>
+            </div>
+            <button type="button" class="cr-btn cr-btn-sec cr-btn-flecha" id="crSemSiguiente" title="Semana siguiente" aria-label="Semana siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+            <button type="button" class="cr-btn cr-btn-sec" id="crSemActual">Esta semana</button>
+          </div>
+          <label class="cr-campo">
+            <span>Fábrica</span>
+            <select id="crRepArea">
+              <option value="">Todas</option>
+              <option>Fábrica 1</option>
+              <option>Fábrica 2</option>
+              <option>Fábrica 3</option>
+              <option>Fábrica 4</option>
+            </select>
+          </label>
+          <div class="cr-filtros-botones">
+            <button type="button" class="cr-btn cr-btn-sec" id="crBtnImprimir"><i class="fa-solid fa-print"></i> Imprimir</button>
+          </div>
+        </div>
+
+        <div class="cr-reporte" id="crReporte">
+          <div class="cr-rep-encabezado-impresion">
+            <img src="/marca/logo-horizontal.png" alt="Plast Innova" class="cr-rep-logo">
+            <div>
+              <h2>Caja roja · Reporte semanal</h2>
+              <p id="crRepImpresionSub"></p>
+            </div>
+          </div>
+
+          <div class="cr-kpis">
+            <div class="cr-kpi">
+              <span class="cr-kpi-label">Piezas a caja roja</span>
+              <strong class="cr-kpi-valor" id="crKpiPiezas">—</strong>
+              <span class="cr-kpi-sub" id="crKpiComparacion"></span>
+            </div>
+            <div class="cr-kpi">
+              <span class="cr-kpi-label">Registros</span>
+              <strong class="cr-kpi-valor" id="crKpiRegistros">—</strong>
+              <span class="cr-kpi-sub" id="crKpiLotes"></span>
+            </div>
+            <div class="cr-kpi">
+              <span class="cr-kpi-label">Referencias distintas</span>
+              <strong class="cr-kpi-valor" id="crKpiRefs">—</strong>
+              <span class="cr-kpi-sub" id="crKpiTopRef"></span>
+            </div>
+            <div class="cr-kpi">
+              <span class="cr-kpi-label">Fábrica con más piezas</span>
+              <strong class="cr-kpi-valor cr-kpi-texto" id="crKpiFabrica">—</strong>
+              <span class="cr-kpi-sub" id="crKpiFabricaSub"></span>
+            </div>
+          </div>
+
+          <div class="cr-rep-grid">
+            <div class="cr-rep-card">
+              <h3>Piezas por día</h3>
+              <div class="cr-barras-v" id="crGrafDias"></div>
+            </div>
+            <div class="cr-rep-card">
+              <h3>Piezas por fábrica</h3>
+              <div class="cr-barras-h" id="crGrafFabricas"></div>
+            </div>
+          </div>
+
+          <div class="cr-rep-card">
+            <div class="cr-rep-card-titulo">
+              <h3>Referencias que más fueron a caja roja</h3>
+              <button type="button" class="cr-btn-mini" id="crRepVerTodas" style="display:none;"></button>
+            </div>
+            <div class="cr-tabla-wrap cr-tabla-plana">
+              <table class="cr-tabla cr-tabla-top">
+                <thead>
+                  <tr><th class="num">#</th><th>Referencia</th><th>Descripción</th><th class="cr-col-barra">Piezas</th><th class="num">% del total</th><th class="num">Registros</th><th class="num">Lotes</th></tr>
+                </thead>
+                <tbody id="crRepTopCuerpo"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cr-rep-card">
+            <h3>Piezas por día y fábrica</h3>
+            <div class="cr-tabla-wrap cr-tabla-plana">
+              <table class="cr-tabla">
+                <thead id="crRepMatrizCabeza"></thead>
+                <tbody id="crRepMatrizCuerpo"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="cr-toast" id="crToast"></div>
+
+  <script src="js/comun.js"></script>
+  <script src="js/caja_roja/app.js"></script>
+</body>
+</html>

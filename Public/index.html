@@ -310,6 +310,25 @@
               <h3>Reportes</h3>
             </div>
           </a>
+
+          <!-- "Caja roja" (MIGRACIÓN #53, 10/11, pedido por Julio): registro
+               de piezas por referencia + lote + cantidad. Funciona aunque la
+               tablet pierda la conexión (ver Public/js/caja_roja/app.js). -->
+          <a href="caja_roja.html" class="portal-card" id="cardCajaRoja" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #B00000 0%, #7A0000 100%);"><i class="fa-solid fa-box"></i></div>
+            <div class="card-body">
+              <h3>Caja roja</h3>
+            </div>
+          </a>
+
+          <!-- "Liberación de producto" (MIGRACIÓN #56, 23/11/2026, pedido por
+               Julio): formato de liberación con fotos originales y PDF. -->
+          <a href="liberacion.html" class="portal-card" id="cardLiberacion" style="display: none;">
+            <div class="card-banner" style="background: linear-gradient(135deg, #009245 0%, #006B33 100%);"><i class="fa-solid fa-clipboard-check"></i></div>
+            <div class="card-body">
+              <h3>Liberación de producto</h3>
+            </div>
+          </a>
         </div>
       </section>
 
@@ -459,6 +478,18 @@
             cardReportes.style.display = (PERMISOS_REPORTES_GENERALES || PERMISOS_REPORTES_INFORMATIVOS) ? 'flex' : 'none';
           }
 
+          const PERMISOS_CAJA_ROJA = ['caja_roja.registrar', 'caja_roja.ver', 'caja_roja.gestion'];
+          const cardCajaRoja = document.getElementById('cardCajaRoja');
+          if (cardCajaRoja) {
+            cardCajaRoja.style.display = PERMISOS_CAJA_ROJA.some(p => tienePermiso(p)) ? 'flex' : 'none';
+          }
+
+          const PERMISOS_LIBERACION = ['liberacion.registrar', 'liberacion.ver', 'liberacion.gestion'];
+          const cardLiberacion = document.getElementById('cardLiberacion');
+          if (cardLiberacion) {
+            cardLiberacion.style.display = PERMISOS_LIBERACION.some(p => tienePermiso(p)) ? 'flex' : 'none';
+          }
+
           // Secciones como "Piezas Plásticas" o "Calidad" solo tienen
           // tarjetas con permiso propio (a diferencia de "Electrónica" o
           // "Reportes", que siempre muestran algo). Si a esta persona le
@@ -476,7 +507,7 @@
           // ISO 2859 también terminaba saltándose el portal sin querer —
           // se completa la lista para que cualquier módulo aparte de SMD
           // mantenga a la persona en el portal.
-          const tieneOtroModulo = ['garantias.ver', 'garantias.dashboard', 'referencias.crear', 'referencias.editar', 'gestion.ver', 'whatsapp.bot.ver', 'metrologia.ver', 'metrologia.gestion', 'metrologia.crear_referencia', 'metrologia.versiones', 'iso2859.ver', 'iso2859.gestion', 'calidad.ver', 'valores_cableado.ver', 'produccion.trazabilidad.ver', 'produccion.trazabilidad.gestionar', 'reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar', 'problemas.ver', 'problemas.crear', 'problemas.gestionar', 'problemas.eliminar']
+          const tieneOtroModulo = ['garantias.ver', 'garantias.dashboard', 'referencias.crear', 'referencias.editar', 'gestion.ver', 'whatsapp.bot.ver', 'metrologia.ver', 'metrologia.gestion', 'metrologia.crear_referencia', 'metrologia.versiones', 'iso2859.ver', 'iso2859.gestion', 'calidad.ver', 'valores_cableado.ver', 'produccion.trazabilidad.ver', 'produccion.trazabilidad.gestionar', 'reportes.ver', 'reportes.crear', 'reportes.gestionar', 'reportes.eliminar', 'problemas.ver', 'problemas.crear', 'problemas.gestionar', 'problemas.eliminar', 'caja_roja.registrar', 'caja_roja.ver', 'caja_roja.gestion', 'liberacion.registrar', 'liberacion.ver', 'liberacion.gestion']
             .some(p => tienePermiso(p));
           if (!tieneOtroModulo) {
             location.href = 'smd.html';

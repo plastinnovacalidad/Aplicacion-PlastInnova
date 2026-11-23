@@ -15,6 +15,7 @@ const { manejadorDeErrores } = require('./middleware/errores');
 const { limpiarObsoletas } = require('./utils/archivos');
 const { cerrarLotesInactivos } = require('./data/iso2859');
 const { sincronizarProduccion } = require('./scripts/sincronizar_produccion');
+const { iniciarServidor, vigilarVencimiento } = require('./utils/servidorHttps');
 
 const app = express();
 
@@ -26,6 +27,11 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
+  // HSTS apagado a propósito: con HTTPS activo, esa cabecera obliga al
+  // navegador de la tablet a no volver a usar http:// en este equipo por
+  // meses. Si algún día el certificado falla y hay que volver a http://
+  // (HTTPS_DESACTIVADO=1), las tablets quedarían sin poder entrar.
+  hsts: false,
 }));
 
 // CORS: esta app no tiene un frontend en otro dominio ni se consume desde
@@ -81,6 +87,8 @@ app.use('/api', require('./routes/valoresCableado'));
 app.use('/api', require('./routes/produccion'));
 app.use('/api', require('./routes/reportes'));
 app.use('/api', require('./routes/problemas'));
+app.use('/api', require('./routes/cajaRoja'));
+app.use('/api', require('./routes/liberaciones'));
 
 // Cualquier /api/... que no coincidió con ninguna ruta de arriba (ej. una URL
 // mal escrita) responde con JSON en vez de la página HTML de error por
@@ -115,8 +123,19 @@ inicializarBaseDatos().then(() => {
     whatsappService.iniciarBotWhatsApp(getDb());
   }
 
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Servidor en http://localhost:${PORT}`);
+  // Antes: app.listen(PORT). Ahora arranca con HTTPS si el certificado
+  // existe (ver utils/servidorHttps.js); si no, sigue en http:// igual que
+  // siempre.
+  iniciarServidor(app, PORT, (protocolo) => {
+    console.log(`\n🚀 Servidor en ${protocolo}://localhost:${PORT}`);
+    if (protocolo === 'https') {
+      console.log(`🔒 HTTPS activo. Las direcciones http:// redirigen solas a https://.`);
+      // Aviso 30 días antes de que venza el certificado (consola y, en la
+      // app normal, WhatsApp al administrador).
+      vigilarVencimiento(SIN_WHATSAPP ? null : (mensaje) => {
+        require('./whatsapp_bot_service').enviarAlerta('certificado_https_por_vencer', mensaje);
+      });
+    }
     console.log(motorBd() === 'sqlserver'
       ? `📁 BD: SQL Server ${process.env.MSSQL_SERVER} / ${process.env.MSSQL_DATABASE}`
       : `📁 BD: ${DB_PATH}`);

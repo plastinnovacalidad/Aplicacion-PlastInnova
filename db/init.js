@@ -255,6 +255,132 @@ async function inicializarSqlServer() {
     throw new Error(`En SQL Server el esquema "calidad" tiene ${tablas ? tablas.n : 0} de 52 tablas. Ejecuta db/sqlserver/01_crear_tablas.sql y la migración de datos.`);
   }
 
+  // MIGRACIÓN #53 (Caja roja) en SQL Server: la tabla no está en
+  // 01_crear_tablas.sql (es posterior), así que se crea aquí si falta.
+  // Mismas columnas que la versión SQLite (ver inicializarBaseDatos).
+  try {
+    await db.exec(`
+      IF OBJECT_ID('calidad.caja_roja_registros', 'U') IS NULL
+      BEGIN
+        CREATE TABLE calidad.caja_roja_registros (
+          id INT IDENTITY(1,1) PRIMARY KEY,
+          uid NVARCHAR(64) NOT NULL UNIQUE,
+          fecha NVARCHAR(10) NOT NULL,
+          hora_registro NVARCHAR(8) NULL,
+          area NVARCHAR(50) NOT NULL,
+          usuario_id INT NULL,
+          usuario_nombre NVARCHAR(200) NULL,
+          f120_id NVARCHAR(30) NULL,
+          referencia NVARCHAR(100) NOT NULL,
+          descripcion NVARCHAR(300) NULL,
+          lote NVARCHAR(100) NOT NULL,
+          cantidad INT NOT NULL,
+          sin_conexion INT DEFAULT 0,
+          recibido_en NVARCHAR(30) NULL,
+          eliminado INT DEFAULT 0,
+          eliminado_por INT NULL,
+          eliminado_por_nombre NVARCHAR(200) NULL,
+          eliminado_en NVARCHAR(30) NULL
+        );
+        CREATE INDEX idx_caja_roja_fecha ON calidad.caja_roja_registros(fecha);
+        CREATE INDEX idx_caja_roja_referencia ON calidad.caja_roja_registros(referencia);
+      END
+    `);
+  } catch (e) {
+    console.error('⚠️ Error creando tabla de Caja roja en SQL Server (MIGRACIÓN #53):', e.message);
+  }
+
+  // MIGRACIÓN #54 en SQL Server: garantias.origen_app_id (ver la versión
+  // SQLite más abajo). Índice único filtrado porque en SQL Server un UNIQUE
+  // normal no admite más de un NULL.
+  try {
+    await db.exec(`
+      IF COL_LENGTH('calidad.garantias', 'origen_app_id') IS NULL
+        ALTER TABLE calidad.garantias ADD origen_app_id NVARCHAR(100) NULL;
+    `);
+    await db.exec(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_garantias_origen_app' AND object_id = OBJECT_ID('calidad.garantias'))
+        CREATE UNIQUE INDEX idx_garantias_origen_app ON calidad.garantias(origen_app_id) WHERE origen_app_id IS NOT NULL;
+    `);
+  } catch (e) {
+    console.error('⚠️ Error agregando origen_app_id a garantias en SQL Server (MIGRACIÓN #54):', e.message);
+  }
+
+  // MIGRACIÓN #56 (Liberación de producto) en SQL Server: mismas columnas que
+  // la versión SQLite (ver inicializarBaseDatos).
+  try {
+    await db.exec(`
+      IF OBJECT_ID('calidad.liberaciones', 'U') IS NULL
+      BEGIN
+        CREATE TABLE calidad.liberaciones (
+          id INT IDENTITY(1,1) PRIMARY KEY,
+          consecutivo NVARCHAR(20) NOT NULL UNIQUE,
+          anio INT NOT NULL,
+          numero INT NOT NULL,
+          fecha NVARCHAR(10) NOT NULL,
+          turno NVARCHAR(20) NOT NULL,
+          area_id INT NULL,
+          area_nombre NVARCHAR(200) NULL,
+          responsable_id INT NULL,
+          responsable_nombre NVARCHAR(200) NULL,
+          revision INT DEFAULT 0,
+          creado_en NVARCHAR(30) NULL,
+          actualizado_en NVARCHAR(30) NULL,
+          actualizado_por INT NULL,
+          actualizado_por_nombre NVARCHAR(200) NULL,
+          eliminado INT DEFAULT 0,
+          eliminado_por INT NULL,
+          eliminado_por_nombre NVARCHAR(200) NULL,
+          eliminado_en NVARCHAR(30) NULL
+        );
+        CREATE UNIQUE INDEX idx_liberaciones_anio_numero ON calidad.liberaciones(anio, numero);
+        CREATE INDEX idx_liberaciones_fecha ON calidad.liberaciones(fecha);
+      END
+    `);
+    await db.exec(`
+      IF OBJECT_ID('calidad.liberaciones_productos', 'U') IS NULL
+      BEGIN
+        CREATE TABLE calidad.liberaciones_productos (
+          id INT IDENTITY(1,1) PRIMARY KEY,
+          liberacion_id INT NOT NULL REFERENCES calidad.liberaciones(id),
+          orden INT DEFAULT 0,
+          referencia NVARCHAR(100) NOT NULL,
+          descripcion_referencia NVARCHAR(300) NULL,
+          lote NVARCHAR(100) NOT NULL,
+          cantidad INT NOT NULL,
+          estado NVARCHAR(20) NOT NULL,
+          descripcion NVARCHAR(300) NULL,
+          foto_archivo NVARCHAR(200) NULL,
+          foto_nombre_original NVARCHAR(260) NULL
+        );
+        CREATE INDEX idx_liberaciones_productos_lib ON calidad.liberaciones_productos(liberacion_id);
+        CREATE INDEX idx_liberaciones_productos_ref ON calidad.liberaciones_productos(referencia);
+      END
+    `);
+  } catch (e) {
+    console.error('⚠️ Error creando tablas de Liberación de producto en SQL Server (MIGRACIÓN #56):', e.message);
+  }
+
+  // MIGRACIÓN #57 en SQL Server: liberaciones.tipo y consecutivo por tipo
+  // (ver la versión SQLite).
+  try {
+    await db.exec(`
+      IF COL_LENGTH('calidad.liberaciones', 'tipo') IS NULL
+        ALTER TABLE calidad.liberaciones ADD tipo NVARCHAR(20) NULL;
+    `);
+    await db.exec("UPDATE calidad.liberaciones SET tipo = N'Liberación' WHERE tipo IS NULL");
+    await db.exec(`
+      IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_liberaciones_anio_numero' AND object_id = OBJECT_ID('calidad.liberaciones'))
+        DROP INDEX idx_liberaciones_anio_numero ON calidad.liberaciones;
+    `);
+    await db.exec(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'idx_liberaciones_tipo_anio_numero' AND object_id = OBJECT_ID('calidad.liberaciones'))
+        CREATE UNIQUE INDEX idx_liberaciones_tipo_anio_numero ON calidad.liberaciones(tipo, anio, numero) WHERE tipo IS NOT NULL;
+    `);
+  } catch (e) {
+    console.error('⚠️ Error agregando el tipo a liberaciones en SQL Server (MIGRACIÓN #57):', e.message);
+  }
+
   for (const p of PERMISOS_DISPONIBLES) {
     await db.run('INSERT OR IGNORE INTO permisos (codigo, descripcion) VALUES (?, ?)', [p.codigo, p.descripcion]);
   }
@@ -2527,6 +2653,161 @@ async function inicializarBaseDatos() {
     }
   } catch (e) {
     console.error('⚠️ Error quitando url_foto de elec_fotos_cableado (MIGRACIÓN #52):', e.message);
+  }
+
+  // MIGRACIÓN #53 (10/11, pedido por Julio): módulo "Caja roja" -- registro
+  // de piezas que van a la caja roja (referencia del maestro del ERP + lote
+  // + cantidad, por área y fecha). `uid` lo genera la tablet al registrar:
+  // si la tablet pierde la conexión, el registro queda guardado en la
+  // tablet y se envía después; si un envío se repite (por ejemplo, la red se
+  // cayó justo después de guardar), el UNIQUE de `uid` evita duplicarlo.
+  // Borrado suave (eliminado=1), igual que referencias de Circuitos SMD.
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS caja_roja_registros (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uid TEXT NOT NULL UNIQUE,
+        fecha TEXT NOT NULL,
+        hora_registro TEXT,
+        area TEXT NOT NULL,
+        usuario_id INTEGER,
+        usuario_nombre TEXT,
+        f120_id TEXT,
+        referencia TEXT NOT NULL,
+        descripcion TEXT,
+        lote TEXT NOT NULL,
+        cantidad INTEGER NOT NULL,
+        sin_conexion INTEGER DEFAULT 0,
+        recibido_en TEXT,
+        eliminado INTEGER DEFAULT 0,
+        eliminado_por INTEGER,
+        eliminado_por_nombre TEXT,
+        eliminado_en TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_caja_roja_fecha ON caja_roja_registros(fecha);
+      CREATE INDEX IF NOT EXISTS idx_caja_roja_referencia ON caja_roja_registros(referencia);
+    `);
+  } catch (e) {
+    console.error('⚠️ Error creando tabla de Caja roja (MIGRACIÓN #53):', e.message);
+  }
+
+  // MIGRACIÓN #54 (17/11/2026, pedido por Julio): garantias.origen_app_id --
+  // de qué ítem de la app aparte de Garantías (Firebase) vino cada fila,
+  // como "<id remisión>/<id ítem>". La llena scripts/importar_garantias_app.js
+  // para poder correrlo con cada respaldo nuevo sin duplicar. Las garantías
+  // creadas en esta app la dejan vacía (NULL). Índice único: un ítem de la
+  // otra app solo puede quedar una vez (SQLite permite varios NULL).
+  try {
+    const colsGarantias = await db.all('PRAGMA table_info(garantias)');
+    if (!colsGarantias.some(c => c.name === 'origen_app_id')) {
+      await db.exec('ALTER TABLE garantias ADD COLUMN origen_app_id TEXT');
+      console.log('➕ Columna origen_app_id agregada a garantias (MIGRACIÓN #54).');
+    }
+    await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_garantias_origen_app ON garantias(origen_app_id)');
+  } catch (e) {
+    console.error('⚠️ Error agregando origen_app_id a garantias (MIGRACIÓN #54):', e.message);
+  }
+
+  // MIGRACIÓN #55 (17/11/2026, pedido por Julio): tipo de circuito de las
+  // garantías creadas en la app (desde el 11/08/2026 se guardaban vacías y el
+  // Tablero de Garantías mostraba la referencia completa). En cada arranque se
+  // recalcula para las garantías creadas después del Excel (y las que estén
+  // vacías) con la misma regla que al crear una (resolverTipoCircuito en
+  // data/garantias.js), y solo se escribe donde el valor cambia. Así también
+  // se corrigen las que una primera versión de esta migración dejó con el
+  // valor crudo de referencias_pt (1075C en vez de 1075, como en el Excel).
+  // No toca las garantías del Excel que ya tienen tipo.
+  try {
+    const { resolverTipoCircuito, cargarDatosTipoCircuito, FIN_HISTORIAL_EXCEL } = require('../data/garantias');
+    const revisar = await db.all(
+      "SELECT id, referencia, tipo_circuito FROM garantias WHERE tipo_circuito IS NULL OR TRIM(tipo_circuito) = '' OR fecha_creacion > ?",
+      [FIN_HISTORIAL_EXCEL]);
+    if (revisar.length) {
+      const datosTipo = await cargarDatosTipoCircuito(db);
+      let cambiadas = 0;
+      for (const g of revisar) {
+        const tipo = resolverTipoCircuito(g.referencia, datosTipo);
+        if (tipo && tipo !== String(g.tipo_circuito || '').trim()) {
+          await db.run('UPDATE garantias SET tipo_circuito = ? WHERE id = ?', [tipo, g.id]);
+          cambiadas++;
+        }
+      }
+      if (cambiadas) console.log(`➕ Tipo de circuito completado o corregido en ${cambiadas} garantía(s) (MIGRACIÓN #55).`);
+    }
+  } catch (e) {
+    console.error('⚠️ Error completando tipo de circuito en garantías (MIGRACIÓN #55):', e.message);
+  }
+
+  // MIGRACIÓN #56 (23/11/2026, pedido por Julio): módulo "Liberación de
+  // producto" -- un formato con encabezado (responsable, turno, área, fecha
+  // y consecutivo LIB-AAAA-NNNN por año) y varios productos con su foto
+  // original, referencia, lote, cantidad, estado y descripción corta. Solo
+  // crea tablas nuevas; no toca ninguna existente. Borrado suave
+  // (eliminado=1) como Caja roja. `revision` sube cada vez que quien lo
+  // creó lo edita (el PDF muestra "Rev. N").
+  try {
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS liberaciones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        consecutivo TEXT NOT NULL UNIQUE,
+        anio INTEGER NOT NULL,
+        numero INTEGER NOT NULL,
+        fecha TEXT NOT NULL,
+        turno TEXT NOT NULL,
+        area_id INTEGER,
+        area_nombre TEXT,
+        responsable_id INTEGER,
+        responsable_nombre TEXT,
+        revision INTEGER DEFAULT 0,
+        creado_en TEXT,
+        actualizado_en TEXT,
+        actualizado_por INTEGER,
+        actualizado_por_nombre TEXT,
+        eliminado INTEGER DEFAULT 0,
+        eliminado_por INTEGER,
+        eliminado_por_nombre TEXT,
+        eliminado_en TEXT
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_liberaciones_anio_numero ON liberaciones(anio, numero);
+      CREATE INDEX IF NOT EXISTS idx_liberaciones_fecha ON liberaciones(fecha);
+      CREATE TABLE IF NOT EXISTS liberaciones_productos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        liberacion_id INTEGER NOT NULL REFERENCES liberaciones(id),
+        orden INTEGER DEFAULT 0,
+        referencia TEXT NOT NULL,
+        descripcion_referencia TEXT,
+        lote TEXT NOT NULL,
+        cantidad INTEGER NOT NULL,
+        estado TEXT NOT NULL,
+        descripcion TEXT,
+        foto_archivo TEXT,
+        foto_nombre_original TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_liberaciones_productos_lib ON liberaciones_productos(liberacion_id);
+      CREATE INDEX IF NOT EXISTS idx_liberaciones_productos_ref ON liberaciones_productos(referencia);
+    `);
+  } catch (e) {
+    console.error('⚠️ Error creando tablas de Liberación de producto (MIGRACIÓN #56):', e.message);
+  }
+
+  // MIGRACIÓN #57 (23/11/2026, pedido por Julio): cada documento de
+  // Liberación de producto es de un solo tipo, 'Liberación' o 'Rechazo', y
+  // cada tipo lleva su propio consecutivo (LIB-AAAA-NNNN y REC-AAAA-NNNN).
+  // Agrega liberaciones.tipo, marca como 'Liberación' las que ya existían
+  // (todas nacieron con consecutivo LIB-, así su número sigue contando en
+  // la serie LIB y no choca con la nueva serie REC) y cambia el índice único
+  // de (anio, numero) a (tipo, anio, numero).
+  try {
+    const colsLib = await db.all('PRAGMA table_info(liberaciones)');
+    if (!colsLib.some(c => c.name === 'tipo')) {
+      await db.exec('ALTER TABLE liberaciones ADD COLUMN tipo TEXT');
+      console.log('➕ Columna tipo agregada a liberaciones (MIGRACIÓN #57).');
+    }
+    await db.run("UPDATE liberaciones SET tipo = 'Liberación' WHERE tipo IS NULL");
+    await db.exec('DROP INDEX IF EXISTS idx_liberaciones_anio_numero');
+    await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_liberaciones_tipo_anio_numero ON liberaciones(tipo, anio, numero)');
+  } catch (e) {
+    console.error('⚠️ Error agregando el tipo (liberación/rechazo) a liberaciones (MIGRACIÓN #57):', e.message);
   }
 
   // Usuarios por defecto si está vacío
