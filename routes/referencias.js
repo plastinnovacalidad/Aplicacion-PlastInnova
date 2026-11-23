@@ -261,6 +261,88 @@ router.post('/referencias-codigo/:codigo_base/versiones', validarToken, requerir
 });
 
 // Modificar versión actual (reemplaza imagen, misma versión, mueve anterior a obsoletas)
+// Enlazar una foto que YA está en el disco (03/11/2026, pedido por Julio).
+// Para versiones que no tienen foto, o cuya foto se cambió directamente en
+// la carpeta (E:\ o la de circuitos): no se sube ni se copia nada a ningún
+// lado. La pantalla manda solo el NOMBRE del archivo que se escogió (y su
+// tamaño, para distinguir si hay dos con el mismo nombre); aquí se busca
+// ese archivo en las carpetas activas y se guarda su ruta en la versión.
+// La foto anterior solo se COPIA a uploads/obsoletas (la original no se
+// mueve, no se borra y no se modifica).
+router.post('/referencias/:codigo_base/enlazar-foto', validarToken, requerirPermiso('referencias.editar'), asyncHandler(async (req, res) => {
+  const codigoBase = req.params.codigo_base || '';
+  const motivo = String(req.body.motivo || '').trim();
+  const nombre = path.basename(String(req.body.nombre_archivo || '').trim());
+  const tamano = Number(req.body.tamano) || null;
+  const usuarioId = req.usuario.id;
+
+  if (!codigoBase) return res.status(400).json({ error: 'codigo_base requerido' });
+  if (!nombre) return res.status(400).json({ error: 'Escoge la foto que ya está en el disco' });
+  if (!/\.(jpg|jpeg|png|gif|bmp|webp|tiff)$/i.test(nombre)) return res.status(400).json({ error: 'El archivo escogido no es una imagen' });
+  if (!motivo) return res.status(400).json({ error: 'El motivo del cambio es obligatorio' });
+
+  // Buscar el archivo por nombre en las carpetas activas (igual que la app
+  // busca una foto que cambió de lugar).
+  let candidatos = [];
+  for (const carpeta of CARPETAS_FOTOS) {
+    if (fs.existsSync(carpeta)) candidatos.push(...escanearRecursivo(carpeta).filter(r => path.basename(r).toLowerCase() === nombre.toLowerCase()));
+  }
+  if (candidatos.length > 1 && tamano) {
+    const mismoTamano = candidatos.filter(r => { try { return fs.statSync(r).size === tamano; } catch (e) { return false; } });
+    if (mismoTamano.length) candidatos = mismoTamano;
+  }
+  if (candidatos.length === 0) {
+    return res.status(404).json({ error: `No se encontró "${nombre}" en las carpetas de fotos activas (${CARPETAS_FOTOS.join(' | ')}). Escoge la foto directamente desde esas carpetas.` });
+  }
+  if (candidatos.length > 1) {
+    return res.status(409).json({ error: `Hay ${candidatos.length} fotos con el nombre "${nombre}": ${candidatos.join(' | ')}. Cámbiale el nombre a una o avísale a Julio.` });
+  }
+  const rutaNueva = candidatos[0];
+
+  const ref = await refData.buscarReferenciaPorCodigo(codigoBase);
+  if (!ref) return res.status(404).json({ error: 'Referencia no encontrada' });
+  if (ref.activa === 0) return res.status(409).json({ error: 'Esta referencia está eliminada. Restáurela antes de modificar su versión.' });
+  const versionActiva = await refData.buscarVersionActivaMasReciente(ref.id);
+  if (!versionActiva) return res.status(404).json({ error: 'No hay versión activa para modificar' });
+
+  const rutaAnterior = versionActiva.imagen_ruta;
+  const misma = !!rutaAnterior && path.resolve(rutaAnterior).toLowerCase() === path.resolve(rutaNueva).toLowerCase();
+  let copiaObsoleta = null;
+  let notaAnterior = null;
+  if (!rutaAnterior) notaAnterior = 'la versión no tenía foto';
+  else if (misma) notaAnterior = 'es la misma foto (se cambió directamente en la carpeta)';
+  else if (!fs.existsSync(rutaAnterior)) notaAnterior = 'la foto anterior ya no existía en el disco';
+  else {
+    const fechaSufijo = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const ext = path.extname(rutaAnterior);
+    copiaObsoleta = path.join(OBSOLETAS_DIR, path.basename(rutaAnterior, ext) + '_' + fechaSufijo + '_mod' + ext);
+    fs.copyFileSync(rutaAnterior, copiaObsoleta);
+    notaAnterior = 'copia de la anterior en obsoletas';
+  }
+
+  await enTransaccion(async () => {
+    await refData.actualizarImagenVersion(rutaNueva, versionActiva.id);
+    await refData.marcarNecesitaPrueba(versionActiva.id, 1);
+    // Si había otra versión también 'activa' por error, se retira sin
+    // tocar su foto.
+    const otras = await refData.listarOtrasVersionesActivas(ref.id, versionActiva.id);
+    for (const otra of otras) await refData.marcarVersionObsoleta(otra.id);
+    await refData.insertarSeguimientoCambios(
+      ref.id, 'modificacion',
+      {
+        accion: 'Foto enlazada desde el disco (sin subirla)',
+        version: versionActiva.version,
+        imagen_ruta: { antes: rutaAnterior, despues: rutaNueva },
+        ruta_obsoleta: copiaObsoleta,
+        foto_anterior: notaAnterior,
+      },
+      usuarioId, motivo
+    );
+  });
+
+  res.json({ success: true, message: `Versión ${versionActiva.version}: foto enlazada`, imagen_ruta: rutaNueva, foto_anterior: notaAnterior, ruta_obsoleta: copiaObsoleta });
+}));
+
 // Modificación de la versión actual: se sube una foto nueva para la MISMA
 // versión (no se crea V2). Sirve para cambiar la foto o para ponerle foto a
 // una versión que no tiene. 03/11/2026 (pedido por Julio):

@@ -500,10 +500,10 @@
         versionSeleccionadaId = elegirVersionSmdPorDefecto(versionesRef).id;
       }
       renderVersionChips();
-      await cargarFotoVersionSeleccionada();
-
-      await cargarObservaciones();
-      await cargarRecomendaciones();
+      // 04/11/2026: la foto, las observaciones y las recomendaciones se
+      // piden a la vez (antes las observaciones esperaban a que llegara la
+      // foto). Cada una ya revisa que la referencia no haya cambiado.
+      await Promise.all([cargarFotoVersionSeleccionada(), cargarObservaciones(), cargarRecomendaciones()]);
     }
 
     // ==================== VERSIONES ====================
@@ -573,7 +573,16 @@
     // Carga la foto de la versión actualmente seleccionada en los chips (o,
     // si por algún motivo no hay ninguna versión en la lista, cae al
     // comportamiento antiguo de pedir la foto activa por código).
+    // Si se cambia de referencia o de versión antes de que llegue la foto,
+    // se cancela la petición anterior (04/11/2026): el servidor deja de
+    // prepararla y la foto nueva no espera turno.
+    let fotoSmdAbort = null;
     async function cargarFotoVersionSeleccionada() {
+      if (fotoSmdAbort) fotoSmdAbort.abort();
+      fotoSmdAbort = new AbortController();
+      const signal = fotoSmdAbort.signal;
+      const wrapperCarga = document.getElementById('photosWrapper');
+      if (wrapperCarga) wrapperCarga.innerHTML = '<div style="color:#999;font-size:14px;">Cargando foto…</div>';
       // Se captura qué referencia/versión estábamos por cargar ANTES del
       // await: si para cuando la respuesta llega el usuario ya seleccionó
       // otra referencia u otra versión (chips), esas variables globales ya
@@ -585,7 +594,7 @@
 
       if (!versionSeleccionadaId) {
         try {
-          const res = await fetch('/api/fotos/' + encodeURIComponent(referenciaActiva), { headers: { 'Authorization': 'Bearer ' + token } });
+          const res = await fetch('/api/fotos/' + encodeURIComponent(referenciaActiva), { headers: { 'Authorization': 'Bearer ' + token }, signal });
           if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
           // Antes no se revisaba res.ok acá (a diferencia de la rama de
           // /api/fotos-version/ más abajo, que sí lo hace) — si el servidor
@@ -600,6 +609,7 @@
             renderFotos([]);
           }
         } catch (e) {
+          if (e && e.name === 'AbortError') return;
           console.error('Error cargando fotos:', e);
           if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
           renderFotos([]);
@@ -611,7 +621,7 @@
       }
 
       try {
-        const res = await fetch('/api/fotos-version/' + versionSeleccionadaId, { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await fetch('/api/fotos-version/' + versionSeleccionadaId, { headers: { 'Authorization': 'Bearer ' + token }, signal });
         if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
         if (res.ok) {
           const data = await res.json();
@@ -621,6 +631,7 @@
           renderFotos([]);
         }
       } catch (e) {
+        if (e && e.name === 'AbortError') return;
         console.error('Error cargando fotos:', e);
         if (referenciaActiva !== refEnCurso || versionSeleccionadaId !== versionEnCurso) return;
         renderFotos([]);

@@ -633,11 +633,23 @@ const ValoresCableadoApp = (() => {
   // hay que pedirla autenticado y el servidor devuelve un data: URL. Solo se
   // toca el "content" interno de la caja, para no perder el botón de editar
   // (Crear Referencia) que va al lado.
+  // Al abrir otra ficha se cancelan las fotos que todavía se estaban
+  // cargando (04/11/2026): el servidor deja de prepararlas y las de la ficha
+  // nueva no esperan turno. (La ficha nueva reemplaza el HTML, así que una
+  // respuesta vieja tampoco alcanzaría a pintarse en ella.)
+  const abortFotos = { circuito: null, cableado: null };
+  function nuevaSenalFoto(tipo) {
+    if (abortFotos[tipo]) abortFotos[tipo].abort();
+    abortFotos[tipo] = new AbortController();
+    return abortFotos[tipo].signal;
+  }
+
   async function cargarFotoCircuito(versionId) {
     const content = document.getElementById('vc-foto-circuito-content');
     if (!content) return;
+    const signal = nuevaSenalFoto('circuito');
     try {
-      const res = await fetch(`${API}/foto-circuito/${versionId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+      const res = await fetch(`${API}/foto-circuito/${versionId}`, { headers: { 'Authorization': 'Bearer ' + token }, signal });
       const data = await res.json();
       if (res.ok && data.fotos && data.fotos.length > 0) {
         const foto = data.fotos[0];
@@ -646,6 +658,7 @@ const ValoresCableadoApp = (() => {
         content.innerHTML = '<span class="vc-foto-placeholder">Sin imagen de circuito</span>';
       }
     } catch (e) {
+      if (e && e.name === 'AbortError') return;
       content.innerHTML = '<span class="vc-foto-placeholder">Sin imagen de circuito</span>';
     }
   }
@@ -658,8 +671,9 @@ const ValoresCableadoApp = (() => {
   async function cargarFotoCableado(formaCableado) {
     const content = document.getElementById('vc-foto-cableado-content');
     if (!content) return;
+    const signal = nuevaSenalFoto('cableado');
     try {
-      const res = await fetch(`${API}/foto-cableado/${encodeURIComponent(formaCableado)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+      const res = await fetch(`${API}/foto-cableado/${encodeURIComponent(formaCableado)}`, { headers: { 'Authorization': 'Bearer ' + token }, signal });
       const data = await res.json();
       if (res.ok && data && (data.data || data.url)) {
         const src = data.tipo === 'archivo' ? data.data : data.url;
@@ -688,6 +702,7 @@ const ValoresCableadoApp = (() => {
         content.innerHTML = '<span class="vc-foto-placeholder">Sin imagen de cableado</span>';
       }
     } catch (e) {
+      if (e && e.name === 'AbortError') return;
       content.innerHTML = '<span class="vc-foto-placeholder">Sin imagen de cableado</span>';
     }
   }
