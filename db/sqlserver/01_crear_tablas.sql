@@ -556,8 +556,11 @@ CREATE TABLE [calidad].[garantias] (
     [tipo_circuito] NVARCHAR(255) NULL,
     [fecha_creacion] DATETIME2(0) NULL,
     [problema_id] INT NULL,
+    -- MIGRACIÓN #54: de qué ítem de la app de Garantías (Firebase) vino la fila
+    [origen_app_id] NVARCHAR(100) NULL,
     CONSTRAINT [PK_garantias] PRIMARY KEY ([id])
 );
+CREATE UNIQUE INDEX [idx_garantias_origen_app] ON [calidad].[garantias] ([origen_app_id]) WHERE [origen_app_id] IS NOT NULL;
 CREATE TABLE [calidad].[clientes] (
     [id] INT IDENTITY(1,1) NOT NULL,
     [nit] NVARCHAR(100) NULL,

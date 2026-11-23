@@ -7,6 +7,102 @@ function buscarClientes(q) {
   );
 }
 
+// ======================== TIPO DE CIRCUITO DE UNA GARANTÍA ========================
+// Pedido por Julio (17/11/2026). Las garantías cargadas desde el Excel
+// anterior (hasta el 06/08/2026) traían el tipo de circuito; las creadas en
+// la app desde el 11/08 quedaban vacías y el Tablero de Garantías mostraba
+// la referencia completa en su lugar. Regla, en este orden:
+//   1. El tipo que ya tienen otras garantías con la misma referencia (así se
+//      respeta lo que se usaba en el Excel: 1075C/... -> "1075").
+//   2. El tipo de referencias_pt (sin los "#¡VALOR!" que vinieron de Excel).
+//      Si es un número con letra (1075C, 1059H) y en las garantías nunca se
+//      usó así pero sí el número solo (1075, 1059), se usa el número solo.
+//      Los que sí se usan con letra (1075B, 1036H) se dejan con letra.
+//   3. Si no está en ninguna: el número de 4 dígitos con que empieza la
+//      referencia (1053V/AMAM/MULTI -> 1053), o si no empieza por número, el
+//      código completo de la primera parte, como en el Excel para accesorios
+//      (AP1060, V1055, INT02).
+// resolverTipoCircuito trabaja sobre datos ya cargados (lo usan la
+// MIGRACIÓN #55 y scripts/importar_garantias_app.js para muchas filas a la
+// vez); tipoCircuitoDeReferencia consulta la base para una sola referencia
+// (al crear o editar una garantía).
+// Las garantías del Excel anterior se cargaron todas el 06/08/2026 a las
+// 12:00; las de después se crearon en la app. Para "el tipo que ya usan otras
+// garantías" solo se mira ese historial, así un tipo mal puesto en la app no
+// se copia a las siguientes.
+const FIN_HISTORIAL_EXCEL = '2026-08-06 12:00:03';
+
+const tipoValido = (t) => { const s = String(t || '').trim(); return s && !s.startsWith('#') ? s : ''; };
+
+function resolverTipoCircuito(referencia, { tipoEnGarantias, tipoEnReferenciasPt, tipoUsado }) {
+  const ref = String(referencia || '').trim().toUpperCase();
+  if (!ref) return '';
+  const deGarantias = tipoValido(tipoEnGarantias(ref));
+  if (deGarantias) return deGarantias;
+  const dePt = tipoValido(tipoEnReferenciasPt(ref));
+  if (dePt) {
+    const m = dePt.toUpperCase().match(/^(\d{4})[A-Z]+$/);
+    if (m && !tipoUsado(dePt) && tipoUsado(m[1])) return m[1];
+    return dePt;
+  }
+  // Primera parte que tenga un número (REP/4003S/CR -> 4003S -> 4003).
+  const partes = ref.split('/');
+  const parte = partes.find(p => /\d/.test(p)) || partes[0];
+  const num = parte.match(/^\d{4}/);
+  return num ? num[0] : parte;
+}
+
+// Carga en memoria lo necesario para resolver muchas referencias de una vez.
+async function cargarDatosTipoCircuito(db) {
+  const enGarantias = new Map();
+  for (const r of await db.all(`SELECT UPPER(TRIM(referencia)) AS ref, tipo_circuito AS tipo, COUNT(*) AS n
+       FROM garantias WHERE tipo_circuito IS NOT NULL AND tipo_circuito <> '' AND tipo_circuito NOT LIKE '#%'
+         AND fecha_creacion <= ?
+       GROUP BY UPPER(TRIM(referencia)), tipo_circuito`, [FIN_HISTORIAL_EXCEL])) {
+    const previo = enGarantias.get(r.ref);
+    if (!previo || r.n > previo.n) enGarantias.set(r.ref, { tipo: r.tipo, n: r.n });
+  }
+  const usados = new Set((await db.all("SELECT DISTINCT UPPER(tipo_circuito) AS t FROM garantias WHERE tipo_circuito IS NOT NULL AND tipo_circuito <> '' AND fecha_creacion <= ?", [FIN_HISTORIAL_EXCEL])).map(r => r.t));
+  const enPt = new Map();
+  for (const r of await db.all("SELECT referencia, tipo_circuito FROM referencias_pt WHERE tipo_circuito IS NOT NULL AND tipo_circuito <> '' AND tipo_circuito NOT LIKE '#%'")) {
+    const k = String(r.referencia || '').trim().toUpperCase();
+    if (k && !enPt.has(k)) enPt.set(k, String(r.tipo_circuito).trim());
+  }
+  return {
+    tipoEnGarantias: (ref) => (enGarantias.get(ref) || {}).tipo,
+    tipoEnReferenciasPt: (ref) => enPt.get(ref),
+    tipoUsado: (t) => usados.has(String(t).toUpperCase()),
+  };
+}
+
+async function tipoCircuitoDeReferencia(referencia) {
+  const ref = String(referencia || '').trim().toUpperCase();
+  if (!ref) return '';
+  const db = getDb();
+  const hist = await db.get(`SELECT tipo_circuito AS tipo, COUNT(*) AS n FROM garantias
+       WHERE UPPER(TRIM(referencia)) = ? AND tipo_circuito IS NOT NULL AND tipo_circuito <> '' AND tipo_circuito NOT LIKE '#%'
+         AND fecha_creacion <= ?
+       GROUP BY tipo_circuito ORDER BY n DESC LIMIT 1`, [ref, FIN_HISTORIAL_EXCEL]);
+  const pt = hist ? null : await db.get("SELECT tipo_circuito FROM referencias_pt WHERE UPPER(referencia) = ? AND tipo_circuito IS NOT NULL AND tipo_circuito <> '' AND tipo_circuito NOT LIKE '#%' LIMIT 1", [ref]);
+  const usados = new Map();
+  const tipoUsadoAsync = async (t) => {
+    if (!usados.has(t)) usados.set(t, !!(await db.get('SELECT 1 AS si FROM garantias WHERE UPPER(tipo_circuito) = UPPER(?) AND fecha_creacion <= ? LIMIT 1', [t, FIN_HISTORIAL_EXCEL])));
+    return usados.get(t);
+  };
+  // Se precalcula lo que la regla 2 pueda preguntar (tipo con letra y sin letra).
+  if (pt && pt.tipo_circuito) {
+    const t = String(pt.tipo_circuito).trim();
+    await tipoUsadoAsync(t.toUpperCase());
+    const m = t.toUpperCase().match(/^(\d{4})[A-Z]+$/);
+    if (m) await tipoUsadoAsync(m[1]);
+  }
+  return resolverTipoCircuito(ref, {
+    tipoEnGarantias: () => (hist ? hist.tipo : ''),
+    tipoEnReferenciasPt: () => (pt ? pt.tipo_circuito : ''),
+    tipoUsado: (t) => !!usados.get(String(t).toUpperCase()),
+  });
+}
+
 function buscarReferenciasPt(q) {
   return getDb().all(
     'SELECT referencia, linea_base, tipo_circuito FROM referencias_pt WHERE referencia LIKE ? LIMIT 15',
@@ -32,7 +128,8 @@ function listarGarantias() {
   return getDb().all('SELECT * FROM garantias ORDER BY id DESC');
 }
 
-function crearGarantia(numGarantia, fechaRep, responsable, vendedorDistribuidor, cliente, nitCliente, ciudad, remision, item, tipoSolicitud, observacionesGeneral, fechaRev, estado, quienApruebaRechazo) {
+async function crearGarantia(numGarantia, fechaRep, responsable, vendedorDistribuidor, cliente, nitCliente, ciudad, remision, item, tipoSolicitud, observacionesGeneral, fechaRev, estado, quienApruebaRechazo) {
+  const tipoCircuito = await tipoCircuitoDeReferencia(item.referencia);
   return getDb().run(`
     INSERT INTO garantias (
       no_garantia, fecha_reporte, responsable, vendedor_distribuidor, memorando,
@@ -47,18 +144,24 @@ function crearGarantia(numGarantia, fechaRep, responsable, vendedorDistribuidor,
     item.referencia, item.cantidad || 1,
     item.tipo_solicitud || tipoSolicitud || 'GARANTIA', item.observaciones || observacionesGeneral || '',
     fechaRev, estado || 'Pendiente', item.lote_fecha || '',
-    item.problema || '', quienApruebaRechazo, '', ''
+    item.problema || '', quienApruebaRechazo, '', tipoCircuito
   ]);
 }
 
-function actualizarGarantia(id, estado, tipoSolicitud, cantidad, referencia, loteFecha, problema, observaciones, remision, quienApruebaRechazo) {
+async function actualizarGarantia(id, estado, tipoSolicitud, cantidad, referencia, loteFecha, problema, observaciones, remision, quienApruebaRechazo) {
+  // El tipo de circuito se vuelve a buscar solo si cambió la referencia o si
+  // estaba vacío; así no se borra el tipo de las garantías viejas cuya
+  // referencia no está en referencias_pt.
+  const tipoCircuito = await tipoCircuitoDeReferencia(referencia);
   return getDb().run(`
     UPDATE garantias SET
+      tipo_circuito = CASE WHEN COALESCE(referencia, '') <> ? OR COALESCE(tipo_circuito, '') = '' THEN ? ELSE tipo_circuito END,
       estado = ?, tipo_solicitud = ?, cantidad = ?, referencia = ?,
       lote_fecha = ?, problema = ?, observaciones = ?, remision = ?,
       quien_aprobo_rechazo = ?
     WHERE id = ?
   `, [
+    referencia || '', tipoCircuito,
     estado || 'Pendiente', tipoSolicitud || 'GARANTIA', cantidad || 1, referencia || '',
     loteFecha || '', problema || '', observaciones || '', remision || '',
     quienApruebaRechazo || '', id
@@ -213,6 +316,10 @@ function consultarTopReferenciasConMasGarantias(n) {
 }
 
 module.exports = {
+  FIN_HISTORIAL_EXCEL,
+  tipoCircuitoDeReferencia,
+  resolverTipoCircuito,
+  cargarDatosTipoCircuito,
   buscarClientes,
   buscarReferenciasPt,
   obtenerSiguienteNumeroGarantia,

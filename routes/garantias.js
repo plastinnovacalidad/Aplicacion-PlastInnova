@@ -4,6 +4,7 @@ const { asyncHandler } = require('../middleware/errores');
 const { enTransaccion } = require('../db/connection');
 const garData = require('../data/garantias');
 const { registrarCambio } = require('../data/auditoria');
+const { escribirCsvGarantias } = require('../utils/csvGarantias');
 
 const router = express.Router();
 
@@ -107,6 +108,17 @@ router.delete('/garantias/problemas/:id', validarToken, requerirPermiso('catalog
 router.get('/garantias', validarToken, requerirPermisoAlternativo(['garantias.ver', 'garantias.dashboard']), asyncHandler(async (req, res) => {
   const garantias = await garData.listarGarantias();
   res.json(garantias);
+}));
+
+// Botón "Actualizar archivo CSV" del Tablero de Garantías (pedido por Julio,
+// 17/11/2026): escribe todas las garantías en garantias.csv en la carpeta de
+// Estadísticas (ver utils/csvGarantias.js), sobrescribiendo el anterior, para
+// hacer reportes en Excel. Mismo permiso que ver el tablero.
+router.post('/garantias/exportar-csv', validarToken, requerirPermisoAlternativo(['garantias.ver', 'garantias.dashboard']), asyncHandler(async (req, res) => {
+  const garantias = await garData.listarGarantias();
+  const resultado = escribirCsvGarantias(garantias);
+  console.log(`📄 garantias.csv actualizado por ${req.usuario.nombre}: ${resultado.filas} filas → ${resultado.ruta}`);
+  res.json({ success: true, ...resultado });
 }));
 
 router.post('/garantias', validarToken, requerirPermiso('garantias.crear'), asyncHandler(async (req, res) => {

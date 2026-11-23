@@ -81,7 +81,12 @@
                     <h2 class="text-dark fw-bold mb-1"><i class="fa-solid fa-shield-halved text-primary me-2"></i>Control de Garantías y Calidad (Base de Datos en Vivo)</h2>
                     <p class="text-muted mb-0">Tablero dinámico sincronizado con SQLite</p>
                 </div>
-                <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                    <!-- Pedido por Julio (17/11/2026): deja todas las garantías en
+                         garantias.csv (carpeta 15.3.4 Estadisticas\2.Garantias)
+                         para hacer reportes en Excel. Ver utils/csvGarantias.js. -->
+                    <span class="text-muted small" id="estadoCsv"></span>
+                    <button class="btn btn-outline-primary" id="btnActualizarCsv" onclick="actualizarCsv()"><i class="fa-solid fa-file-csv me-1"></i> Actualizar archivo CSV</button>
                     <button class="btn btn-outline-secondary" onclick="resetFilters()"><i class="fa-solid fa-rotate-right me-1"></i> Reiniciar Filtros</button>
                 </div>
             </div>
@@ -294,6 +299,42 @@
 
         // automatica = true solo en el refresco de cada 15 s (ver window.onload):
         // ese refresco no cuenta como actividad para la sesión.
+        // Botón "Actualizar archivo CSV": el servidor escribe garantias.csv en la
+        // carpeta de Estadísticas (sobrescribe el anterior).
+        async function actualizarCsv() {
+            const btn = document.getElementById('btnActualizarCsv');
+            const estado = document.getElementById('estadoCsv');
+            const token = localStorage.getItem('token') || (window.parent && window.parent.localStorage ? window.parent.localStorage.getItem('token') : null);
+            btn.disabled = true;
+            estado.className = 'text-muted small';
+            estado.textContent = 'Generando…';
+            try {
+                const res = await fetch('/api/garantias/exportar-csv', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'No se pudo generar el archivo');
+                const hora = new Date(data.generado).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                estado.className = 'text-success small';
+                estado.textContent = `Listo: ${data.filas.toLocaleString('es-CO')} filas · ${hora}`;
+                estado.title = data.ruta;
+            } catch (e) {
+                estado.className = 'text-danger small';
+                estado.textContent = e.message;
+                estado.title = '';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function tipoCircuitoDe(tipo, ref) {
+            const t = String(tipo || '').trim();
+            if (t && !t.startsWith('#')) return t.toUpperCase();
+            const r = String(ref || '').trim().toUpperCase();
+            if (!r) return 'Sin tipo de circuito';
+            const num = r.match(/\d{4}/);
+            if (num) return num[0];
+            return r.split('/')[0] || 'Sin tipo de circuito';
+        }
+
         async function init(automatica = false) {
             // init() lo llama el propio tablero (al cargar y cada 15 s) y
             // también garantias.html al validar la sesión; se evita que dos
@@ -340,7 +381,12 @@
                         const mesNum = extractMonth(fechaRep);
                         const mesKey = `${anio}-${mesNum}`;
                         const ref = g.referencia || '';
-                        const tipoCir = g.tipo_circuito || (ref ? (ref.includes('_') ? ref.split('_')[0] : (ref.includes('-') ? ref.split('-')[0] : ref)) : 'General');
+                        // Tipo de circuito guardado en la garantía (se llena solo
+                        // desde referencias_pt, ver MIGRACIÓN #55). Si falta, se
+                        // agrupa por el número de modelo de la referencia (1053C/AmAm/24
+                        // → 1053, V1055 → 1055) y no por la referencia completa
+                        // (pedido por Julio, 17/11/2026).
+                        const tipoCir = tipoCircuitoDe(g.tipo_circuito, ref);
 
                         return {
                             Responsable: g.responsable || 'Sistema',
